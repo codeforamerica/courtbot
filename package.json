@@ -1,0 +1,18 @@
+{
+  "name": "court-api",
+  "version": "0.0.1",
+  "description": "Deliver simple court data via JSON or SMS.",
+  "main": "web.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Sam Hashemi",
+  "license": "MIT",
+  "engines": {
+    "node": "0.10.x"
+  },
+  "dependencies": {
+    "express": "~3.4.8",
+    "logfmt": "~0.23.0"
+  }
+}
