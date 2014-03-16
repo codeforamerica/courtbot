@@ -4,7 +4,8 @@ var pg = require('pg');
 var app = express();
 
 //require the Twilio module and create a REST client
-var client = require('twilio')('PN4f8d200af39a91f20272f96a5ba8b050', 'ACa1a2f0c274fa21513d4fa48b243bd14c');
+var twilio = require('twilio');
+var client = twilio('PN4f8d200af39a91f20272f96a5ba8b050', 'ACa1a2f0c274fa21513d4fa48b243bd14c');
 
 app.use(logfmt.requestLogger());
 
