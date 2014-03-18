@@ -29,7 +29,7 @@ app.get('/', function(req, res) {
 // Respond to text messages that come in from Twilio
 app.post('/sms', function(req, res) {
   var twiml = new twilio.TwimlResponse();
-  var sms = 'hello. i am courtbot. you said: ' + body.Body;
+  var sms = 'hello. i am courtbot. you said: ' + req.body.Body;
   twiml.sms(sms);
   res.send(twiml.toString());
 });
