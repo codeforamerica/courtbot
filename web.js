@@ -3,11 +3,14 @@ var logfmt = require("logfmt");
 var pg = require('pg');
 var app = express();
 
-//require the Twilio module and create a REST client
+// Require the Twilio module and create a REST client
 var twilio = require('twilio');
 var client = twilio('PN4f8d200af39a91f20272f96a5ba8b050', 'ACa1a2f0c274fa21513d4fa48b243bd14c');
 
+// Express Middleware
 app.use(logfmt.requestLogger());
+app.use(express.json());
+app.use(express.urlencoded());
 
 pg.connect(process.env.DATABASE_URL, function(err, client, done) {
   if (err) return console.error(err);
@@ -26,7 +29,8 @@ app.get('/', function(req, res) {
 // Respond to text messages that come in from Twilio
 app.post('/sms', function(req, res) {
   var twiml = new twilio.TwimlResponse();
-  twiml.sms('hello. i am courtbot. some call me the bot of justice.')
+  var sms = 'hello. i am courtbot. you said:' + req.body;
+  twiml.sms()
   res.send(twiml.toString());
 });
 
