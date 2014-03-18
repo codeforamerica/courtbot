@@ -30,7 +30,7 @@ app.get('/', function(req, res) {
 app.post('/sms', function(req, res) {
   var twiml = new twilio.TwimlResponse();
   var sms = 'hello. i am courtbot. you said:' + req.body;
-  twiml.sms()
+  twiml.sms(sms);
   res.send(twiml.toString());
 });
 
