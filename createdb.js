@@ -15,6 +15,8 @@ var knex = Knex.initialize({
   },
 });
 
+var knex = Knex.initialize({ client: 'pg', connection: process.env.DATABASE_URL });
+
 var createTable = function() {
   return knex.schema.createTable('cases', function(t) {
     t.increments('id').primary();
