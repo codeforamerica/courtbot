@@ -27,9 +27,9 @@ app.post('/sms', function(req, res) {
 
   knex('cases').where('citation', req.body.Body).select().then(function(results) {
     if (!results || results.length === 0) {
-      twiml.sms('Sorry, we couldn\t find that court case. Please call us at (404) 658-6940');
+      twiml.sms('Sorry, we couldn\'t find that court case. Please call us at (404) 658-6940.');
     } else {
-      var match = resuts[0];
+      var match = results[0];
       twiml.sms('We found a court case for' + match.defendent + 'on' + match.date + 'at' + match.time +'. If this isn\'t you, call us at (404) 658-6940.');
     }
 
