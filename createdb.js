@@ -6,16 +6,8 @@ var Promise = require('bluebird');
 
 var knex = Knex.initialize({
   client: 'pg',
-  connection: {
-    host: process.env.DATABASE_URL,
-    // user: 'shashemi',
-    // password: '',
-    // database: 'shashemi',
-    charset: 'utf8',
-  },
+  connection: process.env.DATABASE_URL
 });
-
-var knex = Knex.initialize({ client: 'pg', connection: process.env.DATABASE_URL });
 
 var createTable = function() {
   return knex.schema.createTable('cases', function(t) {
