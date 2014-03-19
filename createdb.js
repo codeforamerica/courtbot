@@ -7,10 +7,10 @@ var Promise = require('bluebird');
 var knex = Knex.initialize({
   client: 'pg',
   connection: {
-    host: '127.0.0.1',
-    user: 'shashemi',
-    password: '',
-    database: 'shashemi',
+    host: process.env.DATABASE_URL,
+    // user: 'shashemi',
+    // password: '',
+    // database: 'shashemi',
     charset: 'utf8',
   },
 });
