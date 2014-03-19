@@ -30,7 +30,7 @@ app.post('/sms', function(req, res) {
       twiml.sms('Sorry, we couldn\'t find that court case. Please call us at (404) 658-6940.');
     } else {
       var match = results[0];
-      twiml.sms('We found a court case for' + match.defendent + 'on' + match.date + 'at' + match.time +'. If this isn\'t you, call us at (404) 658-6940.');
+      twiml.sms('Hello. We found a court case for ' + match.defendant + ' on ' + match.date + ' at ' + match.time +'. If this isn\'t you, call us at (404) 658-6940.');
     }
 
     res.send(twiml.toString());
