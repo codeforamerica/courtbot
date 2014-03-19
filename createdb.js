@@ -50,7 +50,7 @@ var getCaseData = function(callback) {
           defendant: parseDefendant(line[4]),
           room: line[0],
           date: 'March 18th',
-          time: line[1],
+          time: line[1].trim(),
           citation: parseCitation(line[5]),
           violation_code: line[2],
           violation_desc: line[3],
