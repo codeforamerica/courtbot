@@ -21,6 +21,29 @@ app.get('/', function(req, res) {
   res.send('Hello World!');
 });
 
+// Get a list of court cases that match either
+// a citation number of a given name. To make it
+// automatically query against both.
+app.post('/cases', function(req, res) {
+  if (!req.body || !req.body.searchParameter) return res.status(400);
+
+  // Split the name so we can search more strategically
+  var param = req.body.searchParameter;
+  var params = param.split(" ");
+
+  // Search for Names
+  var query = knex('cases').where('defendant', 'like', '%' + params[0] + '%');
+  if (params.length > 1) query = query.andWhere('defendant', 'like', '%' + params[1] + '%')
+
+  // Search for Citations
+  var query = query.orWhere('citation', 'like', '%' + params[0] + '%');
+
+  query.exec(function(err, data) {
+    console.log("data found:" + data);
+    res.send(data);
+  })
+});
+
 // Respond to text messages that come in from Twilio
 app.post('/sms', function(req, res) {
   var twiml = new twilio.TwimlResponse();
