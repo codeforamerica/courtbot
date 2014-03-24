@@ -20,5 +20,7 @@
     "underscore": "~1.6.0",
     "csv": "~0.3.7",
     "bluebird": "~1.1.1",
+    "pdf2json": "~0.6.6",
+    "moment": "~2.5.1"
   }
 }

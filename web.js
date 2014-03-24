@@ -28,7 +28,7 @@ app.post('/cases', function(req, res) {
   if (!req.body || !req.body.searchParameter) return res.status(400);
 
   // Split the name so we can search more strategically
-  var param = req.body.searchParameter;
+  var param = req.body.searchParameter.toUpperCase();
   var params = param.split(" ");
 
   // Search for Names
