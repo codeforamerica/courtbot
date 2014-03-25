@@ -1,11 +1,12 @@
-// pdf2csv.js
-
-exports.convert = function(pdfname, csvname){
+exports.convert = function(pdfname, callback){
   var PFParser = require('pdf2json'),
       _ = require('underscore');
 
+  if (!pdfname) return callback(undefined, false);
+
   var pdfParser = new PFParser();
   var self = {};
+  var csvname = pdfname.slice(0, -4) + '.csv';
  
   function urldecode(url) {
     return decodeURIComponent(url.replace(/\+/g, ' '));
@@ -62,15 +63,17 @@ exports.convert = function(pdfname, csvname){
     var fs = require('fs');
     fs.writeFile(csvname, output, function(err) {
       if(err) {
-        console.log("Error saving: " + err);
+      	callback(undefined, false);
+        // console.log("Error saving: " + err);
       } else {
-        console.log("The file was saved!");
+      	callback(undefined, csvname);
+        // console.log("The file was saved!");
       }
     }); 
   }
 
   function error(e) {
-    console.log("error: " + JSON.stringify(e));
+    // console.log("error: " + JSON.stringify(e));
   }
 
   pdfParser.on("pdfParser_dataReady", _.bind(ready, self));
