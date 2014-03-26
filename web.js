@@ -72,7 +72,7 @@ app.post('/sms', function(req, res) {
 
 // Enable CORS support for IE8. 
 app.get('/proxy.html', function(req, res) {
-  res.send('<!DOCTYPE HTML>\n' + '<script src="http://jpillora.com/xdomain/dist/0.6/xdomain.min.js" master="http://www.atlantamunicipalcourt.com"></script>');
+  res.send('<!DOCTYPE HTML>\n' + '<script src="http://jpillora.com/xdomain/dist/0.6/xdomain.min.js" master="http://www.atlantamunicipalcourt.org"></script>');
 });
 
 var port = Number(process.env.PORT || 5000);
