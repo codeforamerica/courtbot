@@ -17,6 +17,13 @@ app.use(logfmt.requestLogger());
 app.use(express.json());
 app.use(express.urlencoded());
 
+// Allows CORS
+app.all('*', function(req, res, next) {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Headers", "X-Requested-With");
+  next();
+});
+
 app.get('/', function(req, res) {
   res.send('Hello World!');
 });
@@ -24,11 +31,11 @@ app.get('/', function(req, res) {
 // Get a list of court cases that match either
 // a citation number of a given name. To make it
 // automatically query against both.
-app.post('/cases', function(req, res) {
-  if (!req.body || !req.body.searchParameter) return res.status(400);
-
+app.get('/cases', function(req, res) {
+  if (!req.query || !req.query.searchParameter) return res.send(400);
+  
   // Split the name so we can search more strategically
-  var param = req.body.searchParameter.toUpperCase();
+  var param = req.query.searchParameter.toUpperCase();
   var params = param.split(" ");
 
   // Search for Names
@@ -37,6 +44,9 @@ app.post('/cases', function(req, res) {
 
   // Search for Citations
   var query = query.orWhere('citation', 'like', '%' + params[0] + '%');
+
+  // Limit to ten results
+  var query = query.limit(10);
 
   query.exec(function(err, data) {
     console.log("data found:" + data);
