@@ -86,9 +86,9 @@ var extractCases = function(data) {
     }
 
     var caseData = {
-      defendant: parseDefendant(line[4]),
+      defendant: line[4].trim(),
       room: line[0],
-      date: date.format('MMM Do'),
+      date: date.format('dddd, MMM Do'),
       time: line[1].trim(),
       citation: parseCitation(line[5]),
       violation_code: line[2],
@@ -108,8 +108,4 @@ var parseCitation = function(citation) {
   if (hasJunk > -1) citation = citation.substring(0, hasJunk);
 
   return citation;
-};
-
-var parseDefendant = function(defendant) {
-  return defendant;
 };
