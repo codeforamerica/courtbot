@@ -64,12 +64,25 @@ app.post('/sms', function(req, res) {
       twiml.sms('Sorry, we couldn\'t find that court case. Please call us at (404) 658-6940.');
     } else {
       var match = results[0];
-      twiml.sms('Hello. We found a court case for ' + match.defendant + ' on ' + match.date + ' at ' + match.time +'. If this isn\'t you, call us at (404) 658-6940.');
+      var name = cleanupName(match.defendant);
+      twiml.sms('Found a court case for ' + name + ' on ' + match.date + ' at ' + match.time +'. Go to courtroom ' + match.room +'. Call us at (404) 658-6940 for other questions.');
     }
 
     res.send(twiml.toString());
   });
 });
+
+var cleanupName = function(name) {
+  // Switch LAST, FIRST to FIRST LAST
+  var bits = name.split(',');
+  name = bits[1] + ' ' + bits[0];
+  name = name.trim();
+
+  // Change FIRST LAST to First Last
+  name = name.replace(/\w\S*/g, function(txt) { return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase(); });
+
+  return name;
+}
 
 // Enable CORS support for IE8. 
 app.get('/proxy.html', function(req, res) {
