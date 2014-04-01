@@ -57,8 +57,9 @@ app.get('/cases', function(req, res) {
 // Respond to text messages that come in from Twilio
 app.post('/sms', function(req, res) {
   var twiml = new twilio.TwimlResponse();
+  var citation = req.body.Body.toUpperCase();
 
-  knex('cases').where('citation', req.body.Body).select().then(function(results) {
+  knex('cases').where('citation', citation).select().then(function(results) {
     if (!results || results.length === 0) {
       twiml.sms('Sorry, we couldn\'t find that court case. Please call us at (404) 658-6940.');
     } else {
