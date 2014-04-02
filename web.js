@@ -69,7 +69,7 @@ app.post('/sms', function(req, res) {
   var text = req.body.Body.toUpperCase();
 
   if (req.session.askedReminder) {
-    if (text === 'YES') {
+    if (text === 'YES' || text === 'YEA' || text === 'YUP') {
       var match = req.session.match;
       knex('reminders').insert({
         citation: match.citation,
