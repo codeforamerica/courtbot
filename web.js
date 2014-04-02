@@ -70,8 +70,10 @@ app.post('/sms', function(req, res) {
         citation: match.citation,
         sent: false,
         phone: req.body.From,
-        date: match.date
-      }).exec(function() {});
+        created_at: new Date(),
+      }).exec(function(err, results) {
+        if (err) console.log(err);
+      });
 
       twiml.sms('Sounds good. We\'ll text you a day before your case. Call us at (404) 658-6940 with any other questions.');
       req.session.askedReminder = false;

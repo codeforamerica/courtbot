@@ -9,10 +9,10 @@ var knex = Knex.initialize({
 
 var createTable = function() {
   return knex.schema.createTable('reminders', function(table) {
-    table.increments('id').primary();
+    table.increments('reminder_id').primary();
+    table.dateTime('created_at');
     table.string('citation', 100);
     table.string('phone', 100);
-    table.string('date', 100);
     table.boolean('sent', 100);
   });
 };

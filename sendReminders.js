@@ -1,41 +1,49 @@
-console.log(process.env);
-
 var Knex = require('knex');
 var twilio = require('twilio');
 var client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-var moment = require('moment');
 
 var knex = Knex.initialize({
   client: 'pg',
   connection: process.env.DATABASE_URL
 });
 
-// Get todays date, chopping off hours and minutes
-var today = moment(moment().format('YYYY-MM-DD'));
-
-var sendReminders = function() {
-  return knex('reminders').where('sent', false).select().then(function(results) {
-    console.log(results);
-    results.forEach(function(r) {
-      // Only send reminders if the case is happening tomorrow
-      var caseDate = moment(r.date);
-      var diff = caseDate.diff(today, 'days', true);
-      if (diff !== 1) return;
-
-      knex('reminders').where('id', r.id).update({sent: true}).exec(function() {});
-
-      client.sendMessage({
-        to: r.phone,
-        from: '+14157809338',
-        body: 'Reminder: You\'ve got a court case tomorrow at 3pm in court room 6D. Call us at (404) 658-6940 with any questions. -Atlanta Municipal Court',
-      }, function(err, responseData) {
-        console.log(err);
-      });
-    });
-  });
+// Finds reminders for cases happening tomorrow
+var findReminders = function() {
+  return knex('reminders')
+    .where('sent', false)
+    .join('cases', 'reminders.citation', '=', 'cases.citation')
+    .where('cases.date', 'tomorrow')
+    .select()
 };
 
-sendReminders().exec(function() {
-  console.log('Daily reminders sent.');
-});
+findReminders().exec(function(err, results) {
+  if (results.length === 0) {
+    console.log('No reminders to send out today.');
+    process.exit();
+  }
 
+  var count = 0;
+
+  // Send SMS reminder
+  results.forEach(function(reminder) {
+    client.sendMessage({
+      to: reminder.phone,
+      from: process.env.TWILIO_PHONE_NUMBER,
+      body: 'Reminder: You\'ve got a court case tomorrow at ' + reminder.time + ' in court room ' + reminder.room + '. Call us at (404) 658-6940 with any questions. -Atlanta Municipal Court'
+
+    }, function(err, result) {
+      if (err) return console.log(err);
+      console.log('Reminder sent to ' + reminder.phone);
+      count++;
+      if (count === results.length) process.exit();
+    });
+
+    // Update table
+    knex('reminders')
+      .where('reminder_id', '=', reminder.reminder_id)
+      .update({'sent': true})
+      .exec(function(err, results) {
+        if (err) console.log(err);
+      });
+  })
+})
