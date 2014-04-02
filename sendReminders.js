@@ -1,6 +1,8 @@
+console.log(process.env);
+
 var Knex = require('knex');
 var twilio = require('twilio');
-var client = twilio('ACa1a2f0c274fa21513d4fa48b243bd14c', '24a4142517de019719dae425082e8fbe');
+var client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 var moment = require('moment');
 
 var knex = Knex.initialize({
