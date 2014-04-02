@@ -14,14 +14,19 @@ var knex = Knex.initialize({
 app.use(logfmt.requestLogger());
 app.use(express.json());
 app.use(express.urlencoded());
-app.use(express.cookieParser());
-app.use(express.cookieSession({ secret: 'devsecret234' }));
+app.use(express.cookieParser(process.env.COOKIE_SECRET));
+app.use(express.cookieSession());
 
 // Allows CORS
 app.all('*', function(req, res, next) {
   res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Headers", "X-Requested-With");
   next();
+});
+
+// Enable CORS support for IE8. 
+app.get('/proxy.html', function(req, res) {
+  res.send('<!DOCTYPE HTML>\n' + '<script src="http://jpillora.com/xdomain/dist/0.6/xdomain.min.js" master="http://www.atlantamunicipalcourt.org"></script>');
 });
 
 app.get('/', function(req, res) {
@@ -106,11 +111,6 @@ var cleanupName = function(name) {
 
   return name;
 }
-
-// Enable CORS support for IE8. 
-app.get('/proxy.html', function(req, res) {
-  res.send('<!DOCTYPE HTML>\n' + '<script src="http://jpillora.com/xdomain/dist/0.6/xdomain.min.js" master="http://www.atlantamunicipalcourt.org"></script>');
-});
 
 var port = Number(process.env.PORT || 5000);
 app.listen(port, function() {

@@ -9,12 +9,14 @@ var knex = Knex.initialize({
 exports.recreateDB = function(data, callback) {
   var insertAll = function() {
     return Promise.all(data.map(function(cases) {
+      // Make violations a JSON blob, to keep things simple
+      cases.forEach(function(c) { c.violations = JSON.stringify(c.violations); })
       return knex('cases').insert(cases);
     }));
   };
 
   knex.schema.dropTableIfExists('cases')
-    .then(createTable)
+    .then(createCasesTable)
     .then(insertAll)
     .then(close)
     .then(function() {
@@ -22,16 +24,15 @@ exports.recreateDB = function(data, callback) {
     });
 };
 
-var createTable = function() {
-  return knex.schema.createTable('cases', function(t) {
-    t.increments('id').primary();
-    t.string('defendant', 100);
-    t.string('room', 100);
-    t.string('date', 100);
-    t.string('time', 100);
-    t.string('citation', 100);
-    t.string('violation_code', 100);
-    t.string('violation_desc', 100);
+var createCasesTable = function() {
+  return knex.schema.createTable('cases', function(table) {
+    table.increments('id').primary();
+    table.string('citation', 100);
+    table.string('defendant', 100);
+    table.date('date');
+    table.string('time', 100);
+    table.string('room', 100);
+    table.json('violations');
   });
 }
 

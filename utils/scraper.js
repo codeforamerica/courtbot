@@ -63,6 +63,8 @@ var parseCSV = function(csv, callback) {
 
 var extractCases = function(data) {
   var cases = [];
+  var casesMap = {};
+
   var prevLine = false;
   var date = moment(data[1][0]).toDate();
 
@@ -85,17 +87,27 @@ var extractCases = function(data) {
       return;
     }
 
-    var caseData = {
-      defendant: line[4].trim(),
-      room: line[0],
-      date: date,
-      time: line[1].trim(),
-      citation: parseCitation(line[5]),
-      violation_code: line[2],
-      violation_desc: line[3],
-    };
+    var citation = parseCitation(line[5]);
 
-    cases.push(caseData);
+    // Add the case if we haven't seen it before
+    if (!casesMap[citation]) {
+      var caseData = {
+        defendant: line[4].trim(),
+        room: line[0],
+        date: date,
+        time: line[1].trim(),
+        citation: citation,
+        violations: [],
+      };
+
+      casesMap[citation] = caseData;
+      cases.push(caseData);
+    }
+
+    casesMap[citation].violations.push({
+      code: line[2],
+      description: line[3],
+    })
   });
 
   return cases;
