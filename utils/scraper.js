@@ -64,7 +64,7 @@ var parseCSV = function(csv, callback) {
 var extractCases = function(data) {
   var cases = [];
   var prevLine = false;
-  var date = moment(data[1][0]);
+  var date = moment(data[1][0]).toDate();
 
   data.forEach(function(line) {
     if (prevLine) {
@@ -88,7 +88,7 @@ var extractCases = function(data) {
     var caseData = {
       defendant: line[4].trim(),
       room: line[0],
-      date: date.format('dddd, MMM Do'),
+      date: date,
       time: line[1].trim(),
       citation: parseCitation(line[5]),
       violation_code: line[2],

@@ -1,26 +1,21 @@
-var express = require("express");
-var logfmt = require("logfmt");
+var twilio = require('twilio');
+var Knex = require('knex');
+var express = require('express');
+var logfmt = require('logfmt');
+var moment = require('moment');
 var app = express();
 
-var Knex = require('knex');
 var knex = Knex.initialize({
   client: 'pg',
   connection: process.env.DATABASE_URL
 });
 
-// Require the Twilio module and create a REST client
-var twilio = require('twilio');
-var client = twilio('PN4f8d200af39a91f20272f96a5ba8b050', 'ACa1a2f0c274fa21513d4fa48b243bd14c');
-
 // Express Middleware
 app.use(logfmt.requestLogger());
 app.use(express.json());
 app.use(express.urlencoded());
-
 app.use(express.cookieParser());
-app.use(express.cookieSession({
-  secret: 'devsecret234'
-}));
+app.use(express.cookieSession({ secret: 'devsecret234' }));
 
 // Allows CORS
 app.all('*', function(req, res, next) {
@@ -54,7 +49,6 @@ app.get('/cases', function(req, res) {
   var query = query.limit(10);
 
   query.exec(function(err, data) {
-    console.log("data found:" + data);
     res.send(data);
   })
 });
@@ -74,13 +68,13 @@ app.post('/sms', function(req, res) {
         date: match.date
       }).exec(function() {});
 
-      twiml.sms('Sounds good. We\'ll text you a day before your case.');
+      twiml.sms('Sounds good. We\'ll text you a day before your case. Call us at (404) 658-6940 with any other questions.');
       req.session.askedReminder = false;
-      res.send(twiml.toString())
+      res.send(twiml.toString());
     } else if (text === 'NO') {
-      twiml.sms('Alright, no problem. See you on your court date.');
+      twiml.sms('Alright, no problem. See you on your court date. Call us at (404) 658-6940 with any other questions.');
       req.session.askedReminder = false;
-      res.send(twiml.toString())
+      res.send(twiml.toString());
     }
   }
 
@@ -90,7 +84,8 @@ app.post('/sms', function(req, res) {
     } else {
       var match = results[0];
       var name = cleanupName(match.defendant);
-      twiml.sms('Found a court case for ' + name + ' on ' + match.date + ' at ' + match.time +'. Go to courtroom ' + match.room +'. Would you like a reminder the day before?');
+      var date = moment(match.date).format('dddd, MMM Do');
+      twiml.sms('Found a court case for ' + name + ' on ' + date + ' at ' + match.time +'. Go to courtroom ' + match.room +'. Would you like a reminder the day before?');
 
       req.session.match = match;
       req.session.askedReminder = true;
