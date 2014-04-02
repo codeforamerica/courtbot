@@ -17,6 +17,11 @@ app.use(logfmt.requestLogger());
 app.use(express.json());
 app.use(express.urlencoded());
 
+app.use(express.cookieParser());
+app.use(express.cookieSession({
+  secret: 'devsecret234'
+}));
+
 // Allows CORS
 app.all('*', function(req, res, next) {
   res.header("Access-Control-Allow-Origin", "*");
@@ -57,15 +62,38 @@ app.get('/cases', function(req, res) {
 // Respond to text messages that come in from Twilio
 app.post('/sms', function(req, res) {
   var twiml = new twilio.TwimlResponse();
-  var citation = req.body.Body.toUpperCase();
+  var text = req.body.Body.toUpperCase();
 
-  knex('cases').where('citation', citation).select().then(function(results) {
+  if (req.session.askedReminder) {
+    if (text === 'YES') {
+      var match = req.session.match;
+      knex('reminders').insert({
+        citation: match.citation,
+        sent: false,
+        phone: req.body.From,
+        date: match.date
+      }).exec(function() {});
+
+      twiml.sms('Sounds good. We\'ll text you a day before your case.');
+      req.session.askedReminder = false;
+      res.send(twiml.toString())
+    } else if (text === 'NO') {
+      twiml.sms('Alright, no problem. See you on your court date.');
+      req.session.askedReminder = false;
+      res.send(twiml.toString())
+    }
+  }
+
+  knex('cases').where('citation', text).select().then(function(results) {
     if (!results || results.length === 0) {
       twiml.sms('Sorry, we couldn\'t find that court case. Please call us at (404) 658-6940.');
     } else {
       var match = results[0];
       var name = cleanupName(match.defendant);
-      twiml.sms('Found a court case for ' + name + ' on ' + match.date + ' at ' + match.time +'. Go to courtroom ' + match.room +'. Call us at (404) 658-6940 for other questions.');
+      twiml.sms('Found a court case for ' + name + ' on ' + match.date + ' at ' + match.time +'. Go to courtroom ' + match.room +'. Would you like a reminder the day before?');
+
+      req.session.match = match;
+      req.session.askedReminder = true;
     }
 
     res.send(twiml.toString());
