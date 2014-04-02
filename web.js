@@ -54,6 +54,11 @@ app.get('/cases', function(req, res) {
   var query = query.limit(10);
 
   query.exec(function(err, data) {
+    // Add readable dates, to avoid browser side date issues
+    data.forEach(function(d) {
+      d.readableDate = moment(d.date).format('dddd, MMM Do');
+    });
+    
     res.send(data);
   })
 });
