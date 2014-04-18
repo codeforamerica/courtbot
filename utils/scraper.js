@@ -57,8 +57,8 @@ var parseCSV = function(csv, callback) {
     parse(data, {delimiter: ',', escape: '"'}, function(err, rows) {
       var cases = extractCases(rows);
       return callback(undefined, cases);
-    })
-  })
+    });
+  });
 };
 
 var extractCases = function(data) {
@@ -76,6 +76,10 @@ var extractCases = function(data) {
 
     // Short lines are usually parser errors and should be ignored
     if (line.length < 4) return;
+
+    // If we have only 5 fields, the case is missing a court room. 
+    // Skip these fields for the moment, not sure how to handle it.
+    if (line.length === 5) return;
 
     // Ignore the lines that are just table headers
     if (line[0] === 'Defendant') return;
@@ -107,7 +111,7 @@ var extractCases = function(data) {
     casesMap[citation].violations.push({
       code: line[2],
       description: line[3],
-    })
+    });
   });
 
   return cases;
