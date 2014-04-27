@@ -26,7 +26,7 @@ app.all('*', function(req, res, next) {
 
 // Enable CORS support for IE8. 
 app.get('/proxy.html', function(req, res) {
-  res.send('<!DOCTYPE HTML>\n' + '<script src="http://jpillora.com/xdomain/dist/0.6/xdomain.min.js" master="http://www.atlantamunicipalcourt.org"></script>');
+  res.send('<!DOCTYPE HTML>\n' + '<script src="http://jpillora.com/xdomain/dist/0.6/xdomain.min.js" master="http://court.atlantaga.gov"></script>');
 });
 
 app.get('/', function(req, res) {
