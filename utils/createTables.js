@@ -24,5 +24,5 @@ var close = function() {
 createTable()
   .then(close)
   .then(function() {
-    console.log('Tables created.')
+    console.log('Tables created.');
   });
