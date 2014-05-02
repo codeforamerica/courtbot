@@ -45,13 +45,13 @@ app.get('/cases', function(req, res) {
 
   // Search for Names
   var query = knex('cases').where('defendant', 'like', '%' + params[0] + '%');
-  if (params.length > 1) query = query.andWhere('defendant', 'like', '%' + params[1] + '%')
+  if (params.length > 1) query = query.andWhere('defendant', 'like', '%' + params[1] + '%');
 
   // Search for Citations
-  var query = query.orWhere('citation', 'like', '%' + params[0] + '%');
+  query = query.orWhere('citation', 'like', '%' + params[0] + '%');
 
   // Limit to ten results
-  var query = query.limit(10);
+  query = query.limit(10);
 
   query.exec(function(err, data) {
     // Add readable dates, to avoid browser side date issues
@@ -60,7 +60,7 @@ app.get('/cases', function(req, res) {
     });
     
     res.send(data);
-  })
+  });
 });
 
 // Respond to text messages that come in from Twilio
@@ -117,7 +117,7 @@ var cleanupName = function(name) {
   name = name.replace(/\w\S*/g, function(txt) { return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase(); });
 
   return name;
-}
+};
 
 var port = Number(process.env.PORT || 5000);
 app.listen(port, function() {
