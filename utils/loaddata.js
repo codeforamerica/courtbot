@@ -107,38 +107,13 @@ var recreateDB = function(cases, citations, callback) {
     });
 };
 
-/*
-Some complicattions:
-Citations can appear multiple times.
-  if they are an exact match, it's just a duplicate
-  if it's the same except for the later date, go with the later date
-  if it's different info altogether, we've got a serious problem...
-
-so, go through and organize the items into objects
-
-foreach
-  have we seen this citation before?
-  if yes
-    either a court date change or a duplicate
-  if no
-    lookup if we've created a case for it before, based on name+location
-      if yes, use the existing id
-        if date differs, we've got serious issues
-      if no, create a sequential id and populate case data
-
-end result
-  cases
-  citations
-// */
-
-// downloadfile
-//   parse it into cases and citations
-///   then... put it into the db. i guess we need two
-
-
-/*
-
-*/
+// Citation data provided in CSV has a few tricky parsing problems. The
+// main of which is that citation numbers can appear multiple times.
+// There's actually a couple reasons why:
+// 
+// 1. Duplicates produced by the SQL query that generates the file
+// 2. Date updates -- each date is included. Need to go with latest.
+// 3. Cases that use identical citatiation numbers. Typos when put into the system.
 var parseCSV = function(csv, callback) {
   if (!csv) return callback(undefined, []);
 
@@ -147,8 +122,6 @@ var parseCSV = function(csv, callback) {
     parse(data, {delimiter: '|', escape: '"'}, callback);
   });
 };
-
-
 
 var extractCourtData = function(rows) {
   var cases = [];
@@ -160,8 +133,15 @@ var extractCourtData = function(rows) {
   var counter = 1;
   var duplicatecount = 0;
 
-  rows.forEach(function(c) {
+  var latest = function(date1, date2) {
+    if (moment(date1).isAfter(date2)) {
+      return date1;
+    } else {
+      return date2;
+    }
+  };
 
+  rows.forEach(function(c) {
     var newCitation = {
       citation_number: c[5],
       violation: c[6],
@@ -177,35 +157,36 @@ var extractCourtData = function(rows) {
       time: c[4],
     };
 
+    // Since no values here are actually unique, we create some lookups
+    var citationLookup = newCitation.citation_number + newCitation.violation;
     var caseLookup = newCase.defendant + newCitation.location.slice(0, 6);
 
-    // If we've seen this citation before, it's either a duplicate,
-    // or an update of the case date. OR, it's a citation with the dpulicate 
-    // citation number. grrrrrr.
-    var prevCitation = citationsMap[newCitation.citation_number];
+    // The checks below handle the multiple citations in the dataset issue.
+    // See above for a more detailed explanation.
+    var prevCitation = citationsMap[citationLookup];
     var prevCase = casesMap[caseLookup];
 
+    // If we've seen this citation and case, this is just a date update.
+    // If we've seen this case, this is an additional citation on it
+    // Otherwise, both the case and the citation are new.
     if (prevCitation && prevCase) {
-      if (moment(newCase.date).isAfter(prevCase.date)) {
-        console.log('Changing date from', prevCase.date, 'to', newCase.date);
-        prevCase.date = newCase.date;
-      }
-    } else {
-      if (casesMap[caseLookup]) {
-        newCitation.caseId = casesMap[caseLookup].id;
-        // do some date checking here???
-      } else {
-        cases.push(newCase);
-        casesMap[caseLookup] = newCase;
+      prevCase.date = latest(prevCase.date, newCase.date);
+    } else if (prevCase) {
+      prevCase.date = latest(prevCase.date, newCase.date);
 
-        newCase.id = counter;
-        newCitation.caseId = counter;
-
-        counter++;
-      }
-      
+      newCitation.caseId = prevCase.id;
       citations.push(newCitation);
-      citationsMap[newCitation.citation_number] = newCitation;
+      citationsMap[citationLookup] = newCitation;
+    } else {
+      newCase.id = counter;
+      cases.push(newCase);
+      casesMap[caseLookup] = newCase;
+
+      newCitation.caseId = counter;
+      citations.push(newCitation);
+      citationsMap[citationLookup] = newCitation;
+
+      counter++;
     }
   });
 
