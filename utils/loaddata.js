@@ -107,6 +107,9 @@ end result
 ///   then... put it into the db. i guess we need two
 
 
+/*
+
+*/
 var parseCSV = function(csv, callback) {
   if (!csv) return callback(undefined, []);
 
@@ -149,7 +152,7 @@ parseCSV(__dirname + '/tmp/codeamerica.04302014.csv', function(err, rows) {
     // or an update of the case date.
     var prevCitation = citationsMap[newCitation.id];
     if (prevCitation) {
-      //console.log(caseLookup);
+      // console.log(caseLookup);
       var prevCase = casesMap[caseLookup];
       if (!prevCase) {
         console.log('Duplicate citation number, sigh.', newCitation);
@@ -159,6 +162,7 @@ parseCSV(__dirname + '/tmp/codeamerica.04302014.csv', function(err, rows) {
         // and other times it's multiple court cases???
         return;
       }
+      
       if (prevCase.date !== newCase.date) {
         duplicatecount++;
         // console.log(newCitation.id, prevCase.courtDate, newCase.courtDate);
@@ -188,9 +192,9 @@ parseCSV(__dirname + '/tmp/codeamerica.04302014.csv', function(err, rows) {
       citationsMap[newCitation.id] = newCitation;
     }
   });
-  recreateDB(cases, citations, function(){
-    console.log('done!');
-  });
+  // recreateDB(cases, citations, function(){
+  //   console.log('done!');
+  // });
   console.log('Duplicates: ', duplicatecount);
   // console.log(cases);
 });
