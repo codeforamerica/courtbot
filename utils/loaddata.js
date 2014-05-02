@@ -37,75 +37,6 @@ var loadData = function () {
   });
 };
 
-var createCasesTable = function() {
-  return knex.schema.createTable('cases', function(table) {
-    table.increments('id').primary();
-    table.string('defendant', 100);
-    table.date('date');
-    table.string('time', 100);
-    table.string('room', 100);
-  });
-};
-
-var createCitationsTable = function() {
-  return knex.schema.createTable('citations', function(table) {
-    table.increments('id').primary();
-    table.string('citation_number', 100);
-    table.string('violation', 100);
-    table.string('description', 100);
-    table.string('payable', 100);
-    table.string('caseId', 100);
-    table.string('location', 100);
-  });
-};
-
-var close = function() {
-  return knex.client.pool.destroy();
-};
-
-var chunk = function(arr, len) {
-  var chunks = [];
-  var i = 0;
-  var n = arr.length;
-
-  while (i < n) {
-    chunks.push(arr.slice(i, i += len));
-  }
-
-  return chunks;
-};
-
-var recreateDB = function(cases, citations, callback) {
-  // inserts citations, 1000 at a tiem.
-  var insertCitations = function() {
-    var chunks = chunk(citations, 1000);
-    return Promise.all(chunks.map(function(chunk) {
-      return knex('citations').insert(chunk);
-    }));
-  };
-
-  var insertCases = function() {
-    var chunks = chunk(cases, 1000);
-    return Promise.all(chunks.map(function(chunk) {
-      return knex('cases').insert(chunk);
-    }));
-  };
-
-
-  knex.schema
-    .dropTableIfExists('cases')
-    .then(function() {
-      return knex.schema.dropTableIfExists('citations');
-    })
-    .then(createCasesTable)
-    .then(insertCases)
-    .then(createCitationsTable)
-    .then(insertCitations)
-    .then(close)
-    .then(function() {
-      callback();
-    });
-};
 
 // Citation data provided in CSV has a few tricky parsing problems. The
 // main of which is that citation numbers can appear multiple times.
@@ -114,15 +45,6 @@ var recreateDB = function(cases, citations, callback) {
 // 1. Duplicates produced by the SQL query that generates the file
 // 2. Date updates -- each date is included. Need to go with latest.
 // 3. Cases that use identical citatiation numbers. Typos when put into the system.
-var parseCSV = function(csv, callback) {
-  if (!csv) return callback(undefined, []);
-
-  fs.readFile(csv, function(err, data) {
-    if (err) return callback(undefined, []);
-    parse(data, {delimiter: '|', escape: '"'}, callback);
-  });
-};
-
 var extractCourtData = function(rows) {
   var cases = [];
   var casesMap = {};
@@ -196,4 +118,75 @@ var extractCourtData = function(rows) {
   };
 };
 
+var recreateDB = function(cases, citations, callback) {
+  // inserts citations, 1000 at a tiem.
+  var insertCitations = function() {
+    var chunks = chunk(citations, 1000);
+    return Promise.all(chunks.map(function(chunk) {
+      return knex('citations').insert(chunk);
+    }));
+  };
+
+  var insertCases = function() {
+    var chunks = chunk(cases, 1000);
+    return Promise.all(chunks.map(function(chunk) {
+      return knex('cases').insert(chunk);
+    }));
+  };
+
+
+  knex.schema
+    .dropTableIfExists('cases')
+    .then(function() {
+      return knex.schema.dropTableIfExists('citations');
+    })
+    .then(createCasesTable)
+    .then(insertCases)
+    .then(createCitationsTable)
+    .then(insertCitations)
+    .then(close)
+    .then(function() {
+      callback();
+    });
+};
+
+var createCasesTable = function() {
+  return knex.schema.createTable('cases', function(table) {
+    table.increments('id').primary();
+    table.string('defendant', 100);
+    table.date('date');
+    table.string('time', 100);
+    table.string('room', 100);
+  });
+};
+
+var createCitationsTable = function() {
+  return knex.schema.createTable('citations', function(table) {
+    table.increments('id').primary();
+    table.string('citation_number', 100);
+    table.string('violation', 100);
+    table.string('description', 100);
+    table.string('payable', 100);
+    table.string('caseId', 100);
+    table.string('location', 100);
+  });
+};
+
+var close = function() {
+  return knex.client.pool.destroy();
+};
+
+var chunk = function(arr, len) {
+  var chunks = [];
+  var i = 0;
+  var n = arr.length;
+
+  while (i < n) {
+    chunks.push(arr.slice(i, i += len));
+  }
+
+  return chunks;
+};
+
+// Do the thing!
 loadData();
