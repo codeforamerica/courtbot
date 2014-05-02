@@ -1,16 +1,44 @@
-var fs = require('fs');
+//
+// Downloads the latest courtdate CSV file and 
+// rebuilds the database. For best results, load nightly.
+//
+var http = require('http');
+var moment = require('moment');
+var request = require('request');
 var parse = require('csv-parse');
-
-var Knex = require('knex');
 var Promise = require('bluebird');
 
+var Knex = require('knex');
 var knex = Knex.initialize({
   client: 'pg',
   connection: process.env.DATABASE_URL
 });
 
+var loadData = function () {
+  var yesterday = moment().subtract('days', 1).format('MMDDYYYY');
+  var url = 'http://courtview.atlantaga.gov/courtcalendars/' + 
+    'court_online_calendar/codeamerica.' + yesterday + '.csv';
+
+  console.log('Downloading latest CSV file...');
+  request.get(url, function(req, res) {
+    console.log('Parsing CSV File...');
+    parse(res.body, { delimiter: '|', escape: '"' }, function(err, rows) {
+      if (err) {
+        console.log('Unable to parse file: ', url);
+        process.exit(1);
+      }
+
+      console.log('Extracting court case information...');
+      var courtData = extractCourtData(rows);
+      recreateDB(courtData.cases, courtData.citations, function() {
+        console.log('Database recreated! All systems are go.');
+      });
+    });
+  });
+};
+
 var createCasesTable = function() {
-  return knex.schema.createTable('cases2', function(table) {
+  return knex.schema.createTable('cases', function(table) {
     table.increments('id').primary();
     table.string('defendant', 100);
     table.date('date');
@@ -21,7 +49,8 @@ var createCasesTable = function() {
 
 var createCitationsTable = function() {
   return knex.schema.createTable('citations', function(table) {
-    table.string('id').primary();
+    table.increments('id').primary();
+    table.string('citation_number', 100);
     table.string('violation', 100);
     table.string('description', 100);
     table.string('payable', 100);
@@ -58,13 +87,13 @@ var recreateDB = function(cases, citations, callback) {
   var insertCases = function() {
     var chunks = chunk(cases, 1000);
     return Promise.all(chunks.map(function(chunk) {
-      return knex('cases2').insert(chunk);
+      return knex('cases').insert(chunk);
     }));
   };
 
 
   knex.schema
-    .dropTableIfExists('cases2')
+    .dropTableIfExists('cases')
     .then(function() {
       return knex.schema.dropTableIfExists('citations');
     })
@@ -119,20 +148,22 @@ var parseCSV = function(csv, callback) {
   });
 };
 
-var cases = [];
-var casesMap = {};
 
-var citations = [];
-var citationsMap = {};
 
-var counter = 1;
-var duplicatecount = 0;
+var extractCourtData = function(rows) {
+  var cases = [];
+  var casesMap = {};
 
-parseCSV(__dirname + '/tmp/codeamerica.04302014.csv', function(err, rows) {
+  var citations = [];
+  var citationsMap = {};
+
+  var counter = 1;
+  var duplicatecount = 0;
+
   rows.forEach(function(c) {
 
     var newCitation = {
-      id: c[5],
+      citation_number: c[5],
       violation: c[6],
       description: c[7],
       location: c[2],
@@ -146,35 +177,20 @@ parseCSV(__dirname + '/tmp/codeamerica.04302014.csv', function(err, rows) {
       time: c[4],
     };
 
-    var caseLookup = newCase.defendant + newCase.location;
+    var caseLookup = newCase.defendant + newCitation.location.slice(0, 6);
 
     // If we've seen this citation before, it's either a duplicate,
-    // or an update of the case date.
-    var prevCitation = citationsMap[newCitation.id];
-    if (prevCitation) {
-      // console.log(caseLookup);
-      var prevCase = casesMap[caseLookup];
-      if (!prevCase) {
-        console.log('Duplicate citation number, sigh.', newCitation);
-        // i'm not sure what we should do for these cases
-        // sometimes it's re-use of citation number
-        // other times it's an update
-        // and other times it's multiple court cases???
-        return;
-      }
-      
-      if (prevCase.date !== newCase.date) {
-        duplicatecount++;
-        // console.log(newCitation.id, prevCase.courtDate, newCase.courtDate);
-      }
+    // or an update of the case date. OR, it's a citation with the dpulicate 
+    // citation number. grrrrrr.
+    var prevCitation = citationsMap[newCitation.citation_number];
+    var prevCase = casesMap[caseLookup];
 
-      // get the case
-      // compare the dates
-      // update as needed
+    if (prevCitation && prevCase) {
+      if (moment(newCase.date).isAfter(prevCase.date)) {
+        console.log('Changing date from', prevCase.date, 'to', newCase.date);
+        prevCase.date = newCase.date;
+      }
     } else {
-      
-      var caseId;
-
       if (casesMap[caseLookup]) {
         newCitation.caseId = casesMap[caseLookup].id;
         // do some date checking here???
@@ -189,12 +205,14 @@ parseCSV(__dirname + '/tmp/codeamerica.04302014.csv', function(err, rows) {
       }
       
       citations.push(newCitation);
-      citationsMap[newCitation.id] = newCitation;
+      citationsMap[newCitation.citation_number] = newCitation;
     }
   });
-  // recreateDB(cases, citations, function(){
-  //   console.log('done!');
-  // });
-  console.log('Duplicates: ', duplicatecount);
-  // console.log(cases);
-});
+
+  return {
+    cases: cases,
+    citations: citations,
+  };
+};
+
+loadData();
