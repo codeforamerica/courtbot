@@ -54,7 +54,7 @@ app.post('/sms', function(req, res) {
       db.addReminder({
         caseId: match.id,
         phone: req.body.From,
-        original_case: JSON.stringify(match)
+        originalCase: JSON.stringify(match)
       }, function(err, data) {});
 
       twiml.sms('Sounds good. We\'ll text you a day before your case. Call us at (404) 954-7914 with any other questions.');

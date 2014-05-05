@@ -8,7 +8,7 @@ var knex = Knex.initialize({
 
 var createTable = function() {
   return knex.schema.createTable('reminders', function(table) {
-    table.increments('id').primary();
+    table.increments('reminder_id').primary();
     table.dateTime('created_at');
     table.string('case_id', 100);
     table.string('phone', 100);

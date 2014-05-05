@@ -28,12 +28,13 @@ exports.fuzzySearch = function(str, callback) {
   query.exec(callback);
 };
 
-exports.addReminder = function(caseId, phone, callback) {
+exports.addReminder = function(data, callback) {
   knex('reminders').insert({
-    case_id: caseId,
+    case_id: data.caseId,
     sent: false,
-    phone: phone,
+    phone: data.phone,
     created_at: new Date(),
+    original_case: data.originalCase,
   }).exec(callback);
 };
 
