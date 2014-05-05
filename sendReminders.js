@@ -1,3 +1,6 @@
+var crypto = require('crypto');
+var decipher = crypto.createDecipher('aes256', process.env.PHONE_ENCRYPTION_KEY);  
+
 var Knex = require('knex');
 var twilio = require('twilio');
 var client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
@@ -26,8 +29,11 @@ findReminders().exec(function(err, results) {
 
   // Send SMS reminder
   results.forEach(function(reminder) {
+    var encryptedPhone = reminder.phone;
+    var phone = decipher.update(encryptedPhone, 'hex', 'utf8') + decipher.final('utf8');
+
     client.sendMessage({
-      to: reminder.phone,
+      to: phone,
       from: process.env.TWILIO_PHONE_NUMBER,
       body: 'Reminder: You\'ve got a court case tomorrow at ' + reminder.time + ' in court room ' + reminder.room + '. Call us at (404) 954-7914 with any questions. -Atlanta Municipal Court'
 
