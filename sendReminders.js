@@ -1,6 +1,4 @@
 var crypto = require('crypto');
-var decipher = crypto.createDecipher('aes256', process.env.PHONE_ENCRYPTION_KEY);  
-
 var Knex = require('knex');
 var twilio = require('twilio');
 var client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
@@ -29,8 +27,8 @@ findReminders().exec(function(err, results) {
 
   // Send SMS reminder
   results.forEach(function(reminder) {
-    var encryptedPhone = reminder.phone;
-    var phone = decipher.update(encryptedPhone, 'hex', 'utf8') + decipher.final('utf8');
+    var decipher = crypto.createDecipher('aes256', process.env.PHONE_ENCRYPTION_KEY);
+    var phone = decipher.update(reminder.phone, 'hex', 'utf8') + decipher.final('utf8');
 
     client.sendMessage({
       to: phone,

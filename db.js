@@ -1,6 +1,4 @@
 var crypto = require('crypto');
-var cipher = crypto.createCipher('aes256', process.env.PHONE_ENCRYPTION_KEY);
-
 var Knex = require('knex');
 var knex = Knex.initialize({
   client: 'pg',
@@ -32,8 +30,8 @@ exports.fuzzySearch = function(str, callback) {
 };
 
 exports.addReminder = function(data, callback) {
-  var phone = data.phone;
-  var encryptedPhone = cipher.update(phone, 'utf8', 'hex') + cipher.final('hex');
+  var cipher = crypto.createCipher('aes256', process.env.PHONE_ENCRYPTION_KEY);
+  var encryptedPhone = cipher.update(data.phone, 'utf8', 'hex') + cipher.final('hex');
 
   knex('reminders').insert({
     case_id: data.caseId,
