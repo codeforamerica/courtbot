@@ -1,5 +1,4 @@
 // Creates the reminders table.
-
 var Knex = require('knex');
 
 var knex = Knex.initialize({
@@ -9,11 +8,12 @@ var knex = Knex.initialize({
 
 var createTable = function() {
   return knex.schema.createTable('reminders', function(table) {
-    table.increments('reminder_id').primary();
+    table.increments('id').primary();
     table.dateTime('created_at');
-    table.string('citation', 100);
+    table.string('case_id', 100);
     table.string('phone', 100);
     table.boolean('sent', 100);
+    table.json('original_case');
   });
 };
 

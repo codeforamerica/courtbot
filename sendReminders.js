@@ -11,9 +11,9 @@ var knex = Knex.initialize({
 var findReminders = function() {
   return knex('reminders')
     .where('sent', false)
-    .join('cases', 'reminders.citation', '=', 'cases.citation')
+    .join('cases', 'reminders.case_id', '=', 'cases.id')
     .where('cases.date', 'tomorrow')
-    .select()
+    .select();
 };
 
 findReminders().exec(function(err, results) {
@@ -29,7 +29,7 @@ findReminders().exec(function(err, results) {
     client.sendMessage({
       to: reminder.phone,
       from: process.env.TWILIO_PHONE_NUMBER,
-      body: 'Reminder: You\'ve got a court case tomorrow at ' + reminder.time + ' in court room ' + reminder.room + '. Call us at (404) 658-6940 with any questions. -Atlanta Municipal Court'
+      body: 'Reminder: You\'ve got a court case tomorrow at ' + reminder.time + ' in court room ' + reminder.room + '. Call us at (404) 954-7914 with any questions. -Atlanta Municipal Court'
 
     }, function(err, result) {
       if (err) return console.log(err);
@@ -45,5 +45,5 @@ findReminders().exec(function(err, results) {
       .exec(function(err, results) {
         if (err) console.log(err);
       });
-  })
-})
+  });
+});

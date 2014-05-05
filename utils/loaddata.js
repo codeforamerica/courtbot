@@ -1,12 +1,11 @@
-//
 // Downloads the latest courtdate CSV file and 
 // rebuilds the database. For best results, load nightly.
-//
 var http = require('http');
 var moment = require('moment');
 var request = require('request');
 var parse = require('csv-parse');
 var Promise = require('bluebird');
+var sha1 = require('sha1');
 
 var Knex = require('knex');
 var knex = Knex.initialize({
@@ -22,15 +21,16 @@ var loadData = function () {
   console.log('Downloading latest CSV file...');
   request.get(url, function(req, res) {
     console.log('Parsing CSV File...');
-    parse(res.body, { delimiter: '|', escape: '"' }, function(err, rows) {
+    parse(res.body, { delimiter: '|', quote: false, escape: false }, function(err, rows) {
       if (err) {
         console.log('Unable to parse file: ', url);
+        console.log(err);
         process.exit(1);
       }
 
       console.log('Extracting court case information...');
-      var courtData = extractCourtData(rows);
-      recreateDB(courtData.cases, courtData.citations, function() {
+      var cases = extractCourtData(rows);
+      recreateDB(cases, function() {
         console.log('Database recreated! All systems are go.');
       });
     });
@@ -48,12 +48,7 @@ var loadData = function () {
 var extractCourtData = function(rows) {
   var cases = [];
   var casesMap = {};
-
-  var citations = [];
   var citationsMap = {};
-
-  var counter = 1;
-  var duplicatecount = 0;
 
   var latest = function(date1, date2) {
     if (moment(date1).isAfter(date2)) {
@@ -65,7 +60,7 @@ var extractCourtData = function(rows) {
 
   rows.forEach(function(c) {
     var newCitation = {
-      citation_number: c[5],
+      id: c[5],
       violation: c[6],
       description: c[7],
       location: c[2],
@@ -77,11 +72,12 @@ var extractCourtData = function(rows) {
       defendant: c[1],
       room: c[3],
       time: c[4],
+      citations: [],
     };
 
     // Since no values here are actually unique, we create some lookups
-    var citationLookup = newCitation.citation_number + newCitation.violation;
-    var caseLookup = newCase.defendant + newCitation.location.slice(0, 6);
+    var citationLookup = newCitation.id + newCitation.violation;
+    var caseLookup = newCase.id = sha1(newCase.defendant + newCitation.location.slice(0, 6));
 
     // The checks below handle the multiple citations in the dataset issue.
     // See above for a more detailed explanation.
@@ -95,55 +91,39 @@ var extractCourtData = function(rows) {
       prevCase.date = latest(prevCase.date, newCase.date);
     } else if (prevCase) {
       prevCase.date = latest(prevCase.date, newCase.date);
-
-      newCitation.caseId = prevCase.id;
-      citations.push(newCitation);
+      prevCase.citations.push(newCitation);
       citationsMap[citationLookup] = newCitation;
     } else {
-      newCase.id = counter;
       cases.push(newCase);
       casesMap[caseLookup] = newCase;
 
-      newCitation.caseId = counter;
-      citations.push(newCitation);
+      newCase.citations.push(newCitation);
       citationsMap[citationLookup] = newCitation;
-
-      counter++;
     }
   });
 
-  return {
-    cases: cases,
-    citations: citations,
-  };
+  return cases;
 };
 
-var recreateDB = function(cases, citations, callback) {
-  // inserts citations, 1000 at a tiem.
-  var insertCitations = function() {
-    var chunks = chunk(citations, 1000);
-    return Promise.all(chunks.map(function(chunk) {
-      return knex('citations').insert(chunk);
-    }));
-  };
-
+var recreateDB = function(cases, callback) {
+  // inserts cases, 1000 at a time.
   var insertCases = function() {
+    // Make violations a JSON blob, to keep things simple
+    cases.forEach(function(c) { c.citations = JSON.stringify(c.citations); });
+
     var chunks = chunk(cases, 1000);
     return Promise.all(chunks.map(function(chunk) {
       return knex('cases').insert(chunk);
     }));
   };
 
-
   knex.schema
     .dropTableIfExists('cases')
-    .then(function() {
-      return knex.schema.dropTableIfExists('citations');
-    })
     .then(createCasesTable)
     .then(insertCases)
-    .then(createCitationsTable)
-    .then(insertCitations)
+    .then(createIndexingFunction)
+    .then(dropIndex)
+    .then(createIndex)
     .then(close)
     .then(function() {
       callback();
@@ -152,24 +132,36 @@ var recreateDB = function(cases, citations, callback) {
 
 var createCasesTable = function() {
   return knex.schema.createTable('cases', function(table) {
-    table.increments('id').primary();
+    table.string('id', 100).primary();
     table.string('defendant', 100);
     table.date('date');
     table.string('time', 100);
     table.string('room', 100);
+    table.json('citations');
   });
 };
 
-var createCitationsTable = function() {
-  return knex.schema.createTable('citations', function(table) {
-    table.increments('id').primary();
-    table.string('citation_number', 100);
-    table.string('violation', 100);
-    table.string('description', 100);
-    table.string('payable', 100);
-    table.string('caseId', 100);
-    table.string('location', 100);
-  });
+// Creating an index for citation ids, stored in a JSON array
+// Using this strategy: http://stackoverflow.com/a/18405706
+var createIndexingFunction = function () {
+  var text = ['CREATE OR REPLACE FUNCTION json_val_arr(_j json, _key text)',
+              '  RETURNS text[] AS',
+              '$$',
+              'SELECT array_agg(elem->>_key)',
+              'FROM   json_array_elements(_j) AS x(elem)',
+              '$$',
+              '  LANGUAGE sql IMMUTABLE;'].join('\n');
+  return knex.raw(text);
+};
+
+var dropIndex = function() {
+  var text = "DROP INDEX IF EXISTS citation_ids_gin_idx";
+  return knex.raw(text);
+};
+
+var createIndex = function() {
+  var text = "CREATE INDEX citation_ids_gin_idx ON cases USING GIN (json_val_arr(citations, 'id'))";
+  return knex.raw(text);
 };
 
 var close = function() {

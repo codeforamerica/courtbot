@@ -1,14 +1,9 @@
 var twilio = require('twilio');
-var Knex = require('knex');
 var express = require('express');
 var logfmt = require('logfmt');
 var moment = require('moment');
+var db = require('./db');
 var app = express();
-
-var knex = Knex.initialize({
-  client: 'pg',
-  connection: process.env.DATABASE_URL
-});
 
 // Express Middleware
 app.use(logfmt.requestLogger());
@@ -30,30 +25,15 @@ app.get('/proxy.html', function(req, res) {
 });
 
 app.get('/', function(req, res) {
-  res.send('Hello World!');
+  res.send('Hello, I am CourtBot. I know things about courts.');
 });
 
-// Get a list of court cases that match either
-// a citation number of a given name. To make it
-// automatically query against both.
+// Fuzzy search that returns cases with a partial name match or
+// an exact citation match
 app.get('/cases', function(req, res) {
-  if (!req.query || !req.query.searchParameter) return res.send(400);
-  
-  // Split the name so we can search more strategically
-  var param = req.query.searchParameter.toUpperCase();
-  var params = param.split(" ");
+  if (!req.query || !req.query.q) return res.send(400);
 
-  // Search for Names
-  var query = knex('cases').where('defendant', 'like', '%' + params[0] + '%');
-  if (params.length > 1) query = query.andWhere('defendant', 'like', '%' + params[1] + '%');
-
-  // Search for Citations
-  query = query.orWhere('citation', 'like', '%' + params[0] + '%');
-
-  // Limit to ten results
-  query = query.limit(10);
-
-  query.exec(function(err, data) {
+  db.fuzzySearch(req.query.q, function(err, data) {
     // Add readable dates, to avoid browser side date issues
     data.forEach(function(d) {
       d.readableDate = moment(d.date).format('dddd, MMM Do');
@@ -69,35 +49,34 @@ app.post('/sms', function(req, res) {
   var text = req.body.Body.toUpperCase();
 
   if (req.session.askedReminder) {
-    if (text === 'YES' || text === 'YEA' || text === 'YUP') {
+    if (text === 'YES' || text === 'YEA' || text === 'YUP' || text === 'Y') {
       var match = req.session.match;
-      knex('reminders').insert({
-        citation: match.citation,
-        sent: false,
+      db.addReminder({
+        caseId: match.id,
         phone: req.body.From,
-        created_at: new Date(),
-      }).exec(function(err, results) {
-        if (err) console.log(err);
-      });
+        original_case: JSON.stringify(match)
+      }, function(err, data) {});
 
-      twiml.sms('Sounds good. We\'ll text you a day before your case. Call us at (404) 658-6940 with any other questions.');
+      twiml.sms('Sounds good. We\'ll text you a day before your case. Call us at (404) 954-7914 with any other questions.');
       req.session.askedReminder = false;
       res.send(twiml.toString());
-    } else if (text === 'NO') {
-      twiml.sms('Alright, no problem. See you on your court date. Call us at (404) 658-6940 with any other questions.');
+    } else if (text === 'NO' || text ==='N') {
+      twiml.sms('Alright, no problem. See you on your court date. Call us at (404) 954-7914 with any other questions.');
       req.session.askedReminder = false;
       res.send(twiml.toString());
     }
   }
 
-  knex('cases').where('citation', text).select().then(function(results) {
-    if (!results || results.length === 0) {
-      twiml.sms('Sorry, we couldn\'t find that court case. Please call us at (404) 658-6940.');
+  db.findCitation(text, function(err, results) {
+    // If we can't find the case, or find more than one case with the citation
+    // number, give an error and recommend they call in.
+    if (!results || results.length === 0 || results.length > 1) {
+      twiml.sms('Sorry, we couldn\'t find that court case. Please call us at (404) 954-7914.');
     } else {
       var match = results[0];
       var name = cleanupName(match.defendant);
       var date = moment(match.date).format('dddd, MMM Do');
-      twiml.sms('Found a court case for ' + name + ' on ' + date + ' at ' + match.time +'. Go to courtroom ' + match.room +'. Would you like a reminder the day before?');
+      twiml.sms('Found a court case for ' + name + ' on ' + date + ' at ' + match.time +', in courtroom ' + match.room +'. Would you like a reminder the day before? (reply YES or NO)');
 
       req.session.match = match;
       req.session.askedReminder = true;

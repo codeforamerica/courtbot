@@ -18,10 +18,11 @@
     "twilio": "~1.6.0",
     "knex": "~0.5.8",
     "bluebird": "~1.1.1",
-    "pdf2json": "~0.6.6",
     "moment": "~2.5.1",
     "async": "~0.2.10",
     "csv-parse": "0.0.1",
-    "underscore": "~1.6.0"
+    "underscore": "~1.6.0",
+    "sha1": "~1.1.0",
+    "request": "~2.34.0"
   }
 }
