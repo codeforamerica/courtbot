@@ -37,6 +37,7 @@ app.get('/cases', function(req, res) {
     // Add readable dates, to avoid browser side date issues
     data.forEach(function(d) {
       d.readableDate = moment(d.date).format('dddd, MMM Do');
+      d.payable = canPayOnline(d);
     });
     
     res.send(data);
@@ -76,15 +77,29 @@ app.post('/sms', function(req, res) {
       var match = results[0];
       var name = cleanupName(match.defendant);
       var date = moment(match.date).format('dddd, MMM Do');
-      twiml.sms('Found a court case for ' + name + ' on ' + date + ' at ' + match.time +', in courtroom ' + match.room +'. Would you like a reminder the day before? (reply YES or NO)');
 
-      req.session.match = match;
-      req.session.askedReminder = true;
+      if (canPayOnline(match)){
+        twiml.sms('Your\'re eligible to pay now and skip court. Just call (404) 658-6940 or visit court.atlantaga.gov. \n\nOtherwise, your court date is ' + date + ' at ' + match.time +', in courtroom ' + match.room + '.');
+      } else {
+        twiml.sms('Found a court case for ' + name + ' on ' + date + ' at ' + match.time +', in courtroom ' + match.room +'. Would you like a reminder the day before? (reply YES or NO)');
+
+        req.session.match = match;
+        req.session.askedReminder = true;
+      }
     }
 
     res.send(twiml.toString());
   });
 });
+
+// You can pay online if ALL your individual citations can be paid online
+var canPayOnline = function(courtCase) {
+  var eligible = true;
+  courtCase.citations.forEach(function(citation) {
+    if (citation.payable !== '1') eligible = false;
+  });
+  return eligible;
+};
 
 var cleanupName = function(name) {
   // Switch LAST, FIRST to FIRST LAST
