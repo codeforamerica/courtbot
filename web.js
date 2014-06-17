@@ -37,6 +37,7 @@ app.get('/cases', function(req, res) {
     // Add readable dates, to avoid browser side date issues
     data.forEach(function(d) {
       d.readableDate = moment(d.date).format('dddd, MMM Do');
+      d.payable = canPayOnline(d);
     });
     
     res.send(data);
