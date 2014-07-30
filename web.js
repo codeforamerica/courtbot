@@ -25,7 +25,7 @@ app.get('/proxy.html', function(req, res) {
 });
 
 app.get('/', function(req, res) {
-  res.send('Hello, I am CourtBot. I know things about courts.');
+  res.send('Hello, I am Courtbot. I have a heart of justice and a knowledge of court cases.');
 });
 
 // Fuzzy search that returns cases with a partial name match or
@@ -68,11 +68,36 @@ app.post('/sms', function(req, res) {
     }
   }
 
+  if (req.session.askedQueued) {
+    if (text === 'YES' || text === 'YEA' || text === 'YUP' || text === 'Y') {
+      db.addQueued({
+        citationId: req.session.citationId,
+        phone: req.body.From,
+      }, function(err, data) {});
+
+      twiml.sms('Sounds good. We\'ll text you in the next 14 days. Call us at (404) 954-7914 with any other questions.');
+      req.session.askedQueued = false;
+      res.send(twiml.toString());
+    } else if (text === 'NO' || text ==='N') {
+      twiml.sms('No problem. Call us at (404) 954-7914 with any other questions.');
+      req.session.askedQueued = false;
+      res.send(twiml.toString());
+    }
+  }
+
   db.findCitation(text, function(err, results) {
     // If we can't find the case, or find more than one case with the citation
     // number, give an error and recommend they call in.
     if (!results || results.length === 0 || results.length > 1) {
-      twiml.sms('Sorry, we couldn\'t find that court case. Please call us at (404) 954-7914.');
+      var correctLengthCitation = 6 <= text.length && text.length <= 9;
+      if (correctLengthCitation) {
+        twiml.sms('Couldn\'t find your case. It takes 14 days for new citations to appear in the sytem. Would you like a text when we find your information? (Reply YES or NO)');
+
+        req.session.askedQueued = true;
+        req.session.citationId = text;
+      } else {
+        twiml.sms('Sorry, we couldn\'t find that court case. Please call us at (404) 954-7914.');
+      }
     } else {
       var match = results[0];
       var name = cleanupName(match.defendant);

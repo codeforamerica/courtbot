@@ -42,6 +42,18 @@ exports.addReminder = function(data, callback) {
   }).exec(callback);
 };
 
+exports.addQueued = function(data, callback) {
+  var cipher = crypto.createCipher('aes256', process.env.PHONE_ENCRYPTION_KEY);
+  var encryptedPhone = cipher.update(data.phone, 'utf8', 'hex') + cipher.final('hex');
+
+  knex('queued').insert({
+    citation_id: data.citationId,
+    sent: false,
+    phone: encryptedPhone,
+    created_at: new Date(),
+  }).exec(callback);
+};
+
 var escapeSQL = function(val) {
   val.replace(/[\0\n\r\b\t\\\'\"\x1a]/g, function(s) {
     switch(s) {

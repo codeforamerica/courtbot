@@ -1,0 +1,68 @@
+var crypto = require('crypto');
+var Knex = require('knex');
+var twilio = require('twilio');
+var client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+var db = require('./db.js');
+var knex = Knex.initialize({
+  client: 'pg',
+  connection: process.env.DATABASE_URL
+});
+var moment = require('moment');
+var decipher = crypto.createDecipher('aes256', process.env.PHONE_ENCRYPTION_KEY);
+
+// Finds reminders for cases happening tomorrow
+var findQueued = function() {
+  return knex('queued')
+    .where('sent', false)
+    .select();
+};
+
+findQueued().exec(sendQueuedMessage);
+count = 0;
+
+function sendQueuedMessage(err, queued) {
+  queued.forEach(function(queuedCitation) {
+    db.findCitation(queuedCitation.citation_id, function(err, results) {
+
+      if (results.length > 0) {
+        var match = results[0];
+        var name = cleanupName(match.defendant);
+        var date = moment(match.date).format('dddd, MMM Do');
+        var body = 'Your Atlanta Municipal Court information was found: a court case for ' + name + ' on ' + date + ' at ' + match.time +', in courtroom ' + match.room +'. Call us at (404) 954-7914 with any questions.';
+        var phone = decipher.update(queuedCitation.phone, 'hex', 'utf8') + decipher.final('utf8');
+
+        client.sendMessage({
+          to: phone,
+          from: process.env.TWILIO_PHONE_NUMBER,
+          body: body,
+        }, function(err, result) {
+          if (err) return console.log(err);
+          console.log('Reminder sent to ' + reminder.phone);
+          count++;
+          if (count === results.length) process.exit();
+        });
+
+        knex('queued')
+          .where('queued_id', '=', queuedCitation.queued_id)
+          .update({'sent': true})
+          .exec(function(err, results) {
+            if (err) console.log(err);
+          });
+      } else {
+        // ...
+      }
+    });
+  });
+}
+
+var cleanupName = function(name) {
+  // Switch LAST, FIRST to FIRST LAST
+  var bits = name.split(',');
+  name = bits[1] + ' ' + bits[0];
+  name = name.trim();
+
+  // Change FIRST LAST to First Last
+  name = name.replace(/\w\S*/g, function(txt) { return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase(); });
+
+  return name;
+};
