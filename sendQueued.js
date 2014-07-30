@@ -37,7 +37,7 @@ function sendQueuedMessage(err, queued) {
           body: body,
         }, function(err, result) {
           if (err) return console.log(err);
-          console.log('Reminder sent to ' + reminder.phone);
+          console.log('Queued message sent to ' + phone);
           count++;
           if (count === results.length) process.exit();
         });
