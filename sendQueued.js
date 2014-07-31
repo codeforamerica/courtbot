@@ -72,7 +72,7 @@ function sendQueuedMessage(err, queued) {
           });
         }  else {
           count++;
-          if (count === results.length) setTimeout(process.exit, 5000);
+          if (count === results.length) setTimeout(function() { process.exit(); }, 5000);
         }
       }
     });
