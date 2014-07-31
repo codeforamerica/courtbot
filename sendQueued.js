@@ -21,6 +21,11 @@ findQueued().exec(sendQueuedMessage);
 count = 0;
 
 function sendQueuedMessage(err, queued) {
+  if (queued.length === 0) {
+    console.log('No queued messages to send today.');
+    process.exit();
+  }
+
   queued.forEach(function(queuedCitation) {
     db.findCitation(queuedCitation.citation_id, function(err, results) {
       var phone = decipher.update(queuedCitation.phone, 'hex', 'utf8') + decipher.final('utf8');
