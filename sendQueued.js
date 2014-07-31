@@ -23,13 +23,13 @@ count = 0;
 function sendQueuedMessage(err, queued) {
   queued.forEach(function(queuedCitation) {
     db.findCitation(queuedCitation.citation_id, function(err, results) {
+      var phone = decipher.update(queuedCitation.phone, 'hex', 'utf8') + decipher.final('utf8');
 
       if (results.length > 0) {
         var match = results[0];
         var name = cleanupName(match.defendant);
         var date = moment(match.date).format('dddd, MMM Do');
         var body = 'Your Atlanta Municipal Court information was found: a court case for ' + name + ' on ' + date + ' at ' + match.time +', in courtroom ' + match.room +'. Call us at (404) 954-7914 with any questions.';
-        var phone = decipher.update(queuedCitation.phone, 'hex', 'utf8') + decipher.final('utf8');
 
         client.sendMessage({
           to: phone,
@@ -49,7 +49,31 @@ function sendQueuedMessage(err, queued) {
             if (err) console.log(err);
           });
       } else {
-        // ...
+        var daysSinceCreation = moment().diff(moment(queuedCitation.created_at), 'days');
+        console.log('Queued message created ' + daysSinceCreation + ' days ago.');
+
+        var ALLOWABLE_QUEUED_DAYS = 16;
+        if (daysSinceCreation > ALLOWABLE_QUEUED_DAYS) {
+          knex('queued')
+            .where('queued_id', '=', queuedCitation.queued_id)
+            .update({'sent': true})
+            .exec(function(err, results) {
+              if (err) console.log(err);
+            });
+
+          client.sendMessage({
+            to: phone,
+            from: process.env.TWILIO_PHONE_NUMBER,
+            body: 'We haven\'t been able to find your court case. Please call us at (404) 954-7914. -Atlanta Municipal Court',
+          }, function(err, result) {
+            if (err) return console.log(err);
+            count++;
+            if (count === results.length) process.exit();
+          });
+        }  else {
+          count++;
+          if (count === results.length) setTimeout(process.exit, 5000);
+        }
       }
     });
   });
