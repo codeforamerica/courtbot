@@ -18,7 +18,6 @@ var findQueued = function() {
 };
 
 findQueued().exec(sendQueuedMessage);
-count = 0;
 
 function sendQueuedMessage(err, queued) {
   if (queued.length === 0) {
@@ -26,6 +25,7 @@ function sendQueuedMessage(err, queued) {
     process.exit();
   }
 
+  var count = 0;
   queued.forEach(function(queuedCitation) {
     db.findCitation(queuedCitation.citation_id, function(err, results) {
       var phone = decipher.update(queuedCitation.phone, 'hex', 'utf8') + decipher.final('utf8');
@@ -44,7 +44,7 @@ function sendQueuedMessage(err, queued) {
           if (err) return console.log(err);
           console.log('Queued message sent to ' + phone);
           count++;
-          if (count === results.length) process.exit();
+          if (count === queued.length) process.exit();
         });
 
         knex('queued')
@@ -73,11 +73,11 @@ function sendQueuedMessage(err, queued) {
           }, function(err, result) {
             if (err) return console.log(err);
             count++;
-            if (count === results.length) process.exit();
+            if (count === queued.length) process.exit();
           });
         }  else {
           count++;
-          if (count === results.length) setTimeout(function() { process.exit(); }, 5000);
+          if (count === queued.length) setTimeout(function() { process.exit(); }, 5000);
         }
       }
     });
