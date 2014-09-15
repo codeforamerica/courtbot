@@ -1,0 +1,13 @@
+{
+  "browser": true,      // Define globals exposed by modern browsers
+  "eqeqeq": true,       // Prohibit use of == and != in favor of === and !==
+  "freeze": true,       // Prohibits overwriting prototypes of native objects
+  "indent": 2,          // Enforce tab width of 2 spaces.
+  "quotmark": "single", // Enforce use of single quotation marks for strings.
+  "maxdepth": 3,        // Warn on overly nested blocks of code
+  "node": true,         // Define globals exposed by Node.js.
+  "sub": true,          // Suppress warnings about bracket syntax for arrays.
+  "trailing": true,     // Prohibit trailing whitespace.
+  "undef": true,        // Prohibit use of explicitly undeclared variables.
+  "unused": true        // Warn when variables are defined but never used.
+}

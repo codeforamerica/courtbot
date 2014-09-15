@@ -2,9 +2,9 @@
   "name": "courtbot",
   "version": "0.0.1",
   "description": "Deliver simple court data via JSON or SMS.",
-  "main": "web.js",
+  "main": "app.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "tape test/*.js"
   },
   "author": "Sam Hashemi",
   "license": "MIT",
@@ -16,7 +16,7 @@
     "logfmt": "~0.23.0",
     "pg": "~2.11.1",
     "twilio": "~1.6.0",
-    "knex": "~0.5.8",
+    "knex": "~0.5.x",
     "bluebird": "~1.1.1",
     "moment": "~2.5.1",
     "async": "~0.2.10",
@@ -24,5 +24,8 @@
     "underscore": "~1.6.0",
     "sha1": "~1.1.0",
     "request": "~2.34.0"
+  },
+  "devDependencies": {
+    "tape": "^2.14.0"
   }
 }
