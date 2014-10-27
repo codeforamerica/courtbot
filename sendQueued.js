@@ -31,7 +31,7 @@ function sendQueuedMessage(err, queued) {
       var decipher = crypto.createDecipher('aes256', process.env.PHONE_ENCRYPTION_KEY);
       var phone = decipher.update(queuedCitation.phone, 'hex', 'utf8') + decipher.final('utf8');
 
-      if (results.length > 0) {
+      if (results && results.length > 0) {
         var match = results[0];
         var name = cleanupName(match.defendant);
         var date = moment(match.date).format('dddd, MMM Do');
