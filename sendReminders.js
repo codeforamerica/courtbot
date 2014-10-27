@@ -33,7 +33,7 @@ findReminders().exec(function(err, results) {
     client.sendMessage({
       to: phone,
       from: process.env.TWILIO_PHONE_NUMBER,
-      body: 'Reminder: You\'ve got a court case tomorrow at ' + reminder.time + ' in court room ' + reminder.room + '. Call us at (404) 954-7914 with any questions. -Atlanta Municipal Court'
+      body: 'Recordatorio: Tienes un caso mañana a la ' + reminder.time + ' en la sala de audiencias ' + reminder.room + '. Llámenos al (404) 954-7914 con cualquier pregunta. –Corte Municipal de Atlanta',
 
     }, function(err, result) {
       if (err) return console.log(err);

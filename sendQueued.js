@@ -35,7 +35,7 @@ function sendQueuedMessage(err, queued) {
         var match = results[0];
         var name = cleanupName(match.defendant);
         var date = moment(match.date).format('dddd, MMM Do');
-        var body = 'Your Atlanta Municipal Court information was found: a court case for ' + name + ' on ' + date + ' at ' + match.time +', in courtroom ' + match.room +'. Call us at (404) 954-7914 with any questions.';
+        var body = 'Encontramos su información con la Corte Municipal de Atlanta : hay un caso para el Sr./Sra. ' + name + ' el ' + date + ' alas ' + match.time + ', en la sala de audiencias ' + match.room + '. Llámenos al (404) 954-7914 con cualquier pregunta o para más información.';
 
         client.sendMessage({
           to: phone,
@@ -70,7 +70,7 @@ function sendQueuedMessage(err, queued) {
           client.sendMessage({
             to: phone,
             from: process.env.TWILIO_PHONE_NUMBER,
-            body: 'We haven\'t been able to find your court case. Please call us at (404) 954-7914. -Atlanta Municipal Court',
+            body: 'No hemos podido encontrar su caso. Por favor llámenos al (404) 954-7914. -Corte Municipal de Atlanta',
           }, function(err, result) {
             if (err) return console.log(err);
             count++;

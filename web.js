@@ -25,7 +25,7 @@ app.get('/proxy.html', function(req, res) {
 });
 
 app.get('/', function(req, res) {
-  res.send('Hello, I am Courtbot. I have a heart of justice and a knowledge of court cases.');
+  res.send('Hello, I am Spanish Courtbot. I have a heart of justicia and a conocimiento of court cases.');
 });
 
 // Fuzzy search that returns cases with a partial name match or
@@ -50,7 +50,7 @@ app.post('/sms', function(req, res) {
   var text = req.body.Body.toUpperCase();
 
   if (req.session.askedReminder) {
-    if (text === 'YES' || text === 'YEA' || text === 'YUP' || text === 'Y') {
+    if (text === 'YES' || text === 'YEA' || text === 'YUP' || text === 'Y' || text === 'SI') {
       var match = req.session.match;
       db.addReminder({
         caseId: match.id,
@@ -58,28 +58,28 @@ app.post('/sms', function(req, res) {
         originalCase: JSON.stringify(match)
       }, function(err, data) {});
 
-      twiml.sms('Sounds good. We\'ll text you a day before your case. Call us at (404) 954-7914 with any other questions.');
+      twiml.sms('Le mandaremos un mensaje de texto el día antes de su caso. Llámenos al (404) 954-7914 con cualquier otra pregunta.');
       req.session.askedReminder = false;
       res.send(twiml.toString());
     } else if (text === 'NO' || text ==='N') {
-      twiml.sms('Alright, no problem. See you on your court date. Call us at (404) 954-7914 with any other questions.');
+      twiml.sms('Sin problema. Nos vemos el día de su caso. Llamenos al (404) 954-7914 si tiene  cualquier otra pregunta.');
       req.session.askedReminder = false;
       res.send(twiml.toString());
     }
   }
 
   if (req.session.askedQueued) {
-    if (text === 'YES' || text === 'YEA' || text === 'YUP' || text === 'Y') {
+    if (text === 'YES' || text === 'YEA' || text === 'YUP' || text === 'Y' || text === 'SI') {
       db.addQueued({
         citationId: req.session.citationId,
         phone: req.body.From,
       }, function(err, data) {});
 
-      twiml.sms('Sounds good. We\'ll text you in the next 14 days. Call us at (404) 954-7914 with any other questions.');
+      twiml.sms('Bueno. Le enviaremos un mensaje de texto en los próximos 14 días. Llámenos al (404) 954-7914 con cualquier otra pregunta.');
       req.session.askedQueued = false;
       res.send(twiml.toString());
     } else if (text === 'NO' || text ==='N') {
-      twiml.sms('No problem. Call us at (404) 954-7914 with any other questions.');
+      twiml.sms('Sin problema. Llámenos al (404) 954-7914 con cualquier otra pregunta.');
       req.session.askedQueued = false;
       res.send(twiml.toString());
     }
@@ -91,12 +91,12 @@ app.post('/sms', function(req, res) {
     if (!results || results.length === 0 || results.length > 1) {
       var correctLengthCitation = 6 <= text.length && text.length <= 9;
       if (correctLengthCitation) {
-        twiml.sms('Couldn\'t find your case. It takes 14 days for new citations to appear in the sytem. Would you like a text when we find your information? (Reply YES or NO)');
+        twiml.sms('No encontramos su caso. Tarda hasta 14 días para que casos nuevos aparezcan en nuestro sistema. ¿Gustaría un texto cuando encontramos su información? (Responda SI o NO)');
 
         req.session.askedQueued = true;
         req.session.citationId = text;
       } else {
-        twiml.sms('Sorry, we couldn\'t find that court case. Please call us at (404) 954-7914.');
+        twiml.sms('Lamentablemente no hemos podido encontrar su caso. Por favor llámenos al (404) 954-7914.');
       }
     } else {
       var match = results[0];
@@ -104,9 +104,9 @@ app.post('/sms', function(req, res) {
       var date = moment(match.date).format('dddd, MMM Do');
 
       if (canPayOnline(match)){
-        twiml.sms('You can pay now and skip court. Just call (404) 658-6940 or visit court.atlantaga.gov. \n\nOtherwise, your court date is ' + date + ' at ' + match.time +', in courtroom ' + match.room + '.');
+        twiml.sms('Puede pagar su multa hoy día sin necesidad de ir a corte. Simplemente llame al (404) 658-6940 o visite court.atlantaga.gov. De lo contrario, la fecha y hora de su caso es ' + date + ' ' + match.time + ', en la sala de audiencias ' + match.room + '.')
       } else {
-        twiml.sms('Found a court case for ' + name + ' on ' + date + ' at ' + match.time +', in courtroom ' + match.room +'. Would you like a reminder the day before? (reply YES or NO)');
+        twiml.sms('Spanish Encontramos un caso para el Sr./Sra. ' + name + ' el día ' + date + ' alas ' + match.time + ', en la sala de audiencias ' + match.room + '. ¿Gustaría un recordatorio el día antes? (responda SI o NO)');
 
         req.session.match = match;
         req.session.askedReminder = true;
