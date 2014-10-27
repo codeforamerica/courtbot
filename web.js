@@ -106,7 +106,7 @@ app.post('/sms', function(req, res) {
       if (canPayOnline(match)){
         twiml.sms('Puede pagar su multa hoy día sin necesidad de ir a corte. Simplemente llame al (404) 658-6940 o visite court.atlantaga.gov. De lo contrario, la fecha y hora de su caso es ' + date + ' ' + match.time + ', en la sala de audiencias ' + match.room + '.')
       } else {
-        twiml.sms('Spanish Encontramos un caso para el Sr./Sra. ' + name + ' el día ' + date + ' alas ' + match.time + ', en la sala de audiencias ' + match.room + '. ¿Gustaría un recordatorio el día antes? (responda SI o NO)');
+        twiml.sms('Encontramos un caso para el Sr./Sra. ' + name + ' el día ' + date + ' alas ' + match.time + ', en la sala de audiencias ' + match.room + '. ¿Gustaría un recordatorio el día antes? (responda SI o NO)');
 
         req.session.match = match;
         req.session.askedReminder = true;
