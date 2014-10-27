@@ -50,4 +50,4 @@ heroku open
 
 Finally, you'll want to setup scheduler to run the various tasks each day. Here's the recommended config:
 
-<INSERT IMAGE HERE>
+![scheduler settings](https://cloud.githubusercontent.com/assets/1435836/4785655/2893dd9a-5d83-11e4-9618-d743bee27d2f.png)
