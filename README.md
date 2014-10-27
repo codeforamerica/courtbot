@@ -44,7 +44,7 @@ heroku config:set PHONE_ENCRYPTION_KEY=<random string>
 git push heroku master
 heroku run node utils/createQueuedTable.js
 heroku run node utils/createRemindersTable.js
-heroku run node loaddata.js
+heroku run node utils/loaddata.js
 heroku open
 ```
 
