@@ -4,13 +4,13 @@ Courtbot is a simple web service for handling court case data. It offers a basic
 
 Specifically, the twilio features include:
 
-- **Payable Prompt.** If a case can be paid immediately, the app offers a phone number and link to being payment.
+- **Payable Prompt.** If a case can be paid immediately, the app offers a phone number and link to begin payment.
 - **Reminders.** If a case requires a court appearance, the app allows users to sign up for reminders, served 24 hours in advance of the case.
 - **Queued Cases.** If a case isn't in the system (usually because it takes two weeks for paper citations to be put into the computer), the app allows users to get information when it becomes available. The app continues checking each day for up to 16 days and sends the case information when found (or an apology if not).
 
 ## Running Locally
 
-First, install [node](https://github.com/codeforamerica/howto/blob/master/Node.js.md), [postgres]](https://github.com/codeforamerica/howto/blob/master/PostgreSQL.md), and [foreman](https://github.com/ddollar/foreman).
+First, install [node](https://github.com/codeforamerica/howto/blob/master/Node.js.md), [postgres](https://github.com/codeforamerica/howto/blob/master/PostgreSQL.md), and [foreman](https://github.com/ddollar/foreman).
 
 Then, to create the tables and load in initial data:
 
@@ -20,7 +20,7 @@ node utils/createRemindersTable.js
 node loaddata.js
 ```
 
-Since the app uses twilio, it requires a bit of configuration. Get a twilio account, create a .env file by running `mv .env.sample .env`, and add your twilio authentication information. While you're there, add a cookie secret and an encryption key (long random strings).
+Since the app uses twilio to send text messages, it requires a bit of configuration. Get a [twilio account](http://www.twilio.com/), create a .env file by running `mv .env.sample .env`, and add your twilio authentication information. While you're there, add a cookie secret and an encryption key (long random strings).
 
 To start the web service:
 
@@ -51,4 +51,3 @@ heroku open
 Finally, you'll want to setup scheduler to run the various tasks each day. Here's the recommended config:
 
 <INSERT IMAGE HERE>
-
