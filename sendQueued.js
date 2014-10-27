@@ -8,7 +8,7 @@ var knex = Knex.initialize({
   connection: process.env.DATABASE_URL
 });
 var moment = require('moment');
-var decipher = crypto.createDecipher('aes256', process.env.PHONE_ENCRYPTION_KEY);
+
 
 // Finds reminders for cases happening tomorrow
 var findQueued = function() {
@@ -28,6 +28,7 @@ function sendQueuedMessage(err, queued) {
   var count = 0;
   queued.forEach(function(queuedCitation) {
     db.findCitation(queuedCitation.citation_id, function(err, results) {
+      var decipher = crypto.createDecipher('aes256', process.env.PHONE_ENCRYPTION_KEY);
       var phone = decipher.update(queuedCitation.phone, 'hex', 'utf8') + decipher.final('utf8');
 
       if (results.length > 0) {
