@@ -25,7 +25,7 @@ app.get('/proxy.html', function(req, res) {
 });
 
 app.get('/', function(req, res) {
-  res.send('Hello, I am Courtbot. I have a heart of justice and a knowledge of court cases.');
+  res.send('Hello, I am Courtbot! I have a heart of justice and a knowledge of court cases.');
 });
 
 // Fuzzy search that returns cases with a partial name match or
