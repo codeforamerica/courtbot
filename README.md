@@ -12,12 +12,20 @@ Specifically, the twilio features include:
 
 First, install [node](https://github.com/codeforamerica/howto/blob/master/Node.js.md), [postgres](https://github.com/codeforamerica/howto/blob/master/PostgreSQL.md), and [foreman](https://github.com/ddollar/foreman).
 
+To get started:
+
+```console
+git clone https://github.com/codeforamerica/courtbot
+cd courtbot
+npm install
+```
+
 Then, to create the tables and load in initial data:
 
 ```console
 node utils/createQueuedTable.js
 node utils/createRemindersTable.js
-node loaddata.js
+node utils/loaddata.js
 ```
 
 Since the app uses twilio to send text messages, it requires a bit of configuration. Get a [twilio account](http://www.twilio.com/), create a .env file by running `mv .env.sample .env`, and add your twilio authentication information. While you're there, add a cookie secret and an encryption key (long random strings).
