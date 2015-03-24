@@ -1,4 +1,4 @@
-// Downloads the latest courtdate CSV file and 
+// Downloads the latest courtdate CSV file and
 // rebuilds the database. For best results, load nightly.
 var http = require('http');
 var moment = require('moment');
@@ -15,25 +15,30 @@ var knex = Knex.initialize({
 
 var loadData = function () {
   var yesterday = moment().subtract('days', 1).format('MMDDYYYY');
-  var url = 'http://courtview.atlantaga.gov/courtcalendars/' + 
+  var url = 'http://courtview.atlantaga.gov/courtcalendars/' +
     'court_online_calendar/codeamerica.' + yesterday + '.csv';
 
   console.log('Downloading latest CSV file...');
   request.get(url, function(req, res) {
     console.log('Parsing CSV File...');
-    parse(res.body, { delimiter: '|', quote: false, escape: false }, function(err, rows) {
-      if (err) {
-        console.log('Unable to parse file: ', url);
-        console.log(err);
-        process.exit(1);
-      }
+    if (res.statusCode == 404) {
+      console.log("404 page not found: ", url);
+    } else {
+      parse(res.body, {delimiter: '|', quote: false, escape: false}, function(err, rows) {
+        if (err) {
+          console.log('Unable to parse file: ', url);
+          console.log(err);
+          process.exit(1);
+        }
 
-      console.log('Extracting court case information...');
-      var cases = extractCourtData(rows);
-      recreateDB(cases, function() {
-        console.log('Database recreated! All systems are go.');
+        console.log('Extracting court case information...');
+        console.log(rows);
+        var cases = extractCourtData(rows);
+        recreateDB(cases, function() {
+          console.log('Database recreated! All systems are go.');
+        });
       });
-    });
+    }
   });
 };
 
@@ -41,7 +46,7 @@ var loadData = function () {
 // Citation data provided in CSV has a few tricky parsing problems. The
 // main of which is that citation numbers can appear multiple times.
 // There's actually a couple reasons why:
-// 
+//
 // 1. Duplicates produced by the SQL query that generates the file
 // 2. Date updates -- each date is included. Need to go with latest.
 // 3. Cases that use identical citatiation numbers. Typos when put into the system.
