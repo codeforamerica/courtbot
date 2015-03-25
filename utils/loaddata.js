@@ -23,6 +23,7 @@ var loadData = function () {
   return new Promise(function (resolve, reject) {
     request.get(url, function(req, res) {
       console.log('Parsing CSV File...');
+
       if (res.statusCode == 404) {
         console.log("404 page not found: ", url);
         reject("404 page not found");
@@ -38,7 +39,7 @@ var loadData = function () {
           var cases = extractCourtData(rows);
           recreateDB(cases, function() {
             console.log('Database recreated! All systems are go.');
-            resolve("Finished");
+            resolve(true);
           });
         });
       }
