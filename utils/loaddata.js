@@ -19,25 +19,30 @@ var loadData = function () {
     'court_online_calendar/codeamerica.' + yesterday + '.csv';
 
   console.log('Downloading latest CSV file...');
-  request.get(url, function(req, res) {
-    console.log('Parsing CSV File...');
-    if (res.statusCode == 404) {
-      console.log("404 page not found: ", url);
-    } else {
-      parse(res.body, {delimiter: '|', quote: false, escape: false}, function(err, rows) {
-        if (err) {
-          console.log('Unable to parse file: ', url);
-          console.log(err);
-          process.exit(1);
-        }
 
-        console.log('Extracting court case information...');
-        var cases = extractCourtData(rows);
-        recreateDB(cases, function() {
-          console.log('Database recreated! All systems are go.');
+  return new Promise(function (resolve, reject) {
+    request.get(url, function(req, res) {
+      console.log('Parsing CSV File...');
+      if (res.statusCode == 404) {
+        console.log("404 page not found: ", url);
+        reject("404 page not found");
+      } else {
+        parse(res.body, {delimiter: '|', quote: false, escape: false}, function(err, rows) {
+          if (err) {
+            console.log('Unable to parse file: ', url);
+            console.log(err);
+            reject(err);
+          }
+
+          console.log('Extracting court case information...');
+          var cases = extractCourtData(rows);
+          recreateDB(cases, function() {
+            console.log('Database recreated! All systems are go.');
+            resolve("Finished");
+          });
         });
-      });
-    }
+      }
+    });
   });
 };
 
@@ -185,4 +190,5 @@ var chunk = function(arr, len) {
 };
 
 // Do the thing!
-loadData();
+
+module.exports = loadData;
