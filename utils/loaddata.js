@@ -32,7 +32,6 @@ var loadData = function () {
         }
 
         console.log('Extracting court case information...');
-        console.log(rows);
         var cases = extractCourtData(rows);
         recreateDB(cases, function() {
           console.log('Database recreated! All systems are go.');
