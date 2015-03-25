@@ -45,10 +45,22 @@ describe("Loading of Data", function() {
       }, assert.failed);
     });
 
-    it("creates 38 cases", function() {
+    it("creates 38 cases", function() { // there are 41 rows but 3 are repeats
       return require("../utils/loaddata")().then(function(resp) {
         return knex("cases").count('* as count').then(function(rows) {
           expect(rows[0].count).to.equal('38');
+        }, assert.failed);
+      }, assert.failed);
+    });
+
+    it("properly manages a duplicate defendant", function() {
+      return require("../utils/loaddata")().then(function(resp) {
+        return knex("cases").where({ defendant: "RUCKER, SEAN D"}).then(function(rows) {
+          expect(rows[0].defendant).to.equal('RUCKER, SEAN D');
+          expect(rows[0].room).to.equal('JRYASM');
+          expect(rows[0].citations.length).to.equal(2);
+          expect(rows[0].citations[0].id).to.equal('4849358');
+          expect(rows[0].citations[1].id).to.equal('4849359');
         }, assert.failed);
       }, assert.failed);
     });
