@@ -53,6 +53,17 @@ describe("Loading of Data", function() {
       }, assert.failed);
     });
 
+    it("properly manages a single defendant", function() {
+      return require("../utils/loaddata")().then(function(resp) {
+        return knex("cases").where({ defendant: "BARBER, DIANA S."}).then(function(rows) {
+          expect(rows[0].defendant).to.equal('BARBER, DIANA S.');
+          expect(rows[0].room).to.equal('CNVCRT');
+          expect(rows[0].citations.length).to.equal(1);
+          expect(rows[0].citations[0].id).to.equal('4736480');
+        }, assert.failed);
+      }, assert.failed);
+    });
+
     it("properly manages a duplicate defendant", function() {
       return require("../utils/loaddata")().then(function(resp) {
         return knex("cases").where({ defendant: "RUCKER, SEAN D"}).then(function(rows) {
