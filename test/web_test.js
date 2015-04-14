@@ -51,7 +51,7 @@ describe("GET /cases", function() {
       });
   });
 
-  it("finds exact matches", function(done) {
+  it("finds partial matches of name", function(done) {
     knex('cases').del().then(function() {
       knex('cases').insert([turnerData(1), turnerData(2)]).then(function() {
         request(app)
@@ -65,6 +65,36 @@ describe("GET /cases", function() {
       });
     });
   });
+
+  it("finds exact matches of id", function(done) {
+    knex('cases').del().then(function() {
+      knex('cases').insert([turnerData()]).then(function() {
+        request(app)
+          .get('/cases?q=4928456')
+          .expect(200)
+          .end(function(err, res) {
+            if (err) return done(err);
+            expect(JSON.parse(res.text)).to.deep.equal([turnerDataAsObject()]);
+            done();
+          });
+      });
+    });
+  });
+
+  it("doesnt find partial matches of id", function(done) {
+    knex('cases').del().then(function() {
+      knex('cases').insert([turnerData()]).then(function() {
+        request(app)
+          .get('/cases?q=492845')
+          .expect(200)
+          .end(function(err, res) {
+            if (err) return done(err);
+            expect(JSON.parse(res.text)).to.deep.equal([]);
+            done();
+          });
+      });
+    });
+  });
 });
 
 function turnerData(v) {
@@ -73,7 +103,7 @@ function turnerData(v) {
     room: 'CNVCRT',
     time: '01:00:00 PM',
     citations: '[{"id":"4928456","violation":"40-8-76.1","description":"SAFETY BELT VIOLATION","location":"27 DECAATUR ST","payable":"1"}]',
-    id: '677167760f89d6f6ddf7ed19ccb63c15486a0eab' + (v||0)
+    id: '677167760f89d6f6ddf7ed19ccb63c15486a0eab' + (v||"")
   };
 }
 
