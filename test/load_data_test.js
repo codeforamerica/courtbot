@@ -35,7 +35,7 @@ describe("Loading of Data", function() {
       nock('http://courtview.atlantaga.gov')
         .get('/courtcalendars/court_online_calendar/codeamerica.03012015.csv')
         .reply(200, function() {
-          return fs.createReadStream('tests/fixtures/codeamerica.03012015.csv');
+          return fs.createReadStream('test/fixtures/codeamerica.03012015.csv');
         });
     });
 
