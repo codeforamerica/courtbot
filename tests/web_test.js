@@ -19,7 +19,7 @@ var knex = Knex.initialize({
 
 describe("GET /", function() {
   it("responds with a simple message", function(done) {
-    nock.enableNetConnect();
+    nock.enableNetConnect('127.0.0.1');
     request(app)
       .get('/')
       .expect('Content-Length', '79')
@@ -30,4 +30,6 @@ describe("GET /", function() {
         done();
       });
   });
+
+
 });
