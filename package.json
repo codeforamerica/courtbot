@@ -16,6 +16,7 @@
     "bluebird": "~1.1.1",
     "chai": "^2.1.2",
     "csv-parse": "0.0.1",
+    "dotenv": "^1.1.0",
     "express": "~3.4.8",
     "knex": "~0.5.8",
     "logfmt": "~0.23.0",
@@ -29,5 +30,8 @@
     "timekeeper": "0.0.5",
     "twilio": "~1.6.0",
     "underscore": "~1.6.0"
+  },
+  "devDependencies": {
+    "supertest": "^0.15.0"
   }
 }
