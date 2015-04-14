@@ -17,9 +17,10 @@ var knex = Knex.initialize({
   connection: process.env.DATABASE_URL
 });
 
+nock.enableNetConnect('127.0.0.1');
+
 describe("GET /", function() {
   it("responds with a simple message", function(done) {
-    nock.enableNetConnect('127.0.0.1');
     request(app)
       .get('/')
       .expect('Content-Length', '79')
@@ -30,6 +31,12 @@ describe("GET /", function() {
         done();
       });
   });
+});
 
-
+describe("GET /cases", function() {
+  it("400s when there is no ?q=", function(done) {
+    request(app)
+      .get('/cases')
+      .expect(400, done);
+  });
 });
