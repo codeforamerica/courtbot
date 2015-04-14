@@ -19,13 +19,13 @@ app.all('*', function(req, res, next) {
   next();
 });
 
-// Enable CORS support for IE8. 
+// Enable CORS support for IE8.
 app.get('/proxy.html', function(req, res) {
   res.send('<!DOCTYPE HTML>\n' + '<script src="http://jpillora.com/xdomain/dist/0.6/xdomain.min.js" master="http://court.atlantaga.gov"></script>');
 });
 
 app.get('/', function(req, res) {
-  res.send('Hello, I am Courtbot. I have a heart of justice and a knowledge of court cases.');
+  res.status(200).send('Hello, I am Courtbot. I have a heart of justice and a knowledge of court cases.');
 });
 
 // Fuzzy search that returns cases with a partial name match or
@@ -39,7 +39,7 @@ app.get('/cases', function(req, res) {
       d.readableDate = moment(d.date).format('dddd, MMM Do');
       d.payable = canPayOnline(d);
     });
-    
+
     res.send(data);
   });
 });
@@ -143,3 +143,4 @@ app.listen(port, function() {
   console.log("Listening on " + port);
 });
 
+module.exports = app;
