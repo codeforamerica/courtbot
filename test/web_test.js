@@ -11,6 +11,7 @@ var Promise = require('bluebird');
 var moment = require("moment");
 var _ = require("underscore");
 var cookieParser = require("cookie-parser");
+var crypto = require('crypto');
 var Session = require('supertest-session')({
   app: require('../web')
 });
@@ -109,8 +110,10 @@ describe("POST /sms", function() {
   beforeEach(function(done) {
     knex('cases').del().then(function() {
       knex('reminders').del().then(function() {
-        knex('cases').insert([turnerData()]).then(function() {
-          done();
+        knex('queued').del().then(function() {
+          knex('cases').insert([turnerData()]).then(function() {
+            done();
+          });
         });
       });
     });
@@ -262,8 +265,13 @@ describe("POST /sms", function() {
           end(function(err, res) {
             if (err) { return done(err); }
             setTimeout(function() { // This is a hack because the DB operation happens ASYNC
-              knex("reminders").count('* as count').then(function(rows) {
-                expect(rows[0].count).to.equal('1');
+              knex("reminders").select("*").groupBy("reminders.reminder_id").count('* as count').then(function(rows) {
+                var record = rows[0];
+                expect(record.count).to.equal('1');
+                expect(record.phone).to.equal(cypher("+12223334444"));
+                expect(record.case_id).to.equal('677167760f89d6f6ddf7ed19ccb63c15486a0eab');
+                expect(record.sent).to.equal(false);
+                expect(JSON.parse(record.original_case)).to.deep.equal(rawTurnerDataAsObject("", false));
                 done();
               }, done);
             }, 200);
@@ -316,7 +324,79 @@ describe("POST /sms", function() {
   });
 
   context("with session.askedQueued", function() {
+    // This cookie comes from "sets the askedQueued and citationId cookies" in order to avoid finicky node session management / encryption
+    // TODO: Have this be a hash that is set and encrypted instead of hardcoded like this
+    var cookieArr = ['connect.sess=s%3Aj%3A%7B%22askedQueued%22%3Atrue%2C%22citationId%22%3A%22123456%22%7D.%2FuRCxqdZogql42ti2bU0yMSOU0CFKA0kbL81MQb5o24; Path=/; HttpOnly'];
 
+    describe("the user texts YES", function() {
+      var params = { Body: "Y", From: "+12223334444" };
+
+      it("creates a queued", function(done) {
+        sess.
+          post('/sms').
+          set('Cookie', cookieArr).
+          send(params).
+          expect(200).
+          end(function(err, res) {
+            if (err) { return done(err); }
+            setTimeout(function() { // This is a hack because the DB operation happens ASYNC
+              knex("queued").select("*").groupBy("queued.queued_id").count('* as count').then(function(rows) {
+                var record = rows[0];
+                expect(record.count).to.equal('1');
+                expect(record.phone).to.equal(cypher("+12223334444"));
+                expect(record.citation_id).to.equal('123456');
+                expect(record.sent).to.equal(false);
+                done();
+              }, done);
+            }, 200);
+          });
+      });
+
+      it("tells the user we'll text them", function(done) {
+        sess.
+          post('/sms').
+          set('Cookie', cookieArr).
+          send(params).
+          expect(200).
+          end(function(err, res) {
+            expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Sounds good. We&apos;ll text you in the next 14 days. Call us at (404) 954-7914 with any other questions.</Sms></Response>');
+            done();
+          });
+      });
+    });
+
+    describe("the user texts NO", function() {
+      var params = { Body: "No", From: "+12223334444" };
+
+      it("doesn't create a queued", function(done) {
+        sess.
+          post('/sms').
+          set('Cookie', cookieArr).
+          send(params).
+          expect(200).
+          end(function(err, res) {
+            if (err) { return done(err); }
+            setTimeout(function() { // This is a hack because the DB operation happens ASYNC
+              knex("queued").count('* as count').then(function(rows) {
+                expect(rows[0].count).to.equal('0');
+                done();
+              }, done);
+            }, 200);
+          });
+      });
+
+      it("tells the user we'll text them", function(done) {
+        sess.
+          post('/sms').
+          set('Cookie', cookieArr).
+          send(params).
+          expect(200).
+          end(function(err, res) {
+            expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>No problem. Call us at (404) 954-7914 with any other questions.</Sms></Response>');
+            done();
+          });
+      });
+    });
   });
 });
 
@@ -364,4 +444,9 @@ function getConnectCookie() {
   });
   var cookie = sessionCookie['connect.sess'];
   return cookieParser.JSONCookie(cookieParser.signedCookie(cookie, process.env.COOKIE_SECRET));
+}
+
+function cypher(phone) {
+  var cipher = crypto.createCipher('aes256', process.env.PHONE_ENCRYPTION_KEY);
+  return cipher.update(phone, 'utf8', 'hex') + cipher.final('hex');
 }
