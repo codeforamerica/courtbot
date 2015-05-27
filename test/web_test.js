@@ -123,14 +123,62 @@ describe("POST /sms", function() {
 
   context("without session set", function() {
     context("with 1 matching court case", function() {
-      var params = "4928456";
+      var params = { Body: "4928456" };
 
       context("it can pay online", function() {
+        beforeEach(function(done) {
+          knex('cases').del().then(function() {
+            knex('cases').insert([turnerData("", true)]).then(function() {
+              done();
+            });
+          });
+        });
 
+        it("responds that we can pay now and skip court", function(done) {
+          done("test pending");
+        });
+
+        it("doesn't set anything on session", function(done) {
+          sess.
+            post('/sms').
+            send(params).
+            expect(200).
+            end(function(err, res) {
+              if (err) { return done(err); }
+              expect(getConnectCookie().askedQueued).to.equal(undefined);
+              expect(getConnectCookie().askedReminder).to.equal(undefined);
+              expect(getConnectCookie().citationId).to.equal(undefined);
+              done();
+            });
+        });
       });
 
       context("it can not be paid online", function() {
+        beforeEach(function(done) {
+          knex('cases').del().then(function() {
+            knex('cases').insert([turnerData("", false)]).then(function() {
+              done();
+            });
+          });
+        });
 
+        it("says there is a court case and prompts for reminder", function(done) {
+          done("test pending");
+        });
+
+        it("sets match and askedReminder on session", function(done) {
+          sess.
+            post('/sms').
+            send(params).
+            expect(200).
+            end(function(err, res) {
+              if (err) { return done(err); }
+              expect(getConnectCookie().askedQueued).to.equal(undefined);
+              expect(getConnectCookie().askedReminder).to.equal(true);
+              expect(getConnectCookie().match).to.deep.equal(rawTurnerDataAsObject("", false));
+              done();
+            });
+        });
       });
     });
 
@@ -195,21 +243,40 @@ describe("POST /sms", function() {
   });
 });
 
-function turnerData(v) {
+function turnerData(v, payable) {
+  if (payable === undefined) {
+    payable = true;
+  }
+
   return { date: '27-MAR-15',
     defendant: 'TURNER, FREDERICK T',
     room: 'CNVCRT',
     time: '01:00:00 PM',
-    citations: '[{"id":"4928456","violation":"40-8-76.1","description":"SAFETY BELT VIOLATION","location":"27 DECAATUR ST","payable":"1"}]',
+    citations: '[{"id":"4928456","violation":"40-8-76.1","description":"SAFETY BELT VIOLATION","location":"27 DECAATUR ST","payable":"' + (payable ? 1 : 0) + '"}]',
     id: '677167760f89d6f6ddf7ed19ccb63c15486a0eab' + (v||"")
   };
 }
 
-function turnerDataAsObject(v) {
+function turnerDataAsObject(v, payable) {
+  if (payable === undefined) {
+    payable = true;
+  }
+
   var data = turnerData(v);
   data.date = "2015-03-27T00:00:00.000Z";
   data.citations = JSON.parse(data.citations);
-  data.payable = true;
+  data.payable = payable;
   data.readableDate = "Thursday, Mar 26th";
+  return data;
+}
+
+function rawTurnerDataAsObject(v, payable) {
+  if (payable === undefined) {
+    payable = true;
+  }
+
+  var data = turnerData(v, payable);
+  data.date = "2015-03-27T00:00:00.000Z";
+  data.citations = JSON.parse(data.citations);
   return data;
 }
