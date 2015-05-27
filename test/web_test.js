@@ -135,7 +135,15 @@ describe("POST /sms", function() {
         });
 
         it("responds that we can pay now and skip court", function(done) {
-          done("test pending");
+          sess.
+            post('/sms').
+            send(params).
+            expect(200).
+            end(function(err, res) {
+              if (err) { return done(err); }
+              expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>You can pay now and skip court. Just call (404) 658-6940 or visit court.atlantaga.gov. \n\nOtherwise, your court date is Thursday, Mar 26th at 01:00:00 PM, in courtroom CNVCRT.</Sms></Response>');
+              done();
+            });
         });
 
         it("doesn't set anything on session", function(done) {
@@ -163,7 +171,15 @@ describe("POST /sms", function() {
         });
 
         it("says there is a court case and prompts for reminder", function(done) {
-          done("test pending");
+          sess.
+            post('/sms').
+            send(params).
+            expect(200).
+            end(function(err, res) {
+              if (err) { return done(err); }
+              expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Found a court case for Frederick T Turner on Thursday, Mar 26th at 01:00:00 PM, in courtroom CNVCRT. Would you like a reminder the day before? (reply YES or NO)</Sms></Response>');
+              done();
+            });
         });
 
         it("sets match and askedReminder on session", function(done) {
