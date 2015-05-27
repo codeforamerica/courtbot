@@ -72,7 +72,7 @@ app.post('/sms', function(req, res) {
     if (text === 'YES' || text === 'YEA' || text === 'YUP' || text === 'Y') {
       db.addQueued({
         citationId: req.session.citationId,
-        phone: req.body.From,
+        phone: req.body.From
       }, function(err, data) {});
 
       twiml.sms('Sounds good. We\'ll text you in the next 14 days. Call us at (404) 954-7914 with any other questions.');

@@ -286,6 +286,7 @@ describe("POST /sms", function() {
           expect(200).
           end(function(err, res) {
             expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Sounds good. We&apos;ll text you a day before your case. Call us at (404) 954-7914 with any other questions.</Sms></Response>');
+            expect(getConnectCookie().askedReminder).to.equal(false);
             done();
           });
       });
@@ -309,7 +310,7 @@ describe("POST /sms", function() {
           });
       });
 
-      it("responds to the user about the reminder being created", function(done) {
+      it("responds to the user with our number", function(done) {
         sess.
           post('/sms').
           set('Cookie', cookieArr).
@@ -317,6 +318,7 @@ describe("POST /sms", function() {
           expect(200).
           end(function(err, res) {
             expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Alright, no problem. See you on your court date. Call us at (404) 954-7914 with any other questions.</Sms></Response>');
+            expect(getConnectCookie().askedReminder).to.equal(false);
             done();
           });
       });
@@ -360,6 +362,7 @@ describe("POST /sms", function() {
           expect(200).
           end(function(err, res) {
             expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Sounds good. We&apos;ll text you in the next 14 days. Call us at (404) 954-7914 with any other questions.</Sms></Response>');
+            expect(getConnectCookie().askedQueued).to.equal(false);
             done();
           });
       });
@@ -393,6 +396,7 @@ describe("POST /sms", function() {
           expect(200).
           end(function(err, res) {
             expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>No problem. Call us at (404) 954-7914 with any other questions.</Sms></Response>');
+            expect(getConnectCookie().askedQueued).to.equal(false);
             done();
           });
       });
