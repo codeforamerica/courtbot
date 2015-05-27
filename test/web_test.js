@@ -1,5 +1,6 @@
 // setup ENV dependencies
 process.env.COOKIE_SECRET="test";
+process.env.PHONE_ENCRYPTION_KEY = "phone_encryption_key";
 
 var expect = require("chai").expect;
 var assert = require("chai").assert;
@@ -31,14 +32,6 @@ var knex = Knex.initialize({
 });
 
 nock.enableNetConnect('127.0.0.1');
-
-function getConnectCookie() {
-  var sessionCookie = _.find(sess.cookies, function(cookie) {
-    return _.has(cookie, 'connect.sess');
-  });
-  var cookie = sessionCookie['connect.sess'];
-  return cookieParser.JSONCookie(cookieParser.signedCookie(cookie, process.env.COOKIE_SECRET));
-}
 
 describe("GET /", function() {
   it("responds with a simple message", function(done) {
@@ -115,8 +108,10 @@ describe("GET /cases", function() {
 describe("POST /sms", function() {
   beforeEach(function(done) {
     knex('cases').del().then(function() {
-      knex('cases').insert([turnerData()]).then(function() {
-        done();
+      knex('reminders').del().then(function() {
+        knex('cases').insert([turnerData()]).then(function() {
+          done();
+        });
       });
     });
   });
@@ -251,7 +246,73 @@ describe("POST /sms", function() {
   });
 
   context("with session.askedReminder", function() {
+    // This cookie comes from "sets match and askedReminder on session" in order to avoid finicky node session management / encryption
+    // TODO: Have this be a hash that is set and encrypted instead of hardcoded like this
+    var cookieArr = ['connect.sess=s%3Aj%3A%7B%22match%22%3A%7B%22id%22%3A%22677167760f89d6f6ddf7ed19ccb63c15486a0eab%22%2C%22defendant%22%3A%22TURNER%2C%20FREDERICK%20T%22%2C%22date%22%3A%222015-03-27T00%3A00%3A00.000Z%22%2C%22time%22%3A%2201%3A00%3A00%20PM%22%2C%22room%22%3A%22CNVCRT%22%2C%22citations%22%3A%5B%7B%22id%22%3A%224928456%22%2C%22violation%22%3A%2240-8-76.1%22%2C%22description%22%3A%22SAFETY%20BELT%20VIOLATION%22%2C%22location%22%3A%2227%20DECAATUR%20ST%22%2C%22payable%22%3A%220%22%7D%5D%7D%2C%22askedReminder%22%3Atrue%7D.LJMfW%2B9Dz6BLG2mkRlMdVVnIm3V2faxF3ke7oQjYnls; Path=/; HttpOnly'];
 
+    describe("the user texts YES", function() {
+      var params = { Body: "yEs", From: "+12223334444" };
+
+      it("creates a reminder", function(done) {
+        sess.
+          post('/sms').
+          set('Cookie', cookieArr).
+          send(params).
+          expect(200).
+          end(function(err, res) {
+            if (err) { return done(err); }
+            setTimeout(function() { // This is a hack because the DB operation happens ASYNC
+              knex("reminders").count('* as count').then(function(rows) {
+                expect(rows[0].count).to.equal('1');
+                done();
+              }, done);
+            }, 200);
+          });
+      });
+
+      it("responds to the user about the reminder being created", function(done) {
+        sess.
+          post('/sms').
+          set('Cookie', cookieArr).
+          send(params).
+          expect(200).
+          end(function(err, res) {
+            expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Sounds good. We&apos;ll text you a day before your case. Call us at (404) 954-7914 with any other questions.</Sms></Response>');
+            done();
+          });
+      });
+    });
+
+    describe("the user texts NO", function() {
+      var params = { Body: "No", From: "+12223334444" };
+
+      it("doesn't create a reminder", function(done) {
+        sess.
+          post('/sms').
+          set('Cookie', cookieArr).
+          send(params).
+          expect(200).
+          end(function(err, res) {
+            if (err) { return done(err); }
+            knex("reminders").count('* as count').then(function(rows) {
+              expect(rows[0].count).to.equal('0');
+              done();
+            }, done);
+          });
+      });
+
+      it("responds to the user about the reminder being created", function(done) {
+        sess.
+          post('/sms').
+          set('Cookie', cookieArr).
+          send(params).
+          expect(200).
+          end(function(err, res) {
+            expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Alright, no problem. See you on your court date. Call us at (404) 954-7914 with any other questions.</Sms></Response>');
+            done();
+          });
+      });
+    });
   });
 
   context("with session.askedQueued", function() {
@@ -295,4 +356,12 @@ function rawTurnerDataAsObject(v, payable) {
   data.date = "2015-03-27T00:00:00.000Z";
   data.citations = JSON.parse(data.citations);
   return data;
+}
+
+function getConnectCookie() {
+  var sessionCookie = _.find(sess.cookies, function(cookie) {
+    return _.has(cookie, 'connect.sess');
+  });
+  var cookie = sessionCookie['connect.sess'];
+  return cookieParser.JSONCookie(cookieParser.signedCookie(cookie, process.env.COOKIE_SECRET));
 }
