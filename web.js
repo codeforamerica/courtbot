@@ -2,7 +2,7 @@ var twilio = require('twilio');
 var express = require('express');
 var logfmt = require('logfmt');
 var moment = require('moment');
-var db = require('./db');
+
 var app = express();
 
 // Express Middleware
