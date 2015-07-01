@@ -17,37 +17,58 @@ var findReminders = function() {
     .select();
 };
 
-findReminders().exec(function(err, results) {
-  if (results.length === 0) {
-    console.log('No reminders to send out today.');
-    process.exit();
-  }
+function sendReminderMessages(reminders) {
+  return new Promise(function(resolve, reject) {
+    if (reminders.length === 0) {
+      console.log('No reminders to send out today.');
+      resolve();
+    }
 
-  var count = 0;
+    var count = 0;
 
-  // Send SMS reminder
-  results.forEach(function(reminder) {
-    var decipher = crypto.createDecipher('aes256', process.env.PHONE_ENCRYPTION_KEY);
-    var phone = decipher.update(reminder.phone, 'hex', 'utf8') + decipher.final('utf8');
+    // Send SMS reminder
+    reminders.forEach(function(reminder) {
+      var decipher = crypto.createDecipher('aes256', process.env.PHONE_ENCRYPTION_KEY);
+      var phone = decipher.update(reminder.phone, 'hex', 'utf8') + decipher.final('utf8');
 
-    client.sendMessage({
-      to: phone,
-      from: process.env.TWILIO_PHONE_NUMBER,
-      body: 'Reminder: You\'ve got a court case tomorrow at ' + reminder.time + ' in court room ' + reminder.room + '. Call us at (404) 954-7914 with any questions. -Atlanta Municipal Court'
+      client.sendMessage({
+        to: phone,
+        from: process.env.TWILIO_PHONE_NUMBER,
+        body: 'Reminder: You\'ve got a court case tomorrow at ' + reminder.time +
+              ' in court room ' + reminder.room +
+              '. Call us at (404) 954-7914 with any questions. -Atlanta Municipal Court'
 
-    }, function(err, result) {
-      if (err) return console.log(err);
-      console.log('Reminder sent to ' + reminder.phone);
-      count++;
-      if (count === results.length) process.exit();
-    });
-
-    // Update table
-    knex('reminders')
-      .where('reminder_id', '=', reminder.reminder_id)
-      .update({'sent': true})
-      .exec(function(err, results) {
-        if (err) console.log(err);
+      }, function(err, result) {
+        if (err) {
+          console.log(err);
+        }
+        console.log('Reminder sent to ' + reminder.phone);
+        // Update table
+        knex('reminders')
+          .where('reminder_id', '=', reminder.reminder_id)
+          .update({'sent': true})
+          .exec(function(err, results) {
+            if (err) {
+              console.log(err);
+            }
+          }).then(function(err, data) {
+            if (err) {
+              console.log(err);
+            }
+            count++;
+            if (count === reminders.length) {
+              resolve();
+            }
+          });
       });
+    });
   });
-});
+};
+
+module.exports = function() {
+  return new Promise(function(resolve, reject) {
+    findReminders().then(function(resp) {
+      sendReminderMessages(resp).then(resolve, reject);
+    }).catch(reject);
+  });
+};
