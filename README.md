@@ -51,3 +51,8 @@ heroku open
 Finally, you'll want to setup scheduler to run the various tasks each day. Here's the recommended config:
 
 ![scheduler settings](https://cloud.githubusercontent.com/assets/1435836/4785655/2893dd9a-5d83-11e4-9618-d743bee27d2f.png)
+
+## Scheduler Changes
+* node runners/load.js
+* node runners/sendQueued.js
+* node runners/sendReminders.js
