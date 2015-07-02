@@ -46,10 +46,6 @@ describe("with a reminder that hasn't been sent", function() {
       .post('/2010-04-01/Accounts/test/Messages.json', "To=" + encodeURIComponent(number) + "&From=%2Btest&Body=" + encodeURIComponent(message))
       .reply(200, {"status":200}, { 'access-control-allow-credentials': 'true'});
 
-    nock('https://api.twilio.com:443')
-      .post('/2010-04-01/Accounts/test/Messages.json', "To=" + encodeURIComponent(number) + "&From=%2Btest&Body=" + encodeURIComponent(message))
-      .reply(200, {"status":200}, { 'access-control-allow-credentials': 'true'});
-
     knex("cases").update({date: moment().add(1, 'days')}).then(function() {
       sendReminders().then(function(res) {
         knex("reminders").select("*").then(function(rows) {
