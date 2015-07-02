@@ -22,19 +22,22 @@ nock.disableNetConnect();
 
 describe("with a reminder that hasn't been sent", function() {
   beforeEach(function(done) {
-    knex('cases').del().then(function() {
-      knex('cases').insert([turnerData()]).then(function() {
-        knex('reminders').del().then(function() {
-          db.addReminder({
-              caseId: "677167760f89d6f6ddf7ed19ccb63c15486a0eab",
-              phone: "+12223334444",
-              originalCase: turnerData()
-          }, function(err, data) {
-            done(err);
-          });
+    knex('cases').del()
+      .then(function() {
+        return knex('cases').insert([turnerData()])
+      })
+      .then(function() {
+        return knex('reminders').del()
+      })
+      .then(function() {
+        return db.addReminder({
+          caseId: "677167760f89d6f6ddf7ed19ccb63c15486a0eab",
+          phone: "+12223334444",
+          originalCase: turnerData()
+        }, function(err, data) {
+          done(err);
         });
       });
-    });
   });
 
   it("sends the correct info to Twilio and updates the reminder to sent", function(done) {
