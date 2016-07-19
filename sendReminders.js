@@ -36,7 +36,7 @@ function sendReminderMessages(reminders) {
         from: process.env.TWILIO_PHONE_NUMBER,
         body: 'Reminder: You\'ve got a court case tomorrow at ' + reminder.time +
               ' in court room ' + reminder.room +
-              '. Call us at (404) 954-7914 with any questions. -Atlanta Municipal Court'
+              '. Call us at (907) XXX-XXXX with any questions. - Alaska State Court System'
 
       }, function(err, result) {
         if (err) {

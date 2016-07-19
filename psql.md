@@ -1,1 +1,1 @@
-postgres://localhost:5432/courtbot_test
+postgres://localhost:5432/courtbotdb

@@ -14,9 +14,8 @@ var knex = Knex.initialize({
 });
 
 var loadData = function () {
-  var yesterday = moment().subtract('days', 1).format('MMDDYYYY');
-  var url = 'http://courtview.atlantaga.gov/courtcalendars/' +
-    'court_online_calendar/codeamerica.' + yesterday + '.csv';
+  // var yesterday = moment().subtract('days', 1).format('MMDDYYYY');
+  var url = 'http://courtrecords.alaska.gov/MAJIC/sandbox/acs_mo_event.csv';
 
   console.log('Downloading latest CSV file...');
 
@@ -28,7 +27,7 @@ var loadData = function () {
         console.log("404 page not found: ", url);
         reject("404 page not found");
       } else {
-        parse(res.body, {delimiter: '|', quote: false, escape: false}, function(err, rows) {
+        parse(res.body, {delimiter: ',', quote: false, escape: false}, function(err, rows) {
           if (err) {
             console.log('Unable to parse file: ', url);
             console.log(err);
@@ -68,20 +67,23 @@ var extractCourtData = function(rows) {
     }
   };
 
+  var idgen = 0;
   rows.forEach(function(c) {
+    idgen++;
+    var citationInfo = c[8];
     var newCitation = {
-      id: c[5],
-      violation: c[6],
-      description: c[7],
-      location: c[2],
-      payable: c[8],
+      id: idgen.toString,
+      violation: citationInfo.split(":")[0],
+      description: citationInfo.split(":")[1],
+      location: c[6].substr(0,3),
+      payable: c[9],
     };
 
     var newCase = {
       date: c[0],
-      defendant: c[1],
-      room: c[3],
-      time: c[4],
+      defendant: c[2] + " " + c[1],
+      room: c[4],
+      time: c[5],
       citations: [],
     };
 

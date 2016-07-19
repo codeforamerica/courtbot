@@ -58,11 +58,11 @@ app.post('/sms', function(req, res) {
         originalCase: JSON.stringify(match)
       }, function(err, data) {});
 
-      twiml.sms('Sounds good. We\'ll text you a day before your case. Call us at (404) 954-7914 with any other questions.');
+      twiml.sms('Sounds good. We\'ll text you a day before your case. Call us at (907) XXX-XXXX with any other questions.');
       req.session.askedReminder = false;
       res.send(twiml.toString());
     } else if (text === 'NO' || text ==='N') {
-      twiml.sms('Alright, no problem. See you on your court date. Call us at (404) 954-7914 with any other questions.');
+      twiml.sms('Alright, no problem. See you on your court date. Call us at (907) XXX-XXXX with any other questions.');
       req.session.askedReminder = false;
       res.send(twiml.toString());
     }
@@ -75,11 +75,11 @@ app.post('/sms', function(req, res) {
         phone: req.body.From
       }, function(err, data) {});
 
-      twiml.sms('Sounds good. We\'ll text you in the next 14 days. Call us at (404) 954-7914 with any other questions.');
+      twiml.sms('Sounds good. We\'ll text you in the next 14 days. Call us at (907) XXX-XXXX with any other questions.');
       req.session.askedQueued = false;
       res.send(twiml.toString());
     } else if (text === 'NO' || text ==='N') {
-      twiml.sms('No problem. Call us at (404) 954-7914 with any other questions.');
+      twiml.sms('No problem. Call us at (907) XXX-XXXX with any other questions.');
       req.session.askedQueued = false;
       res.send(twiml.toString());
     }
@@ -96,7 +96,7 @@ app.post('/sms', function(req, res) {
         req.session.askedQueued = true;
         req.session.citationId = text;
       } else {
-        twiml.sms('Sorry, we couldn\'t find that court case. Please call us at (404) 954-7914.');
+        twiml.sms('Sorry, we couldn\'t find that court case. Please call us at (907) XXX-XXXX.');
       }
     } else {
       var match = results[0];
@@ -104,7 +104,7 @@ app.post('/sms', function(req, res) {
       var date = moment(match.date).format('dddd, MMM Do');
 
       if (canPayOnline(match)){
-        twiml.sms('You can pay now and skip court. Just call (404) 658-6940 or visit court.atlantaga.gov. \n\nOtherwise, your court date is ' + date + ' at ' + match.time +', in courtroom ' + match.room + '.');
+        twiml.sms('You can pay now and skip court. Just call (907) XXX-XXXX or visit www.courtrecords.alaska.gov. \n\nOtherwise, your court date is ' + date + ' at ' + match.time +', in courtroom ' + match.room + '.');
       } else {
         twiml.sms('Found a court case for ' + name + ' on ' + date + ' at ' + match.time +', in courtroom ' + match.room +'. Would you like a reminder the day before? (reply YES or NO)');
 
