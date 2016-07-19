@@ -2,6 +2,7 @@ var twilio = require('twilio');
 var express = require('express');
 var logfmt = require('logfmt');
 var moment = require('moment');
+var db = require('./db');
 
 var app = express();
 
@@ -21,7 +22,7 @@ app.all('*', function(req, res, next) {
 
 // Enable CORS support for IE8.
 app.get('/proxy.html', function(req, res) {
-  res.send('<!DOCTYPE HTML>\n' + '<script src="http://jpillora.com/xdomain/dist/0.6/xdomain.min.js" master="http://court.atlantaga.gov"></script>');
+  res.send('<!DOCTYPE HTML>\n' + '<script src="http://jpillora.com/xdomain/dist/0.6/xdomain.min.js" master="http://www.courtrecords.alaska.gov"></script>');
 });
 
 app.get('/', function(req, res) {
@@ -89,9 +90,9 @@ app.post('/sms', function(req, res) {
     // If we can't find the case, or find more than one case with the citation
     // number, give an error and recommend they call in.
     if (!results || results.length === 0 || results.length > 1) {
-      var correctLengthCitation = 6 <= text.length && text.length <= 9;
+      var correctLengthCitation = 6 <= text.length && text.length <= 25;
       if (correctLengthCitation) {
-        twiml.sms('Couldn\'t find your case. It takes 14 days for new citations to appear in the sytem. Would you like a text when we find your information? (Reply YES or NO)');
+        twiml.sms('Couldn\'t find your case. It takes 14 days for new citations to appear in the system. Would you like a text when we find your information? (Reply YES or NO)');
 
         req.session.askedQueued = true;
         req.session.citationId = text;
@@ -100,7 +101,7 @@ app.post('/sms', function(req, res) {
       }
     } else {
       var match = results[0];
-      var name = cleanupName(match.defendant);
+      var name = match.defendant;
       var date = moment(match.date).format('dddd, MMM Do');
 
       if (canPayOnline(match)){

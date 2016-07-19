@@ -10,7 +10,12 @@ var sha1 = require('sha1');
 var Knex = require('knex');
 var knex = Knex.initialize({
   client: 'pg',
-  connection: process.env.DATABASE_URL
+  connection: process.env.DATABASE_URL,
+  pool: {
+    min: 0,
+    max: 7
+  }
+
 });
 
 var loadData = function () {
@@ -27,7 +32,7 @@ var loadData = function () {
         console.log("404 page not found: ", url);
         reject("404 page not found");
       } else {
-        parse(res.body, {delimiter: ',', quote: false, escape: false}, function(err, rows) {
+        parse(res.body, {delimiter: ','}, function(err, rows) {
           if (err) {
             console.log('Unable to parse file: ', url);
             console.log(err);
@@ -67,17 +72,16 @@ var extractCourtData = function(rows) {
     }
   };
 
-  var idgen = 0;
   rows.forEach(function(c) {
-    idgen++;
     var citationInfo = c[8];
     var newCitation = {
-      id: idgen.toString,
+      id: c[6],
       violation: citationInfo.split(":")[0],
       description: citationInfo.split(":")[1],
       location: c[6].substr(0,3),
       payable: c[9],
     };
+    console.log(newCitation.id);
 
     var newCase = {
       date: c[0],
@@ -158,10 +162,10 @@ var createCasesTable = function() {
 var createIndexingFunction = function () {
   var text = ['CREATE OR REPLACE FUNCTION json_val_arr(_j json, _key text)',
               '  RETURNS text[] AS',
-              '$$',
+              "'",
               'SELECT array_agg(elem->>_key)',
               'FROM   json_array_elements(_j) AS x(elem)',
-              '$$',
+              "'",
               '  LANGUAGE sql IMMUTABLE;'].join('\n');
   return knex.raw(text);
 };
