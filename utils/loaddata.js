@@ -86,7 +86,6 @@ var extractCourtData = function(rows) {
       location: c[6].substr(0,3),
       payable: c[9],
     };
-    console.log(newCitation.id);
 
     var newCase = {
       date: c[0],
@@ -155,7 +154,7 @@ var createCasesTable = function() {
   return knex.schema.createTable('cases', function(table) {
     table.string('id', 100).primary();
     table.string('defendant', 100);
-    table.date('date');
+    table.timestamp('date');
     table.string('time', 100);
     table.string('room', 100);
     table.json('citations');

@@ -102,6 +102,7 @@ app.post('/sms', function(req, res) {
     } else {
       var match = results[0];
       var name = match.defendant;
+      console.log(JSON.stringify(match));
       var date = moment(match.date).format('dddd, MMM Do');
 
       if (canPayOnline(match)){
