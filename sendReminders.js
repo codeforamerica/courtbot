@@ -14,7 +14,7 @@ var findReminders = function() {
   return knex('reminders')
     .where('sent', false)
     .join('cases', 'reminders.case_id', '=', 'cases.id')
-    .whereRaw('??::date= ?',['cases.date', 'tomorrow'])
+    .whereRaw('(? + interval ?)::date < (now() + interval ?)',['cases.date', '8 hours', '24 hours'])
     .select();
 };
 
