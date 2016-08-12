@@ -10,11 +10,12 @@ var knex = Knex.initialize({
 });
 
 // Finds reminders for cases happening tomorrow
+// TO FIX: converts cases.date to actual UTC then compares it to UTC 24 hours out
 var findReminders = function() {
   return knex('reminders')
     .where('sent', false)
     .join('cases', 'reminders.case_id', '=', 'cases.id')
-    .whereRaw('(? + interval ?)::date < (now() + interval ?)',['cases.date', '8 hours', '24 hours'])
+    .whereRaw("(? + interval '8 hours') < (now() + interval '24 hours')",['cases.date'])
     .select();
 };
 
