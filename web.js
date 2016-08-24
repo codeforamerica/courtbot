@@ -13,6 +13,12 @@ app.use(express.urlencoded());
 app.use(express.cookieParser(process.env.COOKIE_SECRET));
 app.use(express.cookieSession());
 
+// Serve testing page on which you can impersonate Twilio
+// (but not in production)
+if (app.settings.env === 'development') {
+  app.use(express.static('public'))
+}
+
 // Allows CORS
 app.all('*', function(req, res, next) {
   res.header("Access-Control-Allow-Origin", "*");
