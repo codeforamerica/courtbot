@@ -14,7 +14,7 @@ var db = require('../db');
 var Knex = require('knex');
 var knex = Knex.initialize({
   client: 'pg',
-  connection: process.env.DATABASE_URL || 'localhost'
+  connection: process.env.DATABASE_URL
 });
 
 nock.disableNetConnect();

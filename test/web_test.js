@@ -29,7 +29,7 @@ afterEach(function () {
 var Knex = require('knex');
 var knex = Knex.initialize({
   client: 'pg',
-  connection: process.env.DATABASE_URL || 'localhost'
+  connection: process.env.DATABASE_URL
 });
 
 nock.enableNetConnect('127.0.0.1');
