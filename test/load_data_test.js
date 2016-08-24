@@ -9,7 +9,7 @@ var moment = require("moment");
 var Knex = require('knex');
 var knex = Knex.initialize({
   client: 'pg',
-  connection: process.env.DATABASE_URL
+  connection: process.env.DATABASE_URL || 'localhost'
 });
 
 describe("Loading of Data", function() {
