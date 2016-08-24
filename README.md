@@ -10,7 +10,7 @@ Specifically, the twilio features include:
 
 ## Running Locally
 
-First, install [node](https://github.com/codeforamerica/howto/blob/master/Node.js.md), [postgres](https://github.com/codeforamerica/howto/blob/master/PostgreSQL.md), and [foreman](https://github.com/ddollar/foreman).
+First, install [node](https://github.com/codeforamerica/howto/blob/master/Node.js.md), [postgres](https://github.com/codeforamerica/howto/blob/master/PostgreSQL.md).
 
 Then, to create the tables and load in initial data:
 
@@ -25,7 +25,7 @@ Since the app uses twilio to send text messages, it requires a bit of configurat
 To start the web service:
 
 ```console
-foreman start
+npm start
 ```
 
 ## Deploying to Heroku

@@ -2,7 +2,7 @@ var crypto = require('crypto');
 var Knex = require('knex');
 var knex = Knex.initialize({
   client: 'pg',
-  connection: process.env.DATABASE_URL,
+  connection: process.env.DATABASE_URL || 'localhost',
   pool: {
     afterCreate: function(connection, callback) {
       connection.query("SET TIME ZONE 'America/Anchorage';", function(err) {
