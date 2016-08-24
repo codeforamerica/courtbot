@@ -25,7 +25,7 @@ Since the app uses twilio to send text messages, it requires a bit of configurat
 To start the web service:
 
 ```console
-foreman start
+npm start
 ```
 
 ## Deploying to Heroku
