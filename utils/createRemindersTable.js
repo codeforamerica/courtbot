@@ -26,4 +26,5 @@ createTable()
   .then(close)
   .then(function() {
     console.log('Reminders table created.');
+    process.exit();
   });

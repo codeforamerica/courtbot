@@ -25,4 +25,5 @@ createTable()
   .then(close)
   .then(function() {
     console.log('Queued table created.');
+    process.exit();
   });
