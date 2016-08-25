@@ -1,3 +1,5 @@
 language: node_js
 services:
   - postgresql
+env:
+- DATABASE_URL=postgres://localhost:5432/courtbot
