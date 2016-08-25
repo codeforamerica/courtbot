@@ -12,7 +12,13 @@ Specifically, the twilio features include:
 
 First, install [node](https://github.com/codeforamerica/howto/blob/master/Node.js.md), [postgres](https://github.com/codeforamerica/howto/blob/master/PostgreSQL.md).
 
-Since the app uses twilio to send text messages, it requires a bit of configuration. Get a [twilio account](http://www.twilio.com/), create a .env file by running `mv .env.sample .env`, and add your twilio authentication information. While you're there, add a cookie secret and an encryption key (long random strings).
+Since the app uses twilio to send text messages, it requires a bit of configuration. Get a [twilio account](http://www.twilio.com/), create a .env file by running `cp .env.sample .env`, and add your twilio authentication information. While you're there, add a cookie secret and an encryption key (long random strings).
+
+Install node dependencies
+
+```console
+npm install
+```
 
 Then, to create the tables and load in initial data:
 
