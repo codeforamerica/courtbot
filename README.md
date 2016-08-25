@@ -1,5 +1,5 @@
+[![Build Status](https://travis-ci.org/codeforanchorage/courtbot.svg?branch=master)](https://travis-ci.org/codeforanchorage/courtbot)
 ## Courtbot
-
 Courtbot is a simple web service for handling court case data. It offers a basic HTTP endpoint for integration with websites, and a set of advanced twilio workflows to handle text-based lookup.
 
 Specifically, the twilio features include:
