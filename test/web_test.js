@@ -37,42 +37,42 @@ nock.enableNetConnect('127.0.0.1');
 describe("GET /", function() {
   it("responds with a simple message", function(done) {
     sess.get('/').
-      expect('Content-Length', '79').
-      expect(200).
-      end(function(err, res) {
-        if (err) return done(err);
-        expect(res.text).to.contain("Hello, I am Courtbot.");
-        done();
-      });
+    expect('Content-Length', '79').
+    expect(200).
+    end(function(err, res) {
+      if (err) return done(err);
+      expect(res.text).to.contain("Hello, I am Courtbot.");
+      done();
+    });
   });
 });
 
 describe("GET /cases", function() {
   it("400s when there is no ?q=", function(done) {
     sess.get('/cases').
-      expect(400, done);
+    expect(400, done);
   });
 
   it("200s + empty array when there is ?q=", function(done) {
     sess.get('/cases?q=test').
-      expect(200).
-      end(function(err, res) {
-        if (err) return done(err);
-        expect(res.text).to.equal("[]");
-        done();
-      });
+    expect(200).
+    end(function(err, res) {
+      if (err) return done(err);
+      expect(res.text).to.equal("[]");
+      done();
+    });
   });
 
   it("finds partial matches of name", function(done) {
     knex('cases').del().then(function() {
       knex('cases').insert([turnerData(1), turnerData(2)]).then(function() {
         sess.get('/cases?q=turner').
-          expect(200).
-          end(function(err, res) {
-            if (err) return done(err);
-            expect(JSON.parse(res.text)).to.deep.equal([turnerDataAsObject(1), turnerDataAsObject(2)]);
-            done();
-          });
+        expect(200).
+        end(function(err, res) {
+          if (err) return done(err);
+          expect(JSON.parse(res.text)).to.deep.equal([turnerDataAsObject(1), turnerDataAsObject(2)]);
+          done();
+        });
       });
     });
   });
@@ -81,12 +81,12 @@ describe("GET /cases", function() {
     knex('cases').del().then(function() {
       knex('cases').insert([turnerData()]).then(function() {
         sess.get('/cases?q=4928456').
-          expect(200).
-          end(function(err, res) {
-            if (err) return done(err);
-            expect(JSON.parse(res.text)).to.deep.equal([turnerDataAsObject()]);
-            done();
-          });
+        expect(200).
+        end(function(err, res) {
+          if (err) return done(err);
+          expect(JSON.parse(res.text)).to.deep.equal([turnerDataAsObject()]);
+          done();
+        });
       });
     });
   });
@@ -95,12 +95,12 @@ describe("GET /cases", function() {
     knex('cases').del().then(function() {
       knex('cases').insert([turnerData()]).then(function() {
         sess.get('/cases?q=492845').
-          expect(200).
-          end(function(err, res) {
-            if (err) return done(err);
-            expect(JSON.parse(res.text)).to.deep.equal([]);
-            done();
-          });
+        expect(200).
+        end(function(err, res) {
+          if (err) return done(err);
+          expect(JSON.parse(res.text)).to.deep.equal([]);
+          done();
+        });
       });
     });
   });
@@ -123,107 +123,69 @@ describe("POST /sms", function() {
     context("with 1 matching court case", function() {
       var params = { Body: "4928456" };
 
-      context("it can pay online", function() {
-        beforeEach(function(done) {
-          knex('cases').del().then(function() {
-            knex('cases').insert([turnerData("", true)]).then(function() {
-              done();
-            });
+      beforeEach(function(done) {
+        knex('cases').del().then(function() {
+          knex('cases').insert([turnerData("")]).then(function() {
+            done();
           });
-        });
-
-        it("responds that we can pay now and skip court", function(done) {
-          sess.
-            post('/sms').
-            send(params).
-            expect(200).
-            end(function(err, res) {
-              if (err) { return done(err); }
-              expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>You can pay now and skip court. Just call (404) 658-6940 or visit court.atlantaga.gov. \n\nOtherwise, your court date is Thursday, Mar 26th at 01:00:00 PM, in courtroom CNVCRT.</Sms></Response>');
-              done();
-            });
-        });
-
-        it("doesn't set anything on session", function(done) {
-          sess.
-            post('/sms').
-            send(params).
-            expect(200).
-            end(function(err, res) {
-              if (err) { return done(err); }
-              expect(getConnectCookie().askedQueued).to.equal(undefined);
-              expect(getConnectCookie().askedReminder).to.equal(undefined);
-              expect(getConnectCookie().citationId).to.equal(undefined);
-              done();
-            });
         });
       });
 
-      context("it can not be paid online", function() {
-        beforeEach(function(done) {
-          knex('cases').del().then(function() {
-            knex('cases').insert([turnerData("", false)]).then(function() {
-              done();
-            });
-          });
+      it("says there is a court case and prompts for reminder", function(done) {
+        sess.
+        post('/sms').
+        send(params).
+        expect(200).
+        end(function(err, res) {
+          if (err) { return done(err); }
+          expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Found a case for Frederick T Turner scheduled on Thu, Mar 26th at 1:00 PM, at courtroom CNVCRT. Would you like a courtesy reminder the day before? (reply YES or NO)</Sms></Response>');
+          done();
         });
+      });
 
-        it("says there is a court case and prompts for reminder", function(done) {
-          sess.
-            post('/sms').
-            send(params).
-            expect(200).
-            end(function(err, res) {
-              if (err) { return done(err); }
-              expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Found a court case for Frederick T Turner on Thursday, Mar 26th at 01:00:00 PM, in courtroom CNVCRT. Would you like a reminder the day before? (reply YES or NO)</Sms></Response>');
-              done();
-            });
-        });
-
-        it("sets match and askedReminder on session", function(done) {
-          sess.
-            post('/sms').
-            send(params).
-            expect(200).
-            end(function(err, res) {
-              if (err) { return done(err); }
-              expect(getConnectCookie().askedQueued).to.equal(undefined);
-              expect(getConnectCookie().askedReminder).to.equal(true);
-              expect(getConnectCookie().match).to.deep.equal(rawTurnerDataAsObject("", false));
-              done();
-            });
+      it("sets match and askedReminder on session", function(done) {
+        sess.
+        post('/sms').
+        send(params).
+        expect(200).
+        end(function(err, res) {
+          if (err) { return done(err); }
+          expect(getConnectCookie().askedQueued).to.equal(undefined);
+          expect(getConnectCookie().askedReminder).to.equal(true);
+          expect(getConnectCookie().match).to.deep.equal(rawTurnerDataAsObject(""));
+          done();
         });
       });
     });
 
     context("with 0 matching court cases", function() {
-      context("with a citation length between 6-9 inclusive", function() {
+      context("with a citation length between 6-25 inclusive", function() {
         var params = { Body: "123456" };
 
         it("says we couldn't find their case and prompt for reminder", function(done) {
           sess.
-            post('/sms').
-            send(params).
-            expect(200).
-            end(function(err, res) {
-              if (err) { return done(err); }
-              expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Couldn&apos;t find your case. It takes 14 days for new citations to appear in the sytem. Would you like a text when we find your information? (Reply YES or NO)</Sms></Response>');
-              done();
-            });
+          post('/sms').
+          send(params).
+          expect(200).
+          end(function(err, res) {
+            if (err) { return done(err); }
+            expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Couldn&apos;t find your case. It takes 14 days for new citations to appear in the sytem. Would you like a text when we find your information? (Reply YES or NO)</Sms></Response>');
+            done();
+          });
         });
 
         it("sets the askedQueued and citationId cookies", function(done) {
           sess.
-            post('/sms').
-            send(params).
-            expect(200).
-            end(function(err, res) {
-              if (err) { return done(err); }
-              expect(getConnectCookie().askedQueued).to.equal(true);
-              expect(getConnectCookie().askedReminder).to.equal(undefined);
-              expect(getConnectCookie().citationId).to.equal("123456");
-              done();
-            });
+          post('/sms').
+          send(params).
+          expect(200).
+          end(function(err, res) {
+            if (err) { return done(err); }
+            expect(getConnectCookie().askedQueued).to.equal(true);
+            expect(getConnectCookie().askedReminder).to.equal(undefined);
+            expect(getConnectCookie().citationId).to.equal("123456");
+            done();
+          });
         });
       });
 
@@ -232,16 +194,16 @@ describe("POST /sms", function() {
 
         it("says that you need to call", function(done) {
           sess.
-            post('/sms').
-            send(params).
-            expect(200).
-            end(function(err, res) {
-              if (err) { return done(err); }
-              expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Sorry, we couldn&apos;t find that court case. Please call us at (404) 954-7914.</Sms></Response>');
-              expect(getConnectCookie().askedQueued).to.equal(undefined);
-              expect(getConnectCookie().askedReminder).to.equal(undefined);
-              expect(getConnectCookie().citationId).to.equal(undefined);
-              done();
+          post('/sms').
+          send(params).
+          expect(200).
+          end(function(err, res) {
+            if (err) { return done(err); }
+            expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Sorry, we couldn&apos;t find that court case. Please call us at (404) 954-7914.</Sms></Response>');
+            expect(getConnectCookie().askedQueued).to.equal(undefined);
+            expect(getConnectCookie().askedReminder).to.equal(undefined);
+            expect(getConnectCookie().citationId).to.equal(undefined);
+            done();
           });
         });
       });
@@ -258,37 +220,37 @@ describe("POST /sms", function() {
 
       it("creates a reminder", function(done) {
         sess.
-          post('/sms').
-          set('Cookie', cookieArr).
-          send(params).
-          expect(200).
-          end(function(err, res) {
-            if (err) { return done(err); }
-            setTimeout(function() { // This is a hack because the DB operation happens ASYNC
-              knex("reminders").select("*").groupBy("reminders.reminder_id").count('* as count').then(function(rows) {
-                var record = rows[0];
-                expect(record.count).to.equal('1');
-                expect(record.phone).to.equal(cypher("+12223334444"));
-                expect(record.case_id).to.equal('677167760f89d6f6ddf7ed19ccb63c15486a0eab');
-                expect(record.sent).to.equal(false);
-                expect(JSON.parse(record.original_case)).to.deep.equal(rawTurnerDataAsObject("", false));
-                done();
-              }, done);
-            }, 200);
-          });
+        post('/sms').
+        set('Cookie', cookieArr).
+        send(params).
+        expect(200).
+        end(function(err, res) {
+          if (err) { return done(err); }
+          setTimeout(function() { // This is a hack because the DB operation happens ASYNC
+            knex("reminders").select("*").groupBy("reminders.reminder_id").count('* as count').then(function(rows) {
+              var record = rows[0];
+              expect(record.count).to.equal('1');
+              expect(record.phone).to.equal(cypher("+12223334444"));
+              expect(record.case_id).to.equal('677167760f89d6f6ddf7ed19ccb63c15486a0eab');
+              expect(record.sent).to.equal(false);
+              expect(JSON.parse(record.original_case)).to.deep.equal(rawTurnerDataAsObject("", false));
+              done();
+            }, done);
+          }, 200);
+        });
       });
 
       it("responds to the user about the reminder being created", function(done) {
         sess.
-          post('/sms').
-          set('Cookie', cookieArr).
-          send(params).
-          expect(200).
-          end(function(err, res) {
-            expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Sounds good. We&apos;ll text you a day before your case. Call us at (404) 954-7914 with any other questions.</Sms></Response>');
-            expect(getConnectCookie().askedReminder).to.equal(false);
-            done();
-          });
+        post('/sms').
+        set('Cookie', cookieArr).
+        send(params).
+        expect(200).
+        end(function(err, res) {
+          expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Sounds good. We&apos;ll text you a day before your case. Call us at (404) 954-7914 with any other questions.</Sms></Response>');
+          expect(getConnectCookie().askedReminder).to.equal(false);
+          done();
+        });
       });
     });
 
@@ -297,30 +259,30 @@ describe("POST /sms", function() {
 
       it("doesn't create a reminder", function(done) {
         sess.
-          post('/sms').
-          set('Cookie', cookieArr).
-          send(params).
-          expect(200).
-          end(function(err, res) {
-            if (err) { return done(err); }
-            knex("reminders").count('* as count').then(function(rows) {
-              expect(rows[0].count).to.equal('0');
-              done();
-            }, done);
-          });
+        post('/sms').
+        set('Cookie', cookieArr).
+        send(params).
+        expect(200).
+        end(function(err, res) {
+          if (err) { return done(err); }
+          knex("reminders").count('* as count').then(function(rows) {
+            expect(rows[0].count).to.equal('0');
+            done();
+          }, done);
+        });
       });
 
       it("responds to the user with our number", function(done) {
         sess.
-          post('/sms').
-          set('Cookie', cookieArr).
-          send(params).
-          expect(200).
-          end(function(err, res) {
-            expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Alright, no problem. See you on your court date. Call us at (404) 954-7914 with any other questions.</Sms></Response>');
-            expect(getConnectCookie().askedReminder).to.equal(false);
-            done();
-          });
+        post('/sms').
+        set('Cookie', cookieArr).
+        send(params).
+        expect(200).
+        end(function(err, res) {
+          expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Alright, no problem. See you on your court date. Call us at (404) 954-7914 with any other questions.</Sms></Response>');
+          expect(getConnectCookie().askedReminder).to.equal(false);
+          done();
+        });
       });
     });
   });
@@ -335,36 +297,36 @@ describe("POST /sms", function() {
 
       it("creates a queued", function(done) {
         sess.
-          post('/sms').
-          set('Cookie', cookieArr).
-          send(params).
-          expect(200).
-          end(function(err, res) {
-            if (err) { return done(err); }
-            setTimeout(function() { // This is a hack because the DB operation happens ASYNC
-              knex("queued").select("*").groupBy("queued.queued_id").count('* as count').then(function(rows) {
-                var record = rows[0];
-                expect(record.count).to.equal('1');
-                expect(record.phone).to.equal(cypher("+12223334444"));
-                expect(record.citation_id).to.equal('123456');
-                expect(record.sent).to.equal(false);
-                done();
-              }, done);
-            }, 200);
-          });
+        post('/sms').
+        set('Cookie', cookieArr).
+        send(params).
+        expect(200).
+        end(function(err, res) {
+          if (err) { return done(err); }
+          setTimeout(function() { // This is a hack because the DB operation happens ASYNC
+            knex("queued").select("*").groupBy("queued.queued_id").count('* as count').then(function(rows) {
+              var record = rows[0];
+              expect(record.count).to.equal('1');
+              expect(record.phone).to.equal(cypher("+12223334444"));
+              expect(record.citation_id).to.equal('123456');
+              expect(record.sent).to.equal(false);
+              done();
+            }, done);
+          }, 200);
+        });
       });
 
       it("tells the user we'll text them", function(done) {
         sess.
-          post('/sms').
-          set('Cookie', cookieArr).
-          send(params).
-          expect(200).
-          end(function(err, res) {
-            expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Sounds good. We&apos;ll text you in the next 14 days. Call us at (404) 954-7914 with any other questions.</Sms></Response>');
-            expect(getConnectCookie().askedQueued).to.equal(false);
-            done();
-          });
+        post('/sms').
+        set('Cookie', cookieArr).
+        send(params).
+        expect(200).
+        end(function(err, res) {
+          expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Sounds good. We&apos;ll text you in the next 14 days. Call us at (404) 954-7914 with any other questions.</Sms></Response>');
+          expect(getConnectCookie().askedQueued).to.equal(false);
+          done();
+        });
       });
     });
 
@@ -373,70 +335,57 @@ describe("POST /sms", function() {
 
       it("doesn't create a queued", function(done) {
         sess.
-          post('/sms').
-          set('Cookie', cookieArr).
-          send(params).
-          expect(200).
-          end(function(err, res) {
-            if (err) { return done(err); }
-            setTimeout(function() { // This is a hack because the DB operation happens ASYNC
-              knex("queued").count('* as count').then(function(rows) {
-                expect(rows[0].count).to.equal('0');
-                done();
-              }, done);
-            }, 200);
-          });
+        post('/sms').
+        set('Cookie', cookieArr).
+        send(params).
+        expect(200).
+        end(function(err, res) {
+          if (err) { return done(err); }
+          setTimeout(function() { // This is a hack because the DB operation happens ASYNC
+            knex("queued").count('* as count').then(function(rows) {
+              expect(rows[0].count).to.equal('0');
+              done();
+            }, done);
+          }, 200);
+        });
       });
 
       it("tells the user we'll text them", function(done) {
         sess.
-          post('/sms').
-          set('Cookie', cookieArr).
-          send(params).
-          expect(200).
-          end(function(err, res) {
-            expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>No problem. Call us at (404) 954-7914 with any other questions.</Sms></Response>');
-            expect(getConnectCookie().askedQueued).to.equal(false);
-            done();
-          });
+        post('/sms').
+        set('Cookie', cookieArr).
+        send(params).
+        expect(200).
+        end(function(err, res) {
+          expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>No problem. Call us at (404) 954-7914 with any other questions.</Sms></Response>');
+          expect(getConnectCookie().askedQueued).to.equal(false);
+          done();
+        });
       });
     });
   });
 });
 
-function turnerData(v, payable) {
-  if (payable === undefined) {
-    payable = true;
-  }
-
+function turnerData(v) {
   return { date: '27-MAR-15',
     defendant: 'TURNER, FREDERICK T',
     room: 'CNVCRT',
     time: '01:00:00 PM',
-    citations: '[{"id":"4928456","violation":"40-8-76.1","description":"SAFETY BELT VIOLATION","location":"27 DECAATUR ST","payable":"' + (payable ? 1 : 0) + '"}]',
+    citations: '[{"id":"4928456","violation":"40-8-76.1","description":"SAFETY BELT VIOLATION","location":"27 DECATUR ST"}]',
     id: '677167760f89d6f6ddf7ed19ccb63c15486a0eab' + (v||"")
   };
 }
 
-function turnerDataAsObject(v, payable) {
-  if (payable === undefined) {
-    payable = true;
-  }
-
+function turnerDataAsObject(v) {
   var data = turnerData(v);
   data.date = "2015-03-27T00:00:00.000Z";
   data.citations = JSON.parse(data.citations);
-  data.payable = payable;
-  data.readableDate = "Thursday, Mar 26th";
+  data.readableDate = "Thursday, Mar 27th";
   return data;
 }
 
-function rawTurnerDataAsObject(v, payable) {
-  if (payable === undefined) {
-    payable = true;
-  }
-
-  var data = turnerData(v, payable);
+function rawTurnerDataAsObject(v) {
+  var data = turnerData(v);
   data.date = "2015-03-27T00:00:00.000Z";
   data.citations = JSON.parse(data.citations);
   return data;

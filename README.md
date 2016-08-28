@@ -4,7 +4,6 @@ Courtbot is a simple web service for handling court case data. It offers a basic
 
 Specifically, the twilio features include:
 
-- **Payable Prompt.** If a case can be paid immediately, the app offers a phone number and link to begin payment.
 - **Reminders.** If a case requires a court appearance, the app allows users to sign up for reminders, served 24 hours in advance of the case.
 - **Queued Cases.** If a case isn't in the system (usually because it takes two weeks for paper citations to be put into the computer), the app allows users to get information when it becomes available. The app continues checking each day for up to 16 days and sends the case information when found (or an apology if not).
 
@@ -63,3 +62,13 @@ Finally, you'll want to setup scheduler to run the various tasks each day. Here'
 * node runners/load.js
 * node runners/sendQueued.js
 * node runners/sendReminders.js
+
+## Running Tests
+
+Test are run with Mocha. To run from the command line, you'll first need to install Mocha globally:
+
+* sudo npm install -g mocha@2.5.3
+
+Then, initialize the test database:
+
+* node test_utils/reset
