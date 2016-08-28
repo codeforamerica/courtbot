@@ -26,7 +26,7 @@ var knex = Knex.initialize({
 
 var loadData = function () {
   // var yesterday = moment().subtract('days', 1).format('MMDDYYYY');
-  var url = 'http://courtrecords.alaska.gov/MAJIC/sandbox/acs_mo_event.csv';
+  var url = process.env.DATA_URL;
 
   console.log('Downloading latest CSV file...');
 
