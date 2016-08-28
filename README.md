@@ -47,6 +47,7 @@ heroku config:set TWILIO_ACCOUNT=<twilio account>
 heroku config:set TWILIO_AUTH_TOKEN=<twilio auth token>
 heroku config:set TWILIO_PHONE_NUMBER=<twilio phone number>
 heroku config:set PHONE_ENCRYPTION_KEY=<random string>
+heroku config:set DATA_URL=<court records csv location>
 git push heroku master
 heroku run node utils/createQueuedTable.js
 heroku run node utils/createRemindersTable.js
