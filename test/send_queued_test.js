@@ -18,7 +18,7 @@ var knex = Knex.initialize({
 });
 
 nock.disableNetConnect();
-//nock('https://api.twilio.com').log(console.log);
+nock('https://api.twilio.com:443').log(console.log);
 
 describe("with 2 valid queued cases (same citation)", function() {
   beforeEach(function(done) {
@@ -43,9 +43,7 @@ describe("with 2 valid queued cases (same citation)", function() {
 
   it("sends the correct info to Twilio and updates the queued to sent", function(done) {
     var number = "+12223334444";
-    var message = "Your Atlanta Municipal Court information was found: a court case for " +
-                  "Frederick T Turner on Thursday, Mar 26th at 01:00:00 PM, in courtroom CNVCRT. " +
-                  "Call us at (404) 954-7914 with any questions.";
+    var message = "Your Alaska State Court information was found: a court case for Frederick Turner on Friday, Mar 27th at 01:00:00 PM, in courtroom CNVCRT. Call us at (907) XXX-XXXX with any questions.";
 
     nock('https://api.twilio.com:443')
       .post('/2010-04-01/Accounts/test/Messages.json', "To=" + encodeURIComponent(number) + "&From=%2Btest&Body=" + encodeURIComponent(message))
@@ -92,14 +90,14 @@ describe("with a queued non-existent case", function() {
 
   it("sends a failure sms after 16 days", function(done) {
     var number = "+12223334444";
-    var message = "We haven't been able to find your court case. Please call us at (404) 954-7914. -Atlanta Municipal Court";
+    var message = "We haven\'t been able to find your court case. Please call us at (907) XXX-XXXX. - Alaska State Court System";
 
     nock('https://api.twilio.com:443')
       .post('/2010-04-01/Accounts/test/Messages.json', "To=" + encodeURIComponent(number) + "&From=%2Btest&Body=" + encodeURIComponent(message))
       .reply(200, {"status":200}, { 'access-control-allow-credentials': 'true'});
 
 
-    knex("queued").update({created_at: moment().subtract(18, 'days')}).then(function() {
+    knex("queued").update({created_at: moment().clone().subtract(18, 'days')}).then(function() {
       sendQueued().then(function(res) {
         knex("queued").select("*").then(function(rows) {
           expect(rows[0].sent).to.equal(true);
@@ -116,7 +114,7 @@ function turnerData(v, payable) {
   }
 
   return { date: '27-MAR-15',
-    defendant: 'TURNER, FREDERICK T',
+    defendant: 'Frederick Turner',
     room: 'CNVCRT',
     time: '01:00:00 PM',
     citations: '[{"id":"4928456","violation":"40-8-76.1","description":"SAFETY BELT VIOLATION","location":"27 DECAATUR ST","payable":"' + (payable ? 1 : 0) + '"}]',

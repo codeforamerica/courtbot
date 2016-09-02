@@ -36,7 +36,6 @@ function sendQueuedMessage(queued) {
           var name = cleanupName(match.defendant);
           var date = moment(match.date).format('dddd, MMM Do');
           var body = 'Your Alaska State Court information was found: a court case for ' + name + ' on ' + date + ' at ' + match.time + ', in courtroom ' + match.room + '. Call us at (907) XXX-XXXX with any questions.';
-
           client.sendMessage({
             to: phone,
             from: process.env.TWILIO_PHONE_NUMBER,
@@ -64,6 +63,7 @@ function sendQueuedMessage(queued) {
               });
           });
         } else {
+          console.log("Now: " + moment().format('dddd, MMM Do') + ", Created: " + queuedCitation.created_at);
           var daysSinceCreation = moment().diff(moment(queuedCitation.created_at), 'days');
           console.log('Queued message created ' + daysSinceCreation + ' days ago.');
 
@@ -105,8 +105,8 @@ function sendQueuedMessage(queued) {
 
 var cleanupName = function(name) {
   // Switch LAST, FIRST to FIRST LAST
-  var bits = name.split(',');
-  name = bits[1] + ' ' + bits[0];
+  // var bits = name.split(',');
+  // name = bits[1] + ' ' + bits[0];  // Alaska already has this format
   name = name.trim();
 
   // Change FIRST LAST to First Last
