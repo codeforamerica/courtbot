@@ -25,8 +25,8 @@ exports.fuzzySearch = function(str, callback) {
   var parts = str.toUpperCase().split(" ");
 
   // Search for Names
-  var query = knex('cases').where('defendant', 'like', '%' + parts[0] + '%');
-  if (parts.length > 1) query = query.andWhere('defendant', 'like', '%' + parts[1] + '%');
+  var query = knex('cases').where('defendant', 'ilike', '%' + parts[0] + '%');
+  if (parts.length > 1) query = query.andWhere('defendant', 'ilike', '%' + parts[1] + '%');
 
   // Search for Citations
   var citation = escapeSQL(parts[0]);

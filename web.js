@@ -45,7 +45,6 @@ app.get('/cases', function(req, res) {
     // Add readable dates, to avoid browser side date issues
     data.forEach(function(d) {
       d.readableDate = moment(d.date).format('dddd, MMM Do');
-      d.payable = canPayOnline(d);
     });
 
     res.send(data);
@@ -104,41 +103,27 @@ app.post('/sms', function(req, res) {
         req.session.askedQueued = true;
         req.session.citationId = text;
       } else {
-        twiml.sms('Sorry, we couldn\'t find that court case. Please call us at (907) XXX-XXXX.');
+        twiml.sms('Couldn\'t find your case. Case identifier should be 6 to 25 numbers and/or letters in length.');
       }
     } else {
       var match = results[0];
-      var name = match.defendant;
+      var name = cleanupName(match.defendant);
       console.log(JSON.stringify(match));
-      var date = moment(match.date).format('dddd, MMM Do');
+      var date = moment(match.date).format('ddd, MMM Do');
 
-      if (canPayOnline(match)){
-        twiml.sms('You can pay now and skip court. Just call (907) XXX-XXXX or visit www.courtrecords.alaska.gov. \n\nOtherwise, your court date is ' + date + ' at ' + match.time +', in courtroom ' + match.room + '.');
-      } else {
-        twiml.sms('Found a court case for ' + name + ' on ' + date + ' at ' + match.time +', in courtroom ' + match.room +'. Would you like a reminder the day before? (reply YES or NO)');
 
-        req.session.match = match;
-        req.session.askedReminder = true;
-      }
+      twiml.sms('Found a case for ' + name + ' scheduled on ' + date + ' at ' + moment("1980-01-01 " + match.time).format("h:mm A") +', at courtroom ' + match.room +'. Would you like a courtesy reminder the day before? (reply YES or NO)');
+
+      req.session.match = match;
+      req.session.askedReminder = true;
     }
+
 
     res.send(twiml.toString());
   });
 });
 
-// You can pay online if ALL your individual citations can be paid online
-var canPayOnline = function(courtCase) {
-  var eligible = true;
-  courtCase.citations.forEach(function(citation) {
-    if (citation.payable !== '1') eligible = false;
-  });
-  return eligible;
-};
-
 var cleanupName = function(name) {
-  // Switch LAST, FIRST to FIRST LAST
-  var bits = name.split(',');
-  name = bits[1] + ' ' + bits[0];
   name = name.trim();
 
   // Change FIRST LAST to First Last

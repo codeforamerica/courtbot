@@ -35,13 +35,14 @@ var knex = Knex.initialize({
 nock.enableNetConnect('127.0.0.1');
 
 describe("GET /", function() {
-  it("responds with a simple message", function(done) {
+  it("responds with web form test input", function(done) {
     sess.get('/').
-    expect('Content-Length', '79').
+    expect('Content-Length', '341').
     expect(200).
     end(function(err, res) {
       if (err) return done(err);
-      expect(res.text).to.contain("Hello, I am Courtbot.");
+      console.log(res.text);
+      expect(res.text).to.contain("Impersonate Twilio");
       done();
     });
   });
@@ -138,7 +139,7 @@ describe("POST /sms", function() {
         expect(200).
         end(function(err, res) {
           if (err) { return done(err); }
-          expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Found a case for Frederick T Turner scheduled on Thu, Mar 26th at 1:00 PM, at courtroom CNVCRT. Would you like a courtesy reminder the day before? (reply YES or NO)</Sms></Response>');
+          expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Found a case for Frederick Turner scheduled on Fri, Mar 27th at 1:00 PM, at courtroom CNVCRT. Would you like a courtesy reminder the day before? (reply YES or NO)</Sms></Response>');
           done();
         });
       });
@@ -169,7 +170,7 @@ describe("POST /sms", function() {
           expect(200).
           end(function(err, res) {
             if (err) { return done(err); }
-            expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Couldn&apos;t find your case. It takes 14 days for new citations to appear in the sytem. Would you like a text when we find your information? (Reply YES or NO)</Sms></Response>');
+            expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Couldn&apos;t find your case. It takes 14 days for new citations to appear in the system. Would you like a text when we find your information? (Reply YES or NO)</Sms></Response>');
             done();
           });
         });
@@ -189,17 +190,17 @@ describe("POST /sms", function() {
         });
       });
 
-      context("the citation length is too long", function() {
-        var params = { Body: "123456789123456" };
+      context("the citation length is too short", function() {
+        var params = { Body: "12345" };
 
-        it("says that you need to call", function(done) {
+        it("says that case id is wrong", function(done) {
           sess.
           post('/sms').
           send(params).
           expect(200).
           end(function(err, res) {
             if (err) { return done(err); }
-            expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Sorry, we couldn&apos;t find that court case. Please call us at (404) 954-7914.</Sms></Response>');
+            expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Couldn&apos;t find your case. Case identifier should be 6 to 25 numbers and/or letters in length.</Sms></Response>');
             expect(getConnectCookie().askedQueued).to.equal(undefined);
             expect(getConnectCookie().askedReminder).to.equal(undefined);
             expect(getConnectCookie().citationId).to.equal(undefined);
@@ -368,7 +369,7 @@ describe("POST /sms", function() {
 
 function turnerData(v) {
   return { date: '27-MAR-15',
-    defendant: 'TURNER, FREDERICK T',
+    defendant: 'Frederick Turner',
     room: 'CNVCRT',
     time: '01:00:00 PM',
     citations: '[{"id":"4928456","violation":"40-8-76.1","description":"SAFETY BELT VIOLATION","location":"27 DECATUR ST"}]',
@@ -378,15 +379,15 @@ function turnerData(v) {
 
 function turnerDataAsObject(v) {
   var data = turnerData(v);
-  data.date = "2015-03-27T00:00:00.000Z";
+  data.date = "2015-03-27T08:00:00.000Z";
   data.citations = JSON.parse(data.citations);
-  data.readableDate = "Thursday, Mar 27th";
+  data.readableDate = "Friday, Mar 27th";
   return data;
 }
 
 function rawTurnerDataAsObject(v) {
   var data = turnerData(v);
-  data.date = "2015-03-27T00:00:00.000Z";
+  data.date = "2015-03-27T08:00:00.000Z";
   data.citations = JSON.parse(data.citations);
   return data;
 }

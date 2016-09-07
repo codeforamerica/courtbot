@@ -60,16 +60,12 @@ describe("with a reminder that hasn't been sent", function() {
   });
 });
 
-function turnerData(v, payable) {
-  if (payable === undefined) {
-    payable = true;
-  }
-
-  return { date: '27-MAR-15',
+function turnerData(v) {
+ return { date: '27-MAR-15',
     defendant: 'TURNER, FREDERICK T',
     room: 'CNVCRT',
     time: '01:00:00 PM',
-    citations: '[{"id":"4928456","violation":"40-8-76.1","description":"SAFETY BELT VIOLATION","location":"27 DECAATUR ST","payable":"' + (payable ? 1 : 0) + '"}]',
+    citations: '[{"id":"4928456","violation":"40-8-76.1","description":"SAFETY BELT VIOLATION","location":"27 DECAATUR ST"}]',
     id: '677167760f89d6f6ddf7ed19ccb63c15486a0eab' + (v||"")
   };
 }
