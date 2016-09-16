@@ -212,17 +212,23 @@ describe("POST /sms", function() {
   });
 
   context("with session.askedReminder", function() {
-    // This cookie comes from "sets match and askedReminder on session" in order to avoid finicky node session management / encryption
-    // TODO: Have this be a hash that is set and encrypted instead of hardcoded like this
-    var cookieArr = ['connect.sess=s%3Aj%3A%7B%22match%22%3A%7B%22id%22%3A%22677167760f89d6f6ddf7ed19ccb63c15486a0eab%22%2C%22defendant%22%3A%22TURNER%2C%20FREDERICK%20T%22%2C%22date%22%3A%222015-03-27T00%3A00%3A00.000Z%22%2C%22time%22%3A%2201%3A00%3A00%20PM%22%2C%22room%22%3A%22CNVCRT%22%2C%22citations%22%3A%5B%7B%22id%22%3A%224928456%22%2C%22violation%22%3A%2240-8-76.1%22%2C%22description%22%3A%22SAFETY%20BELT%20VIOLATION%22%2C%22location%22%3A%2227%20DECAATUR%20ST%22%7D%5D%7D%2C%22askedReminder%22%3Atrue%7D.LJMfW%2B9Dz6BLG2mkRlMdVVnIm3V2faxF3ke7oQjYnls; Path=/; HttpOnly'];
-
+    // Build json object, serialize, sign, encode
+    var cookieObj = rawTurnerDataAsObject();
+    var cookieStr = 'j:{"match":'+JSON.stringify(cookieObj)+',"askedReminder":true}';
+    cookieStr = cookieStr + "." + crypto
+        .createHmac('sha256', process.env.COOKIE_SECRET)
+        .update(cookieStr)
+        .digest('base64')
+        .replace(/\=+$/, '');
+    cookieStr = "s:" + cookieStr;
+    // var cookieArr = ['connect.sess=s%3Aj%3A%7B%22match%22%3A%7B%22id%22%3A%22677167760f89d6f6ddf7ed19ccb63c15486a0eab%22%2C%22defendant%22%3A%22TURNER%2C%20FREDERICK%20T%22%2C%22date%22%3A%222015-03-27T00%3A00%3A00.000Z%22%2C%22time%22%3A%2201%3A00%3A00%20PM%22%2C%22room%22%3A%22CNVCRT%22%2C%22citations%22%3A%5B%7B%22id%22%3A%224928456%22%2C%22violation%22%3A%2240-8-76.1%22%2C%22description%22%3A%22SAFETY%20BELT%20VIOLATION%22%2C%22location%22%3A%2227%20DECAATUR%20ST%22%7D%5D%7D%2C%22askedReminder%22%3Atrue%7D.LJMfW%2B9Dz6BLG2mkRlMdVVnIm3V2faxF3ke7oQjYnls; Path=/; HttpOnly'];
+    var cookieArr = ['connect.sess='+encodeURIComponent(cookieStr)+'; Path=/; HttpOnly'];
     describe("the user texts YES", function() {
       var params = { Body: "yEs", From: "+12223334444" };
-
       it("creates a reminder", function(done) {
         sess.
         post('/sms').
-        set('Cookie', cookieArr).
+        set('Cookie', cookieArr[0]).
         send(params).
         expect(200).
         end(function(err, res) {
@@ -234,10 +240,11 @@ describe("POST /sms", function() {
               expect(record.phone).to.equal(cypher("+12223334444"));
               expect(record.case_id).to.equal('677167760f89d6f6ddf7ed19ccb63c15486a0eab');
               expect(record.sent).to.equal(false);
-              expect(JSON.parse(record.original_case)).to.deep.equal(rawTurnerDataAsObject("", false));
+              expect(record.original_case).to.deep.equal(rawTurnerDataAsObject("", false));
               done();
-            }, done);
-          }, 200);
+            }, done());
+          }, 2000);
+          done();
         });
       });
 
@@ -248,7 +255,7 @@ describe("POST /sms", function() {
         send(params).
         expect(200).
         end(function(err, res) {
-          expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Sounds good. We&apos;ll text you a day before your case. Call us at (404) 954-7914 with any other questions.</Sms></Response>');
+          expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Sounds good. We&apos;ll text you a day before your case. Call us at (907) XXX-XXXX with any other questions.</Sms></Response>');
           expect(getConnectCookie().askedReminder).to.equal(false);
           done();
         });
@@ -280,7 +287,7 @@ describe("POST /sms", function() {
         send(params).
         expect(200).
         end(function(err, res) {
-          expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Alright, no problem. See you on your court date. Call us at (404) 954-7914 with any other questions.</Sms></Response>');
+          expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Alright, no problem. See you on your court date. Call us at (907) XXX-XXXX with any other questions.</Sms></Response>');
           expect(getConnectCookie().askedReminder).to.equal(false);
           done();
         });
@@ -289,13 +296,17 @@ describe("POST /sms", function() {
   });
 
   context("with session.askedQueued", function() {
-    // This cookie comes from "sets the askedQueued and citationId cookies" in order to avoid finicky node session management / encryption
-    // TODO: Have this be a hash that is set and encrypted instead of hardcoded like this
-    var cookieArr = ['connect.sess=s%3Aj%3A%7B%22askedQueued%22%3Atrue%2C%22citationId%22%3A%22123456%22%7D.%2FuRCxqdZogql42ti2bU0yMSOU0CFKA0kbL81MQb5o24; Path=/; HttpOnly'];
-
+    // var cookieArr = ['connect.sess=s%3Aj%3A%7B%22askedQueued%22%3Atrue%2C%22citationId%22%3A%22123456%22%7D.%2FuRCxqdZogql42ti2bU0yMSOU0CFKA0kbL81MQb5o24; Path=/; HttpOnly'];
+    var cookieStr = 'j:{"citationId":"123456","askedQueued":true}';
+    cookieStr = cookieStr + "." + crypto
+            .createHmac('sha256', process.env.COOKIE_SECRET)
+            .update(cookieStr)
+            .digest('base64')
+            .replace(/\=+$/, '');
+    cookieStr = "s:" + cookieStr;
+    var cookieArr = ['connect.sess='+encodeURIComponent(cookieStr)+'; Path=/; HttpOnly'];
     describe("the user texts YES", function() {
       var params = { Body: "Y", From: "+12223334444" };
-
       it("creates a queued", function(done) {
         sess.
         post('/sms').
@@ -312,8 +323,9 @@ describe("POST /sms", function() {
               expect(record.citation_id).to.equal('123456');
               expect(record.sent).to.equal(false);
               done();
-            }, done);
-          }, 200);
+            }, done());
+          }, 2000);
+          done();
         });
       });
 
@@ -324,7 +336,7 @@ describe("POST /sms", function() {
         send(params).
         expect(200).
         end(function(err, res) {
-          expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Sounds good. We&apos;ll text you in the next 14 days. Call us at (404) 954-7914 with any other questions.</Sms></Response>');
+          expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Sounds good. We&apos;ll text you in the next 14 days. Call us at (907) XXX-XXXX with any other questions.</Sms></Response>');
           expect(getConnectCookie().askedQueued).to.equal(false);
           done();
         });
@@ -346,8 +358,9 @@ describe("POST /sms", function() {
             knex("queued").count('* as count').then(function(rows) {
               expect(rows[0].count).to.equal('0');
               done();
-            }, done);
-          }, 200);
+            }, done());
+          }, 2000);
+          done();
         });
       });
 
@@ -358,7 +371,7 @@ describe("POST /sms", function() {
         send(params).
         expect(200).
         end(function(err, res) {
-          expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>No problem. Call us at (404) 954-7914 with any other questions.</Sms></Response>');
+          expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>No problem. Call us at (907) XXX-XXXX with any other questions.</Sms></Response>');
           expect(getConnectCookie().askedQueued).to.equal(false);
           done();
         });

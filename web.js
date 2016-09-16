@@ -14,6 +14,7 @@ app.use(express.urlencoded());
 app.use(express.cookieParser(process.env.COOKIE_SECRET));
 app.use(express.cookieSession());
 
+
 // Serve testing page on which you can impersonate Twilio
 // (but not in production)
 if (app.settings.env === 'development') {
@@ -108,7 +109,6 @@ app.post('/sms', function(req, res) {
     } else {
       var match = results[0];
       var name = cleanupName(match.defendant);
-      console.log(JSON.stringify(match));
       var date = moment(match.date).format('ddd, MMM Do');
 
 

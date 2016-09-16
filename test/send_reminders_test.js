@@ -18,7 +18,7 @@ var knex = Knex.initialize({
 });
 
 nock.disableNetConnect();
-//nock('https://api.twilio.com').log(console.log);
+nock('https://api.twilio.com:443').log(console.log);
 
 describe("with a reminder that hasn't been sent", function() {
   beforeEach(function(done) {
