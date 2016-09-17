@@ -1,6 +1,8 @@
 // setup ENV dependencies
 process.env.COOKIE_SECRET="test";
 process.env.PHONE_ENCRYPTION_KEY = "phone_encryption_key";
+process.env.QUEUE_TTL_DAYS=10;
+process.env.COURT_PUBLIC_URL="http://courts.alaska.gov";
 
 var expect = require("chai").expect;
 var assert = require("chai").assert;
@@ -139,7 +141,7 @@ describe("POST /sms", function() {
         expect(200).
         end(function(err, res) {
           if (err) { return done(err); }
-          expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Found a case for Frederick Turner scheduled on Fri, Mar 27th at 1:00 PM, at courtroom CNVCRT. Would you like a courtesy reminder the day before? (reply YES or NO)</Sms></Response>');
+          expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Found a case for Frederick Turner scheduled on Fri, Mar 27th at 1:00 PM, at CNVCRT. Would you like a courtesy reminder the day before? (reply YES or NO)</Sms></Response>');
           done();
         });
       });
@@ -170,7 +172,7 @@ describe("POST /sms", function() {
           expect(200).
           end(function(err, res) {
             if (err) { return done(err); }
-            expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Couldn&apos;t find your case. It takes 14 days for new citations to appear in the system. Would you like a text when we find your information? (Reply YES or NO)</Sms></Response>');
+            expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>(1/2) Could not find a case with that number. It can take several days for a case to appear in our system.</Sms><Sms>(2/2) Would you like us to keep checking for the next ' + process.env.QUEUE_TTL_DAYS + ' days and text you if we find it? (reply YES or NO)</Sms></Response>');
             done();
           });
         });
@@ -255,7 +257,7 @@ describe("POST /sms", function() {
         send(params).
         expect(200).
         end(function(err, res) {
-          expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Sounds good. We&apos;ll text you a day before your case. Call us at (907) XXX-XXXX with any other questions.</Sms></Response>');
+          expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>(1/2) Sounds good. We will attempt to text you a courtesy reminder the day before your case. Note that case schedules frequently change.</Sms><Sms>(2/2) You should always confirm your case date and time by going to ' + process.env.COURT_PUBLIC_URL + '</Sms></Response>');
           expect(getConnectCookie().askedReminder).to.equal(false);
           done();
         });
@@ -280,14 +282,14 @@ describe("POST /sms", function() {
         });
       });
 
-      it("responds to the user with our number", function(done) {
+      it("tells the user how to get more info", function(done) {
         sess.
         post('/sms').
         set('Cookie', cookieArr).
         send(params).
         expect(200).
         end(function(err, res) {
-          expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Alright, no problem. See you on your court date. Call us at (907) XXX-XXXX with any other questions.</Sms></Response>');
+          expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>OK. You can always go to ' + process.env.COURT_PUBLIC_URL + ' for more information about your case and contact information.</Sms></Response>');
           expect(getConnectCookie().askedReminder).to.equal(false);
           done();
         });
@@ -336,7 +338,7 @@ describe("POST /sms", function() {
         send(params).
         expect(200).
         end(function(err, res) {
-          expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Sounds good. We&apos;ll text you in the next 14 days. Call us at (907) XXX-XXXX with any other questions.</Sms></Response>');
+          expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>OK. We will keep checking for up to ' + process.env.QUEUE_TTL_DAYS + ' days. You can always go to ' + process.env.COURT_PUBLIC_URL + ' for more information about your case and contact information.</Sms></Response>');
           expect(getConnectCookie().askedQueued).to.equal(false);
           done();
         });
@@ -364,14 +366,14 @@ describe("POST /sms", function() {
         });
       });
 
-      it("tells the user we'll text them", function(done) {
+      it("tells the user where to get more info", function(done) {
         sess.
         post('/sms').
         set('Cookie', cookieArr).
         send(params).
         expect(200).
         end(function(err, res) {
-          expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>No problem. Call us at (907) XXX-XXXX with any other questions.</Sms></Response>');
+          expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>OK. You can always go to ' + process.env.COURT_PUBLIC_URL + ' for more information about your case and contact information.</Sms></Response>');
           expect(getConnectCookie().askedQueued).to.equal(false);
           done();
         });

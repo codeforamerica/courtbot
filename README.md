@@ -47,6 +47,8 @@ heroku config:set TWILIO_AUTH_TOKEN=<twilio auth token>
 heroku config:set TWILIO_PHONE_NUMBER=<twilio phone number>
 heroku config:set PHONE_ENCRYPTION_KEY=<random string>
 heroku config:set DATA_URL=<court records csv location>
+heroku config:set COURT_PUBLIC_URL=<where to send people for more info>
+heroku config:set QUEUE_TTL_DAYS=<# days to keep a citation on the search queue>
 git push heroku master
 heroku run node utils/createQueuedTable.js
 heroku run node utils/createRemindersTable.js

@@ -43,7 +43,8 @@ describe("with 2 valid queued cases (same citation)", function() {
 
   it("sends the correct info to Twilio and updates the queued to sent", function(done) {
     var number = "+12223334444";
-    var message = "Your Alaska State Court information was found: a court case for Frederick Turner on Friday, Mar 27th at 01:00:00 PM, in courtroom CNVCRT. Call us at (907) XXX-XXXX with any questions.";
+    var message1 = "(1/2) Hello from the Alaska State Court System.";
+    var message2 = "Your Alaska State Court information was found: a court case for Frederick Turner on Friday, Mar 27th at 01:00:00 PM, in courtroom CNVCRT. Call us at (907) XXX-XXXX with any questions.";
 
     nock('https://api.twilio.com:443')
       .post('/2010-04-01/Accounts/test/Messages.json', "To=" + encodeURIComponent(number) + "&From=%2Btest&Body=" + encodeURIComponent(message))
