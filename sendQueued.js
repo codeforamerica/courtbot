@@ -11,7 +11,6 @@ var knex = Knex.initialize({
 var moment = require('moment');
 
 
-// Finds reminders for cases happening tomorrow
 var findQueued = function() {
   return knex('queued')
     .where('sent', false)
@@ -34,33 +33,43 @@ function sendQueuedMessage(queued) {
         if (results && results.length > 0) {
           var match = results[0];
           var name = cleanupName(match.defendant);
-          var date = moment(match.date).format('dddd, MMM Do');
-          var body = 'Your Alaska State Court information was found: a court case for ' + name + ' on ' + date + ' at ' + match.time + ', in courtroom ' + match.room + '. Call us at (907) XXX-XXXX with any questions.';
+          var date = moment(match.date).format('ddd, MMM Do');
           client.sendMessage({
             to: phone,
             from: process.env.TWILIO_PHONE_NUMBER,
-            body: body
+            body: '(1/2) Hello from the Alaska State Court System.'
           }, function(err, result) {
             if (err) {
               return console.log("client.sendMessage", err);
             }
+            client.sendMessage({
+              to: phone,
+              from: process.env.TWILIO_PHONE_NUMBER,
+              body: '(2/2) We found a case for ' + name + ' scheduled on ' + date + ' at ' + moment("1980-01-01 " + match.time).format("h:mm A") +', at ' + match.room +'. Would you like a courtesy reminder the day before? (reply YES or NO)'
+            }, function(err, result) {
+              if (err) {
+                return console.log("client.sendMessage", err);
+              }
 
-            console.log('Queued message sent to ' + phone);
+              console.log('Queued message sent to ' + phone);
 
-            knex('queued')
-              .where('queued_id', '=', queuedCitation.queued_id)
-              .update({'sent': true})
-              .exec(function(err, results) {
-                if (err) {
-                  console.log(err);
-                }
+              knex('queued')
+                  .where('queued_id', '=', queuedCitation.queued_id)
+                  .update({'sent': true,
+                            'asked_reminder': true,
+                            'asked_reminder_at' : new Date()})
+                  .exec(function (err, results) {
+                    if (err) {
+                      console.log(err);
+                    }
 
-                count++;
+                    count++;
 
-                if (count === queued.length) {
-                  resolve();
-                }
-              });
+                    if (count === queued.length) {
+                      resolve();
+                    }
+                  });
+            });
           });
         } else {
           console.log("Now: " + moment().format('dddd, MMM Do') + ", Created: " + queuedCitation.created_at);

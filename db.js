@@ -21,6 +21,28 @@ exports.findCitation = function(citation, callback) {
   knex('cases').where(citationSearch).select().exec(callback);
 };
 
+// Find queued citations that we have asked about adding reminders
+exports.findAskedQueued = function(phone, callback) {
+  var cipher = crypto.createCipher('aes256', process.env.PHONE_ENCRYPTION_KEY);
+  var encryptedPhone = cipher.update(phone, 'utf8', 'hex') + cipher.final('hex');
+  // Filter for new ones. If too old, user probably missed the message (same timeframe as Twilio sessions - 4 hours). Return IFF one found. If > 1 found, skip
+  var query = knex('queued').select().exec(function(err, rows) {
+    console.log("db.js All rows: " + JSON.stringify(rows));
+  });
+  query = knex('queued').where('phone',encryptedPhone).andWhere('asked_reminder',true).andWhereRaw('"asked_reminder_at" > current_timestamp - interval \'4 hours\'').select();
+  console.log("Query: " + query);
+  query.then(function(rows) {
+    console.log("findAskedQueued: " + JSON.stringify(rows));
+    if (rows.length == 1) {
+      var citationSearch = knex.raw("'{\"" + rows[0].citation_id + "\"}'::text[] <@ (json_val_arr(citations, 'id'))");
+      knex('queued').where('queued_id', rows[0].queued_id).update({'askedReminder':false, 'askedReminderAt':'NULL'}),then(function() {
+        knex('cases').where(citationSearch).select().exec(callback);
+      });
+    }
+    callback(null, []);
+  });
+};
+
 exports.fuzzySearch = function(str, callback) {
   var parts = str.toUpperCase().split(" ");
 

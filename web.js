@@ -57,9 +57,8 @@ app.post('/sms', function(req, res) {
   var twiml = new twilio.TwimlResponse();
   var text = req.body.Body.toUpperCase();
 
-  if (req.session.askedReminder) {
+  function handleReminderResponse (match) {
     if (text === 'YES' || text === 'YEA' || text === 'YUP' || text === 'Y') {
-      var match = req.session.match;
       db.addReminder({
         caseId: match.id,
         phone: req.body.From,
@@ -75,6 +74,19 @@ app.post('/sms', function(req, res) {
       req.session.askedReminder = false;
       res.send(twiml.toString());
     }
+  }
+
+  if (req.session.askedReminder) {
+    var match = req.session.match;
+    handleReminderResponse(match);
+   } else {
+    db.findAskedQueued(req.body.From, function(err, data) {  // Is this a response to a queue-triggered SMS? If so, "session" is stored in queue record
+      console.log("dn.findAskedQueue result: " + JSON.stringify(data));
+      if (data.length == 1) { //Only respond if we found one queue response "session"
+        var match = data[0];
+        handleReminderResponse(match);
+      }
+    });
   }
 
   if (req.session.askedQueued) {

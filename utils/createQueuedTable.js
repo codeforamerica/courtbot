@@ -13,7 +13,9 @@ var createTable = function() {
     table.dateTime('created_at');
     table.string('citation_id', 100);
     table.string('phone', 100);
-    table.boolean('sent', 100);
+    table.boolean('sent');
+    table.boolean('asked_reminder');
+    table.dateTime('asked_reminder_at')
   });
 };
 

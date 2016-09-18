@@ -113,18 +113,19 @@ describe("POST /sms", function() {
   beforeEach(function(done) {
     knex('cases').del().then(function() {
       knex('reminders').del().then(function() {
-        knex('queued').del().then(function() {
-          knex('cases').insert([turnerData()]).then(function() {
-            done();
-          });
+//        knex('queued').del().then(function() {
+        knex('cases').insert([turnerData()]).then(function() {
+          done();
         });
+//        });
       });
     });
   });
 
   context("without session set", function() {
     context("with 1 matching court case", function() {
-      var params = { Body: "4928456" };
+      var params = { Body: "4928456",
+        From: "+12223334444"};
 
       beforeEach(function(done) {
         knex('cases').del().then(function() {
@@ -163,7 +164,7 @@ describe("POST /sms", function() {
 
     context("with 0 matching court cases", function() {
       context("with a citation length between 6-25 inclusive", function() {
-        var params = { Body: "123456" };
+        var params = { Body: "123456", From: "+12223334444" };
 
         it("says we couldn't find their case and prompt for reminder", function(done) {
           sess.
@@ -193,7 +194,7 @@ describe("POST /sms", function() {
       });
 
       context("the citation length is too short", function() {
-        var params = { Body: "12345" };
+        var params = { Body: "12345", From: "+12223334444"  };
 
         it("says that case id is wrong", function(done) {
           sess.
@@ -216,27 +217,97 @@ describe("POST /sms", function() {
   context("with session.askedReminder", function() {
     // Build json object, serialize, sign, encode
     var cookieObj = rawTurnerDataAsObject();
-    var cookieStr = 'j:{"match":'+JSON.stringify(cookieObj)+',"askedReminder":true}';
+    var cookieStr = 'j:{"match":' + JSON.stringify(cookieObj) + ',"askedReminder":true}';
     cookieStr = cookieStr + "." + crypto
-        .createHmac('sha256', process.env.COOKIE_SECRET)
-        .update(cookieStr)
-        .digest('base64')
-        .replace(/\=+$/, '');
+            .createHmac('sha256', process.env.COOKIE_SECRET)
+            .update(cookieStr)
+            .digest('base64')
+            .replace(/\=+$/, '');
     cookieStr = "s:" + cookieStr;
     // var cookieArr = ['connect.sess=s%3Aj%3A%7B%22match%22%3A%7B%22id%22%3A%22677167760f89d6f6ddf7ed19ccb63c15486a0eab%22%2C%22defendant%22%3A%22TURNER%2C%20FREDERICK%20T%22%2C%22date%22%3A%222015-03-27T00%3A00%3A00.000Z%22%2C%22time%22%3A%2201%3A00%3A00%20PM%22%2C%22room%22%3A%22CNVCRT%22%2C%22citations%22%3A%5B%7B%22id%22%3A%224928456%22%2C%22violation%22%3A%2240-8-76.1%22%2C%22description%22%3A%22SAFETY%20BELT%20VIOLATION%22%2C%22location%22%3A%2227%20DECAATUR%20ST%22%7D%5D%7D%2C%22askedReminder%22%3Atrue%7D.LJMfW%2B9Dz6BLG2mkRlMdVVnIm3V2faxF3ke7oQjYnls; Path=/; HttpOnly'];
-    var cookieArr = ['connect.sess='+encodeURIComponent(cookieStr)+'; Path=/; HttpOnly'];
-    describe("the user texts YES", function() {
-      var params = { Body: "yEs", From: "+12223334444" };
-      it("creates a reminder", function(done) {
-        sess.
-        post('/sms').
-        set('Cookie', cookieArr[0]).
-        send(params).
-        expect(200).
-        end(function(err, res) {
-          if (err) { return done(err); }
-          setTimeout(function() { // This is a hack because the DB operation happens ASYNC
-            knex("reminders").select("*").groupBy("reminders.reminder_id").count('* as count').then(function(rows) {
+    var cookieArr = ['connect.sess=' + encodeURIComponent(cookieStr) + '; Path=/; HttpOnly'];
+    describe("User responding askedReminder session", function() {
+      checkReminderInteraction(cookieArr, false);
+    });
+  });
+
+  context("with askedReminder from Queued trigger", function() {
+    knex("queued").del().then(function() {
+      var cipher = crypto.createCipher('aes256', process.env.PHONE_ENCRYPTION_KEY);
+      var encryptedPhone = cipher.update( "+12223334444", 'utf8', 'hex') + cipher.final('hex');
+      knex('queued').insert({
+        citation_id: "4928456",
+        sent: true,
+        phone: encryptedPhone,
+        asked_reminder: true,
+        asked_reminder_at: new Date(),
+        created_at: new Date()
+      }).asCallback(function(err, data) {
+        var query = knex('queued').select().exec(function(err, rows) {
+          console.log("All rows: " + JSON.stringify(rows));
+          var cookieArr = ['connect.sess=; Path=/; HttpOnly'];
+          describe("User responding to a queued message", function() {
+            checkReminderInteraction(cookieArr, false);
+          });
+        });
+
+      });
+    });
+  });
+
+  context("with old askedReminder from Queued trigger", function() {
+    knex("queued").del().then(function() {
+      var cipher = crypto.createCipher('aes256', process.env.PHONE_ENCRYPTION_KEY);
+      var encryptedPhone = cipher.update( "+12223334444", 'utf8', 'hex') + cipher.final('hex');
+      var oldDate = new Date();
+      oldDate.setHours(oldDate.getHours() - 5);
+      knex('queued').insert({
+        citation_id: "4928456",
+        sent: true,
+        phone: encryptedPhone,
+        asked_reminder: true,
+        asked_reminder_at: oldDate,
+        created_at: new Date()
+      }).asCallback(function(err, data) {
+        var query = knex('queued').select().exec(function(err, rows) {
+          console.log("All rows: " + JSON.stringify(rows));
+        });
+        var cookieArr = ['connect.sess=; Path=/; HttpOnly'];
+        describe("User responding to an old queued message", function() {
+          checkReminderInteraction(cookieArr, true);
+        });
+      });
+    });
+  });
+
+
+  function checkReminderInteraction(cookieArr, expectNoMatch) {
+    if (expectNoMatch) {
+      it("YES - doesn't find citation", function(done) {
+        var params = { Body: "yEs", From: "+12223334444" };
+        sess.post('/sms').send(params).expect(200).end(function (err, res) {
+          if (err) {
+            return done(err);
+          }
+          expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Couldn&apos;t find your case. Case identifier should be 6 to 25 numbers and/or letters in length.</Sms></Response>');
+          expect(getConnectCookie().askedQueued).to.equal(undefined);
+          expect(getConnectCookie().askedReminder).to.equal(undefined);
+          expect(getConnectCookie().citationId).to.equal(undefined);
+          done();
+        });
+      });
+    } else {
+      it("YES - creates a reminder and responds appropriately", function (done) {
+        var params = { Body: "yEs", From: "+12223334444" };
+        console.log("Params: " + JSON.stringify(params));
+        sess.post('/sms').set('Cookie', cookieArr[0]).send(params).expect(200).end(function (err, res) {
+          if (err) {
+            return done(err);
+          }
+          expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>(1/2) Sounds good. We will attempt to text you a courtesy reminder the day before your case. Note that case schedules frequently change.</Sms><Sms>(2/2) You should always confirm your case date and time by going to ' + process.env.COURT_PUBLIC_URL + '</Sms></Response>');
+          expect(getConnectCookie().askedReminder).to.equal(false);
+          setTimeout(function () { // This is a hack because the DB operation happens ASYNC
+            knex("reminders").select("*").groupBy("reminders.reminder_id").count('* as count').then(function (rows) {
               var record = rows[0];
               expect(record.count).to.equal('1');
               expect(record.phone).to.equal(cypher("+12223334444"));
@@ -250,52 +321,61 @@ describe("POST /sms", function() {
         });
       });
 
-      it("responds to the user about the reminder being created", function(done) {
-        sess.
-        post('/sms').
-        set('Cookie', cookieArr).
-        send(params).
-        expect(200).
-        end(function(err, res) {
-          expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>(1/2) Sounds good. We will attempt to text you a courtesy reminder the day before your case. Note that case schedules frequently change.</Sms><Sms>(2/2) You should always confirm your case date and time by going to ' + process.env.COURT_PUBLIC_URL + '</Sms></Response>');
-          expect(getConnectCookie().askedReminder).to.equal(false);
+      //it("YES - responds to the user about the reminder being created", function(done) {
+      //  sess.
+      //  post('/sms').
+      //  set('Cookie', cookieArr).
+      //  send(params).
+      //  expect(200).
+      //  end(function(err, res) {
+      //    expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>(1/2) Sounds good. We will attempt to text you a courtesy reminder the day before your case. Note that case schedules frequently change.</Sms><Sms>(2/2) You should always confirm your case date and time by going to ' + process.env.COURT_PUBLIC_URL + '</Sms></Response>');
+      //    expect(getConnectCookie().askedReminder).to.equal(false);
+      //    done();
+      //  });
+      //});
+    }
+
+    params = { Body: "No", From: "+12223334444" };
+    if (expectNoMatch) {
+      it("NO - doesn't find citation", function(done) {
+        var params = { Body: "nO", From: "+12223334444" };
+        sess.post('/sms').send(params).expect(200).end(function (err, res) {
+          if (err) {
+            return done(err);
+          }
+          expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Couldn&apos;t find your case. Case identifier should be 6 to 25 numbers and/or letters in length.</Sms></Response>');
+          expect(getConnectCookie().askedQueued).to.equal(undefined);
+          expect(getConnectCookie().askedReminder).to.equal(undefined);
+          expect(getConnectCookie().citationId).to.equal(undefined);
           done();
         });
       });
-    });
+    } else {
 
-    describe("the user texts NO", function() {
-      var params = { Body: "No", From: "+12223334444" };
-
-      it("doesn't create a reminder", function(done) {
-        sess.
-        post('/sms').
-        set('Cookie', cookieArr).
-        send(params).
-        expect(200).
-        end(function(err, res) {
-          if (err) { return done(err); }
-          knex("reminders").count('* as count').then(function(rows) {
+      it("NO - doesn't create a reminder and responds appropriately", function (done) {
+        var params = { Body: "nO", From: "+12223334444" };
+        sess.post('/sms').set('Cookie', cookieArr).send(params).expect(200).end(function (err, res) {
+          if (err) {
+            return done(err);
+          }
+          expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>OK. You can always go to ' + process.env.COURT_PUBLIC_URL + ' for more information about your case and contact information.</Sms></Response>');
+          expect(getConnectCookie().askedReminder).to.equal(false);
+          knex("reminders").count('* as count').then(function (rows) {
             expect(rows[0].count).to.equal('0');
             done();
           }, done);
         });
       });
 
-      it("tells the user how to get more info", function(done) {
-        sess.
-        post('/sms').
-        set('Cookie', cookieArr).
-        send(params).
-        expect(200).
-        end(function(err, res) {
-          expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>OK. You can always go to ' + process.env.COURT_PUBLIC_URL + ' for more information about your case and contact information.</Sms></Response>');
-          expect(getConnectCookie().askedReminder).to.equal(false);
-          done();
-        });
-      });
-    });
-  });
+      //it("NO - tells the user how to get more info", function (done) {
+      //  sess.post('/sms').set('Cookie', cookieArr).send(params).expect(200).end(function (err, res) {
+      //    expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>OK. You can always go to ' + process.env.COURT_PUBLIC_URL + ' for more information about your case and contact information.</Sms></Response>');
+      //    expect(getConnectCookie().askedReminder).to.equal(false);
+      //    done();
+      //  });
+      //});
+    }
+  };
 
   context("with session.askedQueued", function() {
     // var cookieArr = ['connect.sess=s%3Aj%3A%7B%22askedQueued%22%3Atrue%2C%22citationId%22%3A%22123456%22%7D.%2FuRCxqdZogql42ti2bU0yMSOU0CFKA0kbL81MQb5o24; Path=/; HttpOnly'];
