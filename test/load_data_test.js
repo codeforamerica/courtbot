@@ -12,6 +12,8 @@ var knex = Knex.initialize({
   client: 'pg',
   connection: process.env.DATABASE_URL
 });
+require('dotenv').config();
+
 
 var data_hostname = "http://" + url.parse(process.env.DATA_URL).hostname;
 console.log("Host: " + data_hostname);

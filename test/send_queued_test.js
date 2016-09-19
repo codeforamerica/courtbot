@@ -16,6 +16,8 @@ var knex = Knex.initialize({
   client: 'pg',
   connection: process.env.DATABASE_URL
 });
+require('dotenv').config();
+
 
 nock.disableNetConnect();
 nock('https://api.twilio.com:443').log(console.log);
