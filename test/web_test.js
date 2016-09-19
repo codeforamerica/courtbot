@@ -72,10 +72,10 @@ describe("GET /cases", function() {
         expect(200).
         end(function(err, res) {
           if (err) return done(err);
-          console.log("Turner 1: " + JSON.stringify(turnerDataAsObject(1)));
-          console.log("Turner 2: " + JSON.stringify(turnerDataAsObject(2)));
-          console.log("res(text): " + JSON.stringify(res.text));
-          expect(JSON.parse(res.text)).to.deep.equal([turnerDataAsObject(1), turnerDataAsObject(2)]);
+          console.log("Turner 1: " + JSON.stringify(sortObject(turnerDataAsObject(1))));
+          console.log("Turner 2: " + JSON.stringify(sortObject(turnerDataAsObject(2))));
+          console.log("res(text): " + JSON.stringify([sortObject(JSON.parse(res.text)[0]),sortObject(JSON.parse(res.text)[1])]));
+          expect([sortObject(JSON.parse(res.text)[0]),sortObject(JSON.parse(res.text)[1])]).to.deep.equal([turnerDataAsObject(1), turnerDataAsObject(2)]);
           done();
         });
       });
@@ -89,7 +89,7 @@ describe("GET /cases", function() {
         expect(200).
         end(function(err, res) {
           if (err) return done(err);
-          expect(JSON.parse(res.text)).to.deep.equal([turnerDataAsObject()]);
+          expect(sortObject(JSON.parse(res.text))["0"]).to.deep.equal(turnerDataAsObject());
           done();
         });
       });
@@ -508,4 +508,22 @@ function getConnectCookie() {
 function cypher(phone) {
   var cipher = crypto.createCipher('aes256', process.env.PHONE_ENCRYPTION_KEY);
   return cipher.update(phone, 'utf8', 'hex') + cipher.final('hex');
+}
+
+function sortObject(o) {
+  var sorted = {},
+      key, a = [];
+
+  for (key in o) {
+    if (o.hasOwnProperty(key)) {
+      a.push(key);
+    }
+  }
+
+  a.sort();
+
+  for (key = 0; key < a.length; key++) {
+    sorted[a[key]] = o[a[key]];
+  }
+  return sorted;
 }
