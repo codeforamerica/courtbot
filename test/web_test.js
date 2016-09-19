@@ -43,7 +43,6 @@ describe("GET /", function() {
     expect(200).
     end(function(err, res) {
       if (err) return done(err);
-      console.log(res.text);
       expect(res.text).to.contain("Impersonate Twilio");
       done();
     });
@@ -73,6 +72,9 @@ describe("GET /cases", function() {
         expect(200).
         end(function(err, res) {
           if (err) return done(err);
+          console.log("Turner 1: " + JSON.stringify(turnerDataAsObject(1)));
+          console.log("Turner 2: " + JSON.stringify(turnerDataAsObject(2)));
+          console.log("res(text): " + JSON.stringify(res.text));
           expect(JSON.parse(res.text)).to.deep.equal([turnerDataAsObject(1), turnerDataAsObject(2)]);
           done();
         });
@@ -229,7 +231,6 @@ describe("POST /sms", function() {
     describe("User responding askedReminder session", function() {
       it("YES - creates a reminder and responds appropriately", function (done) {
         var params = { Body: "yEs", From: "+12223334444" };
-        console.log("Params: " + JSON.stringify(params));
         sess.post('/sms').set('Cookie', cookieArr[0]).send(params).expect(200).end(function (err, res) {
           if (err) {
             return done(err);
@@ -294,7 +295,6 @@ describe("POST /sms", function() {
       var cookieArr = [""];
       it("YES - creates a reminder and responds appropriately", function (done) {
         var params = { Body: "yEs", From: "+12223334444" };
-        console.log("Params: " + JSON.stringify(params));
         sess.post('/sms').set('Cookie', cookieArr[0]).send(params).expect(200).end(function (err, res) {
           if (err) {
             return done(err);
@@ -317,7 +317,6 @@ describe("POST /sms", function() {
       });
       it("NO - doesn't create a reminder and responds appropriately", function (done) {
         var params = { Body: "nO", From: "+12223334444" };
-        console.log("Params: " + JSON.stringify(params));
         sess.post('/sms').set('Cookie', cookieArr[0]).send(params).expect(200).end(function (err, res) {
           if (err) {
             return done(err);
