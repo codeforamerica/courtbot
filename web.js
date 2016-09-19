@@ -44,6 +44,7 @@ app.get('/cases', function(req, res) {
 
   db.fuzzySearch(req.query.q, function(err, data) {
     // Add readable dates, to avoid browser side date issues
+    console.log(JSON.stringify(data));
     if (data) {
       data.forEach(function (d) {
         d.readableDate = moment(d.date).format('dddd, MMM Do');
@@ -55,7 +56,6 @@ app.get('/cases', function(req, res) {
 });
 
 function askedReminderMiddleware(req, res, next) {
-  console.log("In middleware, text: " + req.body.Body)
   if (isResponseYes(req.body.Body) || isResponseNo(req.body.Body)) {
     if (req.session.askedReminder) {
       req.askedReminder = true;
@@ -64,7 +64,6 @@ function askedReminderMiddleware(req, res, next) {
     }
     db.findAskedQueued(req.body.From, function (err, data) {  // Is this a response to a queue-triggered SMS? If so, "session" is stored in queue record
       if (err) return next(err);
-      console.log("db.findAskedQueue result: " + JSON.stringify(data) + "data.length: " + data.length);
       if (data.length == 1) { //Only respond if we found one queue response "session"
         req.askedReminder = true;
         req.match = data[0];
@@ -83,14 +82,12 @@ app.post('/sms', askedReminderMiddleware, function(req, res, next) {
   var text = req.body.Body.toUpperCase();
 
   if (req.askedReminder) {
-    console.log("Text: " + text);
     if (isResponseYes(text)) {
       db.addReminder({
         caseId: req.match.id,
         phone: req.body.From,
         originalCase: JSON.stringify(req.match)
       }, function(err, data) {});
-      console.log("Ready to send message");
       twiml.sms('(1/2) Sounds good. We will attempt to text you a courtesy reminder the day before your case. Note that case schedules frequently change.');
       twiml.sms('(2/2) You should always confirm your case date and time by going to ' + process.env.COURT_PUBLIC_URL);
       req.session.askedReminder = false;
@@ -104,7 +101,6 @@ app.post('/sms', askedReminderMiddleware, function(req, res, next) {
   }
 
   if (req.session.askedQueued) {
-    console.log("In askedQueued");
     if (isResponseYes(text)) {
       db.addQueued({
         citationId: req.session.citationId,
@@ -126,7 +122,6 @@ app.post('/sms', askedReminderMiddleware, function(req, res, next) {
     }
   }
 
-  console.log("Heading for findCitation");
   db.findCitation(text, function(err, results) {
     // If we can't find the case, or find more than one case with the citation
     // number, give an error and recommend they call in.
@@ -139,7 +134,6 @@ app.post('/sms', askedReminderMiddleware, function(req, res, next) {
         req.session.askedQueued = true;
         req.session.citationId = text;
       } else {
-        console.log("Got here somehow");
         twiml.sms('Couldn\'t find your case. Case identifier should be 6 to 25 numbers and/or letters in length.');
       }
     } else {
