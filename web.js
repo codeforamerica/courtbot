@@ -52,59 +52,69 @@ app.get('/cases', function(req, res) {
   });
 });
 
+function askedReminderMiddleware(req, res, next) {
+  console.log("In middleware, text: " + req.body.Body)
+  if (isResponseYes(req.body.Body) || isResponseNo(req.body.Body)) {
+    if (req.session.askedReminder) {
+      req.askedReminder = true;
+      req.match = req.session.match;
+      return next();
+    }
+    db.findAskedQueued(req.body.From, function (err, data) {  // Is this a response to a queue-triggered SMS? If so, "session" is stored in queue record
+      if (err) return next(err);
+      console.log("db.findAskedQueue result: " + JSON.stringify(data) + "data.length: " + data.length);
+      if (data.length == 1) { //Only respond if we found one queue response "session"
+        req.askedReminder = true;
+        req.match = data[0];
+      }
+      next();
+    });
+  }
+  next();
+}
+
 // Respond to text messages that come in from Twilio
-app.post('/sms', function(req, res) {
+app.post('/sms', askedReminderMiddleware, function(req, res, next) {
   var twiml = new twilio.TwimlResponse();
   var text = req.body.Body.toUpperCase();
 
-  function handleReminderResponse (match) {
+  if (req.askedReminder) {
     console.log("Text: " + text);
-    if (text === 'YES' || text === 'YEA' || text === 'YUP' || text === 'Y') {
+    if (isResponseYes(text)) {
       db.addReminder({
-        caseId: match.id,
+        caseId: req.match.id,
         phone: req.body.From,
-        originalCase: JSON.stringify(match)
+        originalCase: JSON.stringify(req.match)
       }, function(err, data) {});
       console.log("Ready to send message");
       twiml.sms('(1/2) Sounds good. We will attempt to text you a courtesy reminder the day before your case. Note that case schedules frequently change.');
       twiml.sms('(2/2) You should always confirm your case date and time by going to ' + process.env.COURT_PUBLIC_URL);
       req.session.askedReminder = false;
       res.send(twiml.toString());
-    } else if (text === 'NO' || text ==='N') {
+    } else {
       twiml.sms('OK. You can always go to ' + process.env.COURT_PUBLIC_URL + ' for more information about your case and contact information.');
       req.session.askedReminder = false;
       res.send(twiml.toString());
     }
-  }
-
-  if (req.session.askedReminder) {
-    var match = req.session.match;
-    handleReminderResponse(match);
-  } else {
-    console.log("No session, checking queue database");
-    db.findAskedQueued(req.body.From, function(data) {  // Is this a response to a queue-triggered SMS? If so, "session" is stored in queue record
-      console.log("dn.findAskedQueue result: " + JSON.stringify(data) + "data.length: " + data.length);
-      if (data.length == 1) { //Only respond if we found one queue response "session"
-        var match = data[0];
-        console.log("Handling reminder response");
-       handleReminderResponse(match);
-      }
-    });
-    console.log("CONITNUING");
+    return;
   }
 
   if (req.session.askedQueued) {
-    if (text === 'YES' || text === 'YEA' || text === 'YUP' || text === 'Y') {
+    console.log("In askedQueued");
+    if (isResponseYes(text)) {
       db.addQueued({
         citationId: req.session.citationId,
         phone: req.body.From
-      }, function(err, data) {});
-
-      twiml.sms('OK. We will keep checking for up to ' + process.env.QUEUE_TTL_DAYS + ' days. You can always go to ' + process.env.COURT_PUBLIC_URL + ' for more information about your case and contact information.');
-      req.session.askedQueued = false;
-      res.send(twiml.toString());
+      }, function(err, data) {
+        if (err) {
+          next(err);
+        }
+        twiml.sms('OK. We will keep checking for up to ' + process.env.QUEUE_TTL_DAYS + ' days. You can always go to ' + process.env.COURT_PUBLIC_URL + ' for more information about your case and contact information.');
+        req.session.askedQueued = false;
+        res.send(twiml.toString());
+      });
       return;
-    } else if (text === 'NO' || text ==='N') {
+    } else if (isResponseNo(text)) {
       twiml.sms('OK. You can always go to ' + process.env.COURT_PUBLIC_URL + ' for more information about your case and contact information.');
       req.session.askedQueued = false;
       res.send(twiml.toString());
@@ -153,6 +163,29 @@ var cleanupName = function(name) {
 
   return name;
 };
+
+function isResponseYes(text) {
+  text = text.toUpperCase();
+  return (text === 'YES' || text === 'YEA' || text === 'YUP' || text === 'Y');
+}
+function isResponseNo(text) {
+  text = text.toUpperCase();
+  return (text === 'NO' || text ==='N');
+}
+
+// Error handling Middleware
+app.use(function (err, req, res, next) {
+  if (!res.headersSent) {
+    // during development, return the trace to the client for
+    // helpfulness
+    console.log("Error: " + err.message);
+    if (app.settings.env !== 'production') {
+      return res.status(500).send(err.stack)
+    }
+
+    return res.status(500).send('Sorry, internal server error')
+  }
+});
 
 var port = Number(process.env.PORT || 5000);
 app.listen(port, function() {

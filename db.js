@@ -38,13 +38,14 @@ exports.findAskedQueued = function(phone, callback) {
         console.log("Clear queue flag result: " + JSON.stringify(values));
         return knex('cases').where(citationSearch).select().then(function(rows) {
           console.log("Citations found: " + JSON.stringify(rows));
-          return callback(rows);
+          return callback(null, rows);
         });
       });
     } else {
-      return callback([]);
+      return callback(null, []);
     }
-  });
+  })
+      .catch(callback);
 };
 
 exports.fuzzySearch = function(str, callback) {
