@@ -70,7 +70,9 @@ function askedReminderMiddleware(req, res, next) {
       next();
     });
   }
-  next();
+  else {
+    next();
+  }
 }
 
 // Respond to text messages that come in from Twilio
