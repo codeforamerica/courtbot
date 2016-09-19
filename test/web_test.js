@@ -113,11 +113,11 @@ describe("POST /sms", function() {
   beforeEach(function(done) {
     knex('cases').del().then(function() {
       knex('reminders').del().then(function() {
-//        knex('queued').del().then(function() {
-        knex('cases').insert([turnerData()]).then(function() {
-          done();
+        knex('queued').del().then(function() {
+          knex('cases').insert([turnerData()]).then(function() {
+            done();
+          });
         });
-//        });
       });
     });
   });
@@ -268,24 +268,30 @@ describe("POST /sms", function() {
   });
 
   context("with askedReminder from Queued trigger", function() {
-    describe("User responding to a queued message", function() {
-      beforeEach(function (done) {
-        knex("queued").del().then(function () {
-          var cipher = crypto.createCipher('aes256', process.env.PHONE_ENCRYPTION_KEY);
-          var encryptedPhone = cipher.update("+12223334444", 'utf8', 'hex') + cipher.final('hex');
-          knex('queued').insert({
-            citation_id: "4928456",
-            sent: true,
-            phone: encryptedPhone,
-            asked_reminder: true,
-            asked_reminder_at: new Date(),
-            created_at: new Date()
-          }).then(function () {
-            done();
+    beforeEach(function () {
+      return knex('cases').del().then(function() {
+        return knex('reminders').del().then(function() {
+          return knex('cases').insert([turnerData()]).then(function() {
+            return knex("queued").del().then(function () {
+              var cipher = crypto.createCipher('aes256', process.env.PHONE_ENCRYPTION_KEY);
+              var encryptedPhone = cipher.update("+12223334444", 'utf8', 'hex') + cipher.final('hex');
+              return knex('queued').insert({
+                citation_id: "4928456",
+                sent: true,
+                phone: encryptedPhone,
+                asked_reminder: true,
+                asked_reminder_at: "NOW()",
+                created_at: "NOW()"
+              }).then(function () {
+                // done();
+              });
+            });
           });
         });
       });
-      var cookieArr = ['connect.sess=; Path=/; HttpOnly'];
+    });
+    describe("User responding to a queued message", function() {
+      var cookieArr = [""];
       it("YES - creates a reminder and responds appropriately", function (done) {
         var params = { Body: "yEs", From: "+12223334444" };
         console.log("Params: " + JSON.stringify(params));
@@ -304,13 +310,14 @@ describe("POST /sms", function() {
               expect(record.sent).to.equal(false);
               expect(record.original_case).to.deep.equal(rawTurnerDataAsObject("", false));
               done();
-            }, done());
+            }, done(err));
           }, 2000);
           done();
         });
       });
       it("NO - doesn't create a reminder and responds appropriately", function (done) {
         var params = { Body: "nO", From: "+12223334444" };
+        console.log("Params: " + JSON.stringify(params));
         sess.post('/sms').set('Cookie', cookieArr[0]).send(params).expect(200).end(function (err, res) {
           if (err) {
             return done(err);
@@ -319,34 +326,39 @@ describe("POST /sms", function() {
           expect(getConnectCookie().askedReminder).to.equal(false);
           knex("reminders").count('* as count').then(function (rows) {
             expect(rows[0].count).to.equal('0');
-            done();
-          }, done);
+          }, done(err));
         });
       });
     });
   });
 
   context("with old askedReminder from Queued trigger", function() {
-    describe("User responding to an old queued message", function() {
-      beforeEach(function (done) {
-        knex("queued").del().then(function () {
-          var cipher = crypto.createCipher('aes256', process.env.PHONE_ENCRYPTION_KEY);
-          var encryptedPhone = cipher.update("+12223334444", 'utf8', 'hex') + cipher.final('hex');
-          var oldDate = new Date();
-          oldDate.setHours(oldDate.getHours() - 5);
-          knex('queued').insert({
-            citation_id: "4928456",
-            sent: true,
-            phone: encryptedPhone,
-            asked_reminder: true,
-            asked_reminder_at: oldDate,
-            created_at: new Date()
-          }).then(function () {
-            done();
+    beforeEach(function () {
+      return knex('cases').del().then(function() {
+        return knex('reminders').del().then(function() {
+          return knex('cases').insert([turnerData()]).then(function() {
+            return knex("queued").del().then(function () {
+              var cipher = crypto.createCipher('aes256', process.env.PHONE_ENCRYPTION_KEY);
+              var encryptedPhone = cipher.update("+12223334444", 'utf8', 'hex') + cipher.final('hex');
+              var oldDate = new Date();
+              oldDate.setHours(oldDate.getHours() - 5);
+              return knex('queued').insert({
+                citation_id: "4928456",
+                sent: true,
+                phone: encryptedPhone,
+                asked_reminder: true,
+                asked_reminder_at: oldDate,
+                created_at: "NOW()"
+              }).then(function () {
+                // done();
+              });
+            });
           });
         });
       });
-      var cookieArr = ['connect.sess=; Path=/; HttpOnly'];
+    });
+    describe("User responding to an old queued message", function() {
+      var cookieArr = [""];
       it("YES - doesn't find citation", function(done) {
         var params = { Body: "yEs", From: "+12223334444" };
         sess.post('/sms').send(params).expect(200).end(function (err, res) {

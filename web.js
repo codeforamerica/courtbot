@@ -58,35 +58,50 @@ app.post('/sms', function(req, res) {
   var text = req.body.Body.toUpperCase();
 
   function handleReminderResponse (match) {
+    console.log("Text: " + text);
     if (text === 'YES' || text === 'YEA' || text === 'YUP' || text === 'Y') {
       db.addReminder({
         caseId: match.id,
         phone: req.body.From,
         originalCase: JSON.stringify(match)
       }, function(err, data) {});
-
+      console.log("Ready to send message");
       twiml.sms('(1/2) Sounds good. We will attempt to text you a courtesy reminder the day before your case. Note that case schedules frequently change.');
       twiml.sms('(2/2) You should always confirm your case date and time by going to ' + process.env.COURT_PUBLIC_URL);
       req.session.askedReminder = false;
       res.send(twiml.toString());
+      return true;
     } else if (text === 'NO' || text ==='N') {
       twiml.sms('OK. You can always go to ' + process.env.COURT_PUBLIC_URL + ' for more information about your case and contact information.');
       req.session.askedReminder = false;
       res.send(twiml.toString());
+      return true;
     }
+    return false;
   }
 
   if (req.session.askedReminder) {
     var match = req.session.match;
-    handleReminderResponse(match);
-   } else {
-    db.findAskedQueued(req.body.From, function(err, data) {  // Is this a response to a queue-triggered SMS? If so, "session" is stored in queue record
-      console.log("dn.findAskedQueue result: " + JSON.stringify(data));
+    if (handleReminderResponse(match)) {
+      return;
+    }
+  } else {
+    console.log("No session, checking queue database");
+    if (db.findAskedQueued(req.body.From, function(data) {  // Is this a response to a queue-triggered SMS? If so, "session" is stored in queue record
+      console.log("dn.findAskedQueue result: " + JSON.stringify(data) + "data.length: " + data.length);
       if (data.length == 1) { //Only respond if we found one queue response "session"
         var match = data[0];
-        handleReminderResponse(match);
+        console.log("Handling reminder response");
+        if (handleReminderResponse(match)) {
+          console.log("Exiting POST");
+          return true;
+        }
       }
-    });
+      return false;
+    })) {
+      return;
+    }
+    console.log("CONITNUING");
   }
 
   if (req.session.askedQueued) {
@@ -99,13 +114,16 @@ app.post('/sms', function(req, res) {
       twiml.sms('OK. We will keep checking for up to ' + process.env.QUEUE_TTL_DAYS + ' days. You can always go to ' + process.env.COURT_PUBLIC_URL + ' for more information about your case and contact information.');
       req.session.askedQueued = false;
       res.send(twiml.toString());
+      return;
     } else if (text === 'NO' || text ==='N') {
       twiml.sms('OK. You can always go to ' + process.env.COURT_PUBLIC_URL + ' for more information about your case and contact information.');
       req.session.askedQueued = false;
       res.send(twiml.toString());
+      return;
     }
   }
 
+  console.log("Heading for findCitation");
   db.findCitation(text, function(err, results) {
     // If we can't find the case, or find more than one case with the citation
     // number, give an error and recommend they call in.
@@ -118,6 +136,7 @@ app.post('/sms', function(req, res) {
         req.session.askedQueued = true;
         req.session.citationId = text;
       } else {
+        console.log("Got here somehow");
         twiml.sms('Couldn\'t find your case. Case identifier should be 6 to 25 numbers and/or letters in length.');
       }
     } else {

@@ -26,17 +26,26 @@ exports.findAskedQueued = function(phone, callback) {
   var cipher = crypto.createCipher('aes256', process.env.PHONE_ENCRYPTION_KEY);
   var encryptedPhone = cipher.update(phone, 'utf8', 'hex') + cipher.final('hex');
   // Filter for new ones. If too old, user probably missed the message (same timeframe as Twilio sessions - 4 hours). Return IFF one found. If > 1 found, skip
-  var query = knex('queued').where('phone',encryptedPhone).andWhere('asked_reminder',true).andWhereRaw('"asked_reminder_at" > current_timestamp - interval \'4 hours\'').select();
-  console.log("Query: " + query);
-  query.then(function(rows) {
+  // var query = knex('queued').where('phone',encryptedPhone).andWhere('asked_reminder',true).andWhereRaw('"asked_reminder_at" > current_timestamp - interval \'4 hours\'').select();
+  var success = false;
+  var query = knex('queued').where('phone',encryptedPhone).select();
+  query.exec(function(err, rows) {
+    console.log("db.js Rows: " + JSON.stringify(rows));
     if (rows.length == 1) {
       var citationSearch = knex.raw("'{\"" + rows[0].citation_id + "\"}'::text[] <@ (json_val_arr(citations, 'id'))");
-      knex('queued').where('queued_id', rows[0].queued_id).update({'asked_reminder':false}).then(function() {
-        knex('cases').where(citationSearch).select().exec(callback);
+      console.log("citationSearch: " + citationSearch + " queued_id: " + rows[0].queued_id);
+      return knex('queued').where('queued_id', rows[0].queued_id).update({'asked_reminder':false}).then(function(values) {
+        console.log("Clear queue flag result: " + JSON.stringify(values));
+        return knex('cases').where(citationSearch).select().then(function(rows) {
+          console.log("Citations found: " + JSON.stringify(rows));
+          success = callback(rows);
+        });
       });
+    } else {
+      success = callback([]);
     }
-    callback(null, []);
   });
+  return success;
 };
 
 exports.fuzzySearch = function(str, callback) {
