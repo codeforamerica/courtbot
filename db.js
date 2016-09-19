@@ -29,7 +29,7 @@ exports.findAskedQueued = function(phone, callback) {
   // var query = knex('queued').where('phone',encryptedPhone).andWhere('asked_reminder',true).andWhereRaw('"asked_reminder_at" > current_timestamp - interval \'4 hours\'').select();
   var success = false;
   var query = knex('queued').where('phone',encryptedPhone).select();
-  query.exec(function(err, rows) {
+  query.then(function(rows) {
     console.log("db.js Rows: " + JSON.stringify(rows));
     if (rows.length == 1) {
       var citationSearch = knex.raw("'{\"" + rows[0].citation_id + "\"}'::text[] <@ (json_val_arr(citations, 'id'))");
@@ -38,14 +38,13 @@ exports.findAskedQueued = function(phone, callback) {
         console.log("Clear queue flag result: " + JSON.stringify(values));
         return knex('cases').where(citationSearch).select().then(function(rows) {
           console.log("Citations found: " + JSON.stringify(rows));
-          success = callback(rows);
+          return callback(rows);
         });
       });
     } else {
-      success = callback([]);
+      return callback([]);
     }
   });
-  return success;
 };
 
 exports.fuzzySearch = function(str, callback) {

@@ -70,37 +70,26 @@ app.post('/sms', function(req, res) {
       twiml.sms('(2/2) You should always confirm your case date and time by going to ' + process.env.COURT_PUBLIC_URL);
       req.session.askedReminder = false;
       res.send(twiml.toString());
-      return true;
     } else if (text === 'NO' || text ==='N') {
       twiml.sms('OK. You can always go to ' + process.env.COURT_PUBLIC_URL + ' for more information about your case and contact information.');
       req.session.askedReminder = false;
       res.send(twiml.toString());
-      return true;
     }
-    return false;
   }
 
   if (req.session.askedReminder) {
     var match = req.session.match;
-    if (handleReminderResponse(match)) {
-      return;
-    }
+    handleReminderResponse(match);
   } else {
     console.log("No session, checking queue database");
-    if (db.findAskedQueued(req.body.From, function(data) {  // Is this a response to a queue-triggered SMS? If so, "session" is stored in queue record
+    db.findAskedQueued(req.body.From, function(data) {  // Is this a response to a queue-triggered SMS? If so, "session" is stored in queue record
       console.log("dn.findAskedQueue result: " + JSON.stringify(data) + "data.length: " + data.length);
       if (data.length == 1) { //Only respond if we found one queue response "session"
         var match = data[0];
         console.log("Handling reminder response");
-        if (handleReminderResponse(match)) {
-          console.log("Exiting POST");
-          return true;
-        }
+       handleReminderResponse(match);
       }
-      return false;
-    })) {
-      return;
-    }
+    });
     console.log("CONITNUING");
   }
 
