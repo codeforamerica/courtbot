@@ -1,3 +1,4 @@
+require('dotenv').config();
 var expect = require("chai").expect;
 var assert = require("chai").assert;
 var nock = require('nock');
@@ -12,7 +13,6 @@ var knex = Knex.initialize({
   client: 'pg',
   connection: process.env.DATABASE_URL
 });
-require('dotenv').config();
 
 
 var data_hostname = "http://" + url.parse(process.env.DATA_URL).hostname;

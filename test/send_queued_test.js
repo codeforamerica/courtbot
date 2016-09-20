@@ -1,9 +1,10 @@
-process.env.COOKIE_SECRET="test";
-process.env.PHONE_ENCRYPTION_KEY = "phone_encryption_key";
+// Special env vars needed for NOCK consistency
+
 process.env.TWILIO_ACCOUNT_SID = "test";
 process.env.TWILIO_AUTH_TOKEN = "token";
 process.env.TWILIO_PHONE_NUMBER = "+test";
 
+require('dotenv').config();
 var sendQueued = require("../sendQueued.js");
 var expect = require("chai").expect;
 var assert = require("chai").assert;
@@ -16,7 +17,6 @@ var knex = Knex.initialize({
   client: 'pg',
   connection: process.env.DATABASE_URL
 });
-require('dotenv').config();
 
 
 nock.disableNetConnect();

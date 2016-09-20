@@ -1,9 +1,6 @@
 // setup ENV dependencies
-process.env.COOKIE_SECRET="test";
-process.env.PHONE_ENCRYPTION_KEY = "phone_encryption_key";
-process.env.QUEUE_TTL_DAYS=10;
-process.env.COURT_PUBLIC_URL="http://courts.alaska.gov";
 
+require('dotenv').config();
 var expect = require("chai").expect;
 var assert = require("chai").assert;
 var nock = require('nock');

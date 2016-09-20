@@ -67,10 +67,15 @@ Finally, you'll want to setup scheduler to run the various tasks each day. Here'
 
 ## Running Tests
 
-Test are run with Mocha. To run from the command line, you'll first need to install Mocha globally:
-
-* sudo npm install -g mocha@2.5.3
-
-Then, initialize the test database:
+Initialize the test database:
 
 * node test_utils/reset
+
+Set up your environment variables:
+
+* cp .sample.env .env
+-OR- set your own
+
+The run the tests:
+
+npm test
