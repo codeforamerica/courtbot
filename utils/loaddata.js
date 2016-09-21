@@ -84,8 +84,7 @@ var extractCourtData = function(rows) {
       id: c[6],
       violation: citationInfo.split(":")[0],
       description: citationInfo.split(":")[1],
-      location: c[6].substr(0,3),
-      payable: c[9],
+      location: c[6].substr(0,3)
     };
 
     var newCase = {
@@ -93,7 +92,7 @@ var extractCourtData = function(rows) {
       defendant: c[2] + " " + c[1],
       room: c[4],
       time: c[5],
-      citations: [],
+      citations: []
     };
 
     // Since no values here are actually unique, we create some lookups

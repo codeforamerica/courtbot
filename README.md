@@ -4,7 +4,6 @@ Courtbot is a simple web service for handling court case data. It offers a basic
 
 Specifically, the twilio features include:
 
-- **Payable Prompt.** If a case can be paid immediately, the app offers a phone number and link to begin payment.
 - **Reminders.** If a case requires a court appearance, the app allows users to sign up for reminders, served 24 hours in advance of the case.
 - **Queued Cases.** If a case isn't in the system (usually because it takes two weeks for paper citations to be put into the computer), the app allows users to get information when it becomes available. The app continues checking each day for up to 16 days and sends the case information when found (or an apology if not).
 
@@ -48,6 +47,8 @@ heroku config:set TWILIO_AUTH_TOKEN=<twilio auth token>
 heroku config:set TWILIO_PHONE_NUMBER=<twilio phone number>
 heroku config:set PHONE_ENCRYPTION_KEY=<random string>
 heroku config:set DATA_URL=<court records csv location>
+heroku config:set COURT_PUBLIC_URL=<where to send people for more info>
+heroku config:set QUEUE_TTL_DAYS=<# days to keep a citation on the search queue>
 git push heroku master
 heroku run node utils/createQueuedTable.js
 heroku run node utils/createRemindersTable.js
@@ -63,3 +64,18 @@ Finally, you'll want to setup scheduler to run the various tasks each day. Here'
 * node runners/load.js
 * node runners/sendQueued.js
 * node runners/sendReminders.js
+
+## Running Tests
+
+Initialize the test database:
+
+* node test_utils/reset
+
+Set up your environment variables:
+
+* cp .sample.env .env
+-OR- set your own
+
+The run the tests:
+
+npm test

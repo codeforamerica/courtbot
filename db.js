@@ -21,12 +21,33 @@ exports.findCitation = function(citation, callback) {
   knex('cases').where(citationSearch).select().exec(callback);
 };
 
+// Find queued citations that we have asked about adding reminders
+exports.findAskedQueued = function(phone, callback) {
+  var cipher = crypto.createCipher('aes256', process.env.PHONE_ENCRYPTION_KEY);
+  var encryptedPhone = cipher.update(phone, 'utf8', 'hex') + cipher.final('hex');
+  // Filter for new ones. If too old, user probably missed the message (same timeframe as Twilio sessions - 4 hours). Return IFF one found. If > 1 found, skip
+  var query = knex('queued').where('phone',encryptedPhone).andWhere('asked_reminder',true).andWhereRaw('"asked_reminder_at" > current_timestamp - interval \'4 hours\'').select();
+  query.then(function(rows) {
+    if (rows.length == 1) {
+      var citationSearch = knex.raw("'{\"" + rows[0].citation_id + "\"}'::text[] <@ (json_val_arr(citations, 'id'))");
+      return knex('queued').where('queued_id', rows[0].queued_id).update({'asked_reminder':false}).then(function(values) {
+        return knex('cases').where(citationSearch).select().then(function(rows) {
+          return callback(null, rows);
+        });
+      });
+    } else {
+      return callback(null, []);
+    }
+  })
+      .catch(callback);
+};
+
 exports.fuzzySearch = function(str, callback) {
   var parts = str.toUpperCase().split(" ");
 
   // Search for Names
-  var query = knex('cases').where('defendant', 'like', '%' + parts[0] + '%');
-  if (parts.length > 1) query = query.andWhere('defendant', 'like', '%' + parts[1] + '%');
+  var query = knex('cases').where('defendant', 'ilike', '%' + parts[0] + '%');
+  if (parts.length > 1) query = query.andWhere('defendant', 'ilike', '%' + parts[1] + '%');
 
   // Search for Citations
   var citation = escapeSQL(parts[0]);

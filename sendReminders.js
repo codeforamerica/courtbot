@@ -32,6 +32,7 @@ function sendReminderMessages(reminders) {
     reminders.forEach(function(reminder) {
       var decipher = crypto.createDecipher('aes256', process.env.PHONE_ENCRYPTION_KEY);
       var phone = decipher.update(reminder.phone, 'hex', 'utf8') + decipher.final('utf8');
+      console.log("Phone: " + phone);
 
       client.sendMessage({
         to: phone,
