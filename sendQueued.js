@@ -76,8 +76,7 @@ function sendQueuedMessage(queued) {
           var daysSinceCreation = moment().diff(moment(queuedCitation.created_at), 'days');
           console.log('Queued message created ' + daysSinceCreation + ' days ago.');
 
-          var ALLOWABLE_QUEUED_DAYS = 16;
-          if (daysSinceCreation > ALLOWABLE_QUEUED_DAYS) {
+          if (daysSinceCreation > parseInt(process.env.QUEUE_TTL_DAYS)) {
             knex('queued')
               .where('queued_id', '=', queuedCitation.queued_id)
               .update({'sent': true})
@@ -90,7 +89,7 @@ function sendQueuedMessage(queued) {
             client.sendMessage({
               to: phone,
               from: process.env.TWILIO_PHONE_NUMBER,
-              body: 'We haven\'t been able to find your court case. Please call us at (907) XXX-XXXX. - Alaska State Court System',
+              body: "We haven\'t been able to find your court case. You can go to " + process.env.COURT_PUBLIC_URL + " for more information. - Alaska State Court System"
             }, function(err, result) {
               if (err) {
                 return console.log(err);
