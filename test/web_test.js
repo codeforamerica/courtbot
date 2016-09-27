@@ -69,9 +69,6 @@ describe("GET /cases", function() {
         expect(200).
         end(function(err, res) {
           if (err) return done(err);
-          console.log("Turner 1: " + JSON.stringify(sortObject(turnerDataAsObject(1))));
-          console.log("Turner 2: " + JSON.stringify(sortObject(turnerDataAsObject(2))));
-          console.log("res(text): " + JSON.stringify([sortObject(JSON.parse(res.text)[0]),sortObject(JSON.parse(res.text)[1])]));
           expect([sortObject(JSON.parse(res.text)[0]),sortObject(JSON.parse(res.text)[1])]).to.deep.equal([turnerDataAsObject(1), turnerDataAsObject(2)]);
           done();
         });
