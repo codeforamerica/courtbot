@@ -72,9 +72,7 @@ function sendQueuedMessage(queued) {
             });
           });
         } else {
-          console.log("Now: " + moment().format('dddd, MMM Do') + ", Created: " + queuedCitation.created_at);
           var daysSinceCreation = moment().diff(moment(queuedCitation.created_at), 'days');
-          console.log('Queued message created ' + daysSinceCreation + ' days ago.');
 
           if (daysSinceCreation > parseInt(process.env.QUEUE_TTL_DAYS)) {
             knex('queued')

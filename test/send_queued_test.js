@@ -118,10 +118,6 @@ describe("with a queued non-existent case", function() {
     knex("queued").update({created_at: oldDate.format()}).then(function() {
       sendQueued().then(function(res) {
         knex("queued").select("*").then(function(rows) {
-          console.log(JSON.stringify(rows[0]));
-          console.log(process.env.QUEUE_TTL_DAYS);
-          console.log(oldDate.format());
-          console.log(moment().format());
           expect(rows[0].sent).to.equal(true);
           done();
         }).catch(done);
