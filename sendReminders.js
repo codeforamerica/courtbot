@@ -3,6 +3,8 @@ var Knex = require('knex');
 var twilio = require('twilio');
 var client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 var Promise = require('bluebird');
+var moment = require("moment");
+
 
 var knex = Knex.initialize({
   client: 'pg',
@@ -37,24 +39,32 @@ function sendReminderMessages(reminders) {
       client.sendMessage({
         to: phone,
         from: process.env.TWILIO_PHONE_NUMBER,
-        body: 'Reminder: You\'ve got a court case tomorrow at ' + reminder.time +
-              ' in court room ' + reminder.room +
-              '. Call us at (907) XXX-XXXX with any questions. - Alaska State Court System'
+        body: '(1/2) Reminder: It appears you have a court case tomorrow at ' + moment("1980-01-01 " + reminder.time).format("h:mm A") +
+        ' at ' + reminder.room + "."
 
       }, function(err, result) {
         if (err) {
-          console.log(err);
+          console.log(err)
         }
-        console.log('Reminder sent to ' + reminder.phone);
-        // Update table
-        knex('reminders')
-          .where('reminder_id', '=', reminder.reminder_id)
-          .update({'sent': true})
-          .exec(function(err, results) {
-            if (err) {
-              console.log(err);
-            }
-          }).then(function(err, data) {
+        client.sendMessage({
+          to: phone,
+          from: process.env.TWILIO_PHONE_NUMBER,
+          body: '(2/2) You should confirm your case date and time by going to ' + process.env.COURT_PUBLIC_URL + '. - Alaska State Court System'
+
+        }, function(err, result) {
+          if (err) {
+            console.log(err);
+          }
+          console.log('Reminder sent to ' + reminder.phone);
+          // Update table
+          knex('reminders')
+              .where('reminder_id', '=', reminder.reminder_id)
+              .update({'sent': true})
+              .exec(function (err, results) {
+                if (err) {
+                  console.log(err);
+                }
+              }).then(function (err, data) {
             if (err) {
               console.log(err);
             }
@@ -63,6 +73,7 @@ function sendReminderMessages(reminders) {
               resolve();
             }
           });
+        });
       });
     });
   });
