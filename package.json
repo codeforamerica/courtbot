@@ -7,7 +7,7 @@
     "test": "mocha test",
     "start": "node web.js",
     "dbsetup": "node utils/createQueuedTable; node utils/createRemindersTable",
-    "loaddata": "node utils/loaddata"
+    "loaddata": "node runners/load.js"
   },
   "author": "Sam Hashemi",
   "license": "MIT",
