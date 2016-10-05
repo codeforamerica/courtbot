@@ -42,14 +42,17 @@ describe("with a reminder that hasn't been sent", function() {
 
     it("sends the correct info to Twilio and updates the reminder to sent", function(done) {
         var number = "+12223334444";
-        var message = "Reminder: You've got a court case tomorrow at 01:00:00 PM in court room CNVCRT." +
-            " Call us at (907) XXX-XXXX with any questions. - Alaska State Court System";
+        var message1 = "(1/2) Reminder: It appears you have a court case tomorrow at 2:00 PM at NEWROOM.";
+        var message2 = "(2/2) You should confirm your case date and time by going to " + process.env.COURT_PUBLIC_URL + ". - Alaska State Court System";
 
-
-        knex("cases").update({date: moment().add(1, 'days')}).then(function() {
-            nock('https://api.twilio.com:443')
-                .post('/2010-04-01/Accounts/test/Messages.json', "To=" + encodeURIComponent(number) + "&From=%2Btest&Body=" + encodeURIComponent(message))
-                .reply(200, {"status":200}, { 'access-control-allow-credentials': 'true'});
+        knex("cases").update({date: moment().add(1, 'days'), time: '02:00:00 PM', room: 'NEWROOM' })
+            .then(function() {
+                nock('https://api.twilio.com:443')
+                    .post('/2010-04-01/Accounts/test/Messages.json', "To=" + encodeURIComponent(number) + "&From=%2Btest&Body=" + encodeURIComponent(message1))
+                    .reply(200, {"status":200}, { 'access-control-allow-credentials': 'true'});
+                nock('https://api.twilio.com:443')
+                    .post('/2010-04-01/Accounts/test/Messages.json', "To=" + encodeURIComponent(number) + "&From=%2Btest&Body=" + encodeURIComponent(message2))
+                    .reply(200, {"status":200}, { 'access-control-allow-credentials': 'true'});
             sendReminders().then(function(res) {
                 knex("reminders").select("*").then(function(rows) {
                     expect(rows[0].sent).to.equal(true);

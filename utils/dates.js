@@ -19,7 +19,7 @@ module.exports = {
 	 * @return {moment} moment object
 	 */
 	now: function() {
-		return moment.tz(module.exports.timezone());
+		return moment.tz(module.exports.timezone()).clone();
 	},
 
 	/**
@@ -38,7 +38,7 @@ module.exports = {
 	 * @return {Boolean} true means it has been sitting too long.
 	 */
 	hasSatTooLong: function(checkdate) {
-		return module.exports.now().diff(moment(checkdate), 'days') > 16;
+		return module.exports.now().diff(moment(checkdate), 'days') > process.env.QUEUE_TTL_DAYS;
 	}
 
 };

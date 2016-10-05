@@ -17,7 +17,6 @@ var knex = require('knex')({
   connection: process.env.DATABASE_URL
 });
 
-
 nock.disableNetConnect();
 nock('https://api.twilio.com:443').log(console.log);
 
@@ -94,7 +93,7 @@ describe("with a queued non-existent case", function() {
     });
   });
 
-  it("doesn't do anything < 16 days", function(done) {
+  it("doesn't do anything < QUEUE_TTL days", function(done) {
     sendQueued().then(function(res) {
       knex("queued").select("*").then(function(rows) {
         expect(rows[0].sent).to.equal(false);
@@ -103,15 +102,20 @@ describe("with a queued non-existent case", function() {
     }, done);
   });
 
-  it("sends a failure sms after 16 days", function(done) {
+  it("sends a failure sms after QUEUE_TTL days", function(done) {
     var number = "+12223334444";
-    var message = "We haven\'t been able to find your court case. Please call us at (907) XXX-XXXX. - Alaska State Court System";
+    var message = "We haven\'t been able to find your court case. You can go to " + process.env.COURT_PUBLIC_URL + " for more information. - Alaska State Court System";
+    var mockCreatedDate = now().subtract(parseInt(process.env.QUEUE_TTL_DAYS) + 2, 'days');
+
+    console.log(now().clone().format("MM/DD/YYYY"))
+    console.log(parseInt(process.env.QUEUE_TTL_DAYS) + 2);
+    console.log(mockCreatedDate.format("MM/DD/YYYY"));
 
     nock('https://api.twilio.com:443')
       .post('/2010-04-01/Accounts/test/Messages.json', "To=" + encodeURIComponent(number) + "&From=%2Btest&Body=" + encodeURIComponent(message))
       .reply(200, {"status":200}, { 'access-control-allow-credentials': 'true'});
 
-    knex("queued").update({created_at: now().clone().subtract(18, 'days')}).then(function() {
+    knex("queued").update({created_at: mockCreatedDate}).then(function() {
       sendQueued().then(function(res) {
         knex("queued").select("*").then(function(rows) {
           expect(rows[0].sent).to.equal(true);
