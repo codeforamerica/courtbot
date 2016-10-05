@@ -1,6 +1,6 @@
 var crypto = require('crypto');
 var Knex = require('knex');
-require('dotenv').config({silent: true});
+require('dotenv').config();
 var knex = Knex.initialize({
   client: 'pg',
   connection: process.env.DATABASE_URL,
