@@ -42,10 +42,6 @@ describe("with 2 valid queued cases (same citation)", function() {
     });
   });
 
-  /**
-   *  nocks are not being hit because the time is coming from the database as 1AM instead of 1PM, so the bodies of the messages
-   *  do not match....look into whats up...
-   */
   it("sends the correct info to Twilio and updates the queued to sent", function(done) {
     var number = "+12223334444";
     var message1 = "(1/2) Hello from the Alaska State Court System.";
