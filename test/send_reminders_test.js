@@ -4,7 +4,7 @@ process.env.TWILIO_ACCOUNT_SID = "test";
 process.env.TWILIO_AUTH_TOKEN = "token";
 process.env.TWILIO_PHONE_NUMBER = "+test";
 
-require('dotenv').config();
+require('dotenv').config({silent: true});
 var sendReminders = require("../sendReminders.js");
 var expect = require("chai").expect;
 var assert = require("chai").assert;

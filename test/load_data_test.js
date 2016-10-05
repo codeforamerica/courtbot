@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('dotenv').config({silent: true});
 var expect = require("chai").expect;
 var assert = require("chai").assert;
 var nock = require('nock');

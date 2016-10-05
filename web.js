@@ -3,7 +3,7 @@ var express = require('express');
 var logfmt = require('logfmt');
 var moment = require('moment');
 var db = require('./db');
-require('dotenv').config();
+require('dotenv').config({silent: true});
 
 var app = express();
 
