@@ -18,7 +18,7 @@ module.exports = {
 	 * @return {string} Second of two greeting messages.
 	 */
 	greetingTwoOfTwo: function(name, datetime, room) {
-		return `(2/2) We found a case for ${name} scheduled on ${datetime.format('ddd, MMM Do')} at ${datetime.format("h:mm A")}, at ${room}. Would you like a courtesy reminder the day before? (reply YES or NO)`;
+		return "(2/2) We found a case for " + name + " scheduled on " + datetime.format('ddd, MMM Do') + " at " + datetime.format("h:mm A") + ", at " + room + ". Would you like a courtesy reminder the day before? (reply YES or NO)";
 	},
 
 	/**
