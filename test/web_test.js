@@ -179,7 +179,8 @@ describe("POST /sms", function() {
           expect(200).
           end(function(err, res) {
             if (err) { return done(err); }
-            expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>(1/2) Could not find a case with that number. It can take several days for a case to appear in our system.</Sms><Sms>(2/2) Would you like us to keep checking for the next ' + process.env.QUEUE_TTL_DAYS + ' days and text you if we find it? (reply YES or NO)</Sms></Response>');
+            expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Could not find a case with that number. It can take several days for a case to appear in our system. Would you like us to keep checking for the next 10 days and text you if we find it? (reply YES or NO)</Sms></Response>');
+            //expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>(1/2) Could not find a case with that number. It can take several days for a case to appear in our system.</Sms><Sms>(2/2) Would you like us to keep checking for the next ' + process.env.QUEUE_TTL_DAYS + ' days and text you if we find it? (reply YES or NO)</Sms></Response>');
             done();
           });
         });
@@ -239,7 +240,8 @@ describe("POST /sms", function() {
           if (err) {
             return done(err);
           }
-          expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>(1/2) Sounds good. We will attempt to text you a courtesy reminder the day before your case. Note that case schedules frequently change.</Sms><Sms>(2/2) You should always confirm your case date and time by going to ' + process.env.COURT_PUBLIC_URL + '</Sms></Response>');
+          //expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>(1/2) Sounds good. We will attempt to text you a courtesy reminder the day before your case. Note that case schedules frequently change.</Sms><Sms>(2/2) You should always confirm your case date and time by going to ' + process.env.COURT_PUBLIC_URL + '</Sms></Response>');
+          expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Sounds good. We will attempt to text you a courtesy reminder the day before your case. Note that case schedules frequently change. You should always confirm your case date and time by going to http://courts.alaska.gov</Sms></Response>');
           expect(getConnectCookie().askedReminder).to.equal(false);
           setTimeout(function () { // This is a hack because the DB operation happens ASYNC
             knex("reminders").select("*").groupBy("reminders.reminder_id").count('* as count').then(function (rows) {
@@ -303,7 +305,8 @@ describe("POST /sms", function() {
           if (err) {
             return done(err);
           }
-          expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>(1/2) Sounds good. We will attempt to text you a courtesy reminder the day before your case. Note that case schedules frequently change.</Sms><Sms>(2/2) You should always confirm your case date and time by going to ' + process.env.COURT_PUBLIC_URL + '</Sms></Response>');
+          //expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>(1/2) Sounds good. We will attempt to text you a courtesy reminder the day before your case. Note that case schedules frequently change.</Sms><Sms>(2/2) You should always confirm your case date and time by going to ' + process.env.COURT_PUBLIC_URL + '</Sms></Response>');
+          expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Sounds good. We will attempt to text you a courtesy reminder the day before your case. Note that case schedules frequently change. You should always confirm your case date and time by going to http://courts.alaska.gov</Sms></Response>');
           expect(getConnectCookie().askedReminder).to.equal(false);
           setTimeout(function () { // This is a hack because the DB operation happens ASYNC
             knex("reminders").select("*").groupBy("reminders.reminder_id").count('* as count').then(function (rows) {

@@ -76,7 +76,6 @@ function sendReminderMessages(reminders) {
           });
         });
       });
-    });
   });
 };
 
