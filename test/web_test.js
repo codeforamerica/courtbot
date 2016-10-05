@@ -7,6 +7,7 @@ var nock = require('nock');
 var _ = require("underscore");
 var cookieParser = require("cookie-parser");
 var crypto = require('crypto');
+var tk = require("timekeeper");
 var Session = require('supertest-session')({
   app: require('../web')
 });
@@ -15,10 +16,15 @@ var sess;
 
 beforeEach(function () {
   sess = new Session();
+
+  var time = new Date(1425297600000); // Freeze to March 2, 2015. Yesterday is March 1
+  tk.freeze(time);
 });
 
 afterEach(function () {
   sess.destroy();
+
+  tk.reset();
 });
 
 var knex = require('knex')({

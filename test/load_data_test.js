@@ -22,6 +22,10 @@ describe("Loading of Data", function() {
     tk.freeze(time);
   });
 
+  afterEach(function(){
+    tk.reset();
+  });
+
   describe("With a 404 on the CSV", function() {
     nock(data_hostname)
         .get(data_path)

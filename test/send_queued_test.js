@@ -107,10 +107,6 @@ describe("with a queued non-existent case", function() {
     var message = "We haven\'t been able to find your court case. You can go to " + process.env.COURT_PUBLIC_URL + " for more information. - Alaska State Court System";
     var mockCreatedDate = now().subtract(parseInt(process.env.QUEUE_TTL_DAYS) + 2, 'days');
 
-    console.log(now().clone().format("MM/DD/YYYY"))
-    console.log(parseInt(process.env.QUEUE_TTL_DAYS) + 2);
-    console.log(mockCreatedDate.format("MM/DD/YYYY"));
-
     nock('https://api.twilio.com:443')
       .post('/2010-04-01/Accounts/test/Messages.json', "To=" + encodeURIComponent(number) + "&From=%2Btest&Body=" + encodeURIComponent(message))
       .reply(200, {"status":200}, { 'access-control-allow-credentials': 'true'});

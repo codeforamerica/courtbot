@@ -3,6 +3,7 @@ var express = require('express');
 var logfmt = require('logfmt');
 var moment = require('moment');
 var db = require('./db');
+var dates = require("./utils/dates");
 require('dotenv').config();
 
 var app = express();
@@ -138,10 +139,9 @@ app.post('/sms', askedReminderMiddleware, function(req, res, next) {
     } else {
       var match = results[0];
       var name = cleanupName(match.defendant);
-      var date = moment(match.date).format('ddd, MMM Do');
+      var datetime = dates.fromDateAndTime(match.date, match.time);
 
-
-      twiml.sms('Found a case for ' + name + ' scheduled on ' + date + ' at ' + moment("1980-01-01 " + match.time).format("h:mm A") +', at ' + match.room +'. Would you like a courtesy reminder the day before? (reply YES or NO)');
+      twiml.sms('Found a case for ' + name + ' scheduled on ' + datetime.format("ddd, MMM Do") + ' at ' + datetime.format("h:mm A") +', at ' + match.room +'. Would you like a courtesy reminder the day before? (reply YES or NO)');
 
       req.session.match = match;
       req.session.askedReminder = true;

@@ -1,7 +1,5 @@
 module.exports = {
 
-
-
 	/**
 	 * Greeting message 1/2 template
 	 * 
@@ -20,7 +18,6 @@ module.exports = {
 	 * @return {string} Second of two greeting messages.
 	 */
 	greetingTwoOfTwo: function(name, datetime, room) {
-		//'(2/2) We found a case for ' + name + ' scheduled on ' + datetime.format('ddd, MMM Do') + ' at ' + datetime.format("h:mm A") +', at ' + match.room +'. Would you like a courtesy reminder the day before? (reply YES or NO)'
 		return `(2/2) We found a case for ${name} scheduled on ${datetime.format('ddd, MMM Do')} at ${datetime.format("h:mm A")}, at ${room}. Would you like a courtesy reminder the day before? (reply YES or NO)`;
 	},
 
@@ -29,6 +26,6 @@ module.exports = {
 	 * @return {string} Not Found Message
 	 */
 	unableToFindCitationForTooLong: function() {
-		return "We haven\'t been able to find your court case. Please call us at (907) XXX-XXXX. - Alaska State Court System";
+        return "We haven\'t been able to find your court case. You can go to " + process.env.COURT_PUBLIC_URL + " for more information. - Alaska State Court System";
 	}
 }

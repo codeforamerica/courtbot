@@ -1,7 +1,7 @@
 var moment = require("moment-timezone");
 
 /**
- * [exports description]
+ * Utility functions for working with dates, which hide timezone details...
  * @type {Object}
  */
 module.exports = {
@@ -19,7 +19,7 @@ module.exports = {
 	 * @return {moment} moment object
 	 */
 	now: function() {
-		return moment.tz(module.exports.timezone()).clone();
+		return moment.tz(module.exports.timezone());
 	},
 
 	/**
