@@ -87,8 +87,7 @@ app.post('/sms', askedReminderMiddleware, function(req, res, next) {
         phone: req.body.From,
         originalCase: JSON.stringify(req.match)
       }, function(err, data) {});
-      twiml.sms('(1/2) Sounds good. We will attempt to text you a courtesy reminder the day before your case. Note that case schedules frequently change.');
-      twiml.sms('(2/2) You should always confirm your case date and time by going to ' + process.env.COURT_PUBLIC_URL);
+      twiml.sms('Sounds good. We will attempt to text you a courtesy reminder the day before your case. Note that case schedules frequently change. You should always confirm your case date and time by going to ' + process.env.COURT_PUBLIC_URL);
       req.session.askedReminder = false;
       res.send(twiml.toString());
     } else {
@@ -127,8 +126,7 @@ app.post('/sms', askedReminderMiddleware, function(req, res, next) {
     if (!results || results.length === 0 || results.length > 1) {
       var correctLengthCitation = 6 <= text.length && text.length <= 25;
       if (correctLengthCitation) {
-        twiml.sms('(1/2) Could not find a case with that number. It can take several days for a case to appear in our system.');
-        twiml.sms('(2/2) Would you like us to keep checking for the next ' + process.env.QUEUE_TTL_DAYS + ' days and text you if we find it? (reply YES or NO)');
+        twiml.sms('Could not find a case with that number. It can take several days for a case to appear in our system. Would you like us to keep checking for the next ' + process.env.QUEUE_TTL_DAYS + ' days and text you if we find it? (reply YES or NO)');
 
         req.session.askedQueued = true;
         req.session.citationId = text;
