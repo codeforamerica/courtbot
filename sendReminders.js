@@ -1,24 +1,35 @@
 var crypto = require('crypto');
-var Knex = require('knex');
 var twilio = require('twilio');
 var client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 var Promise = require('bluebird');
-
-var knex = Knex.initialize({
+var knex = require('knex')({
   client: 'pg',
   connection: process.env.DATABASE_URL
 });
 
-// Finds reminders for cases happening tomorrow
-// TO FIX: converts cases.date to actual UTC then compares it to UTC 24 hours out
+/**
+ * Find all reminders for which a reminder has not been sent.  
+ *   1.)  cases.date should have been inserted as UTC for anchorage.  
+ *   2.)  we must convert "now()" to UTC from wherever our server sits, then convert to anchorage from there.
+ *   
+ * @return {array} Promise to return results
+ */
 var findReminders = function() {
+
   return knex('reminders')
     .where('sent', false)
     .join('cases', 'reminders.case_id', '=', 'cases.id')
+    //.whereRaw("\"cases\".\"date\"::date - " + "(now() AT TIME ZONE \'UTC\' AT TIME ZONE \'-9\')::date = 1")
     .whereRaw('("cases"."date" + interval \'8 hours\') < (now() + interval \'24 hours\')')
     .select();
 };
 
+/**
+ * Send court appearance reminder via twilio REST API
+ * 
+ * @param  {array} reminders List of reminders to be sent. 
+ * @return {Promise}  Promise to send reminders.
+ */
 function sendReminderMessages(reminders) {
   return new Promise(function(resolve, reject) {
     if (reminders.length === 0) {
@@ -50,7 +61,7 @@ function sendReminderMessages(reminders) {
         knex('reminders')
           .where('reminder_id', '=', reminder.reminder_id)
           .update({'sent': true})
-          .exec(function(err, results) {
+          .asCallback(function(err, results) {
             if (err) {
               console.log(err);
             }
@@ -68,6 +79,14 @@ function sendReminderMessages(reminders) {
   });
 };
 
+/**
+ * Main function for executing: 
+ *   1.)  The retrieval of court date reminders
+ *   2.)  Sending reminder messages via twilio
+ *   3.)  Updating the status of the court reminder messages
+ *   
+ * @return {Promise} Promise to send messages and update statuses.
+ */
 module.exports = function() {
   return new Promise(function(resolve, reject) {
     findReminders().then(function(resp) {

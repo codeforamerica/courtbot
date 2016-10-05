@@ -8,15 +8,14 @@ var Promise = require('bluebird');
 var sha1 = require('sha1');
 require('dotenv').config();
 
-var Knex = require('knex');
-var knex = Knex.initialize({
+var knex = require('knex')({
   client: 'pg',
   connection: process.env.DATABASE_URL,
   pool: {
     min: 0,
     max: 7,
     afterCreate: function(connection, callback) {
-      connection.query("SET TIME ZONE 'America/Anchorage';", function(err) {
+      connection.query("SET TIME ZONE 'UTC';", function(err) {
         callback(err, connection);
       });
     }
@@ -57,14 +56,18 @@ var loadData = function () {
   });
 };
 
-
-// Citation data provided in CSV has a few tricky parsing problems. The
-// main of which is that citation numbers can appear multiple times.
-// There's actually a couple reasons why:
-//
-// 1. Duplicates produced by the SQL query that generates the file
-// 2. Date updates -- each date is included. Need to go with latest.
-// 3. Cases that use identical citatiation numbers. Typos when put into the system.
+/**
+ *  Citation data provided in CSV has a few tricky parsing problems. The
+ *  main of which is that citation numbers can appear multiple times.
+ *  There's actually a couple reasons why:
+ *
+ *  1. Duplicates produced by the SQL query that generates the file
+ *  2. Date updates -- each date is included. Need to go with latest.
+ *  3. Cases that use identical citatiation numbers. Typos when put into the system.
+ *
+ * @param  {array} rows - Citation records
+ * @return {date} cases - Cases derrived from citation data
+ */
 var extractCourtData = function(rows) {
   var cases = [];
   var casesMap = {};
@@ -88,7 +91,7 @@ var extractCourtData = function(rows) {
     };
 
     var newCase = {
-      date: c[0],
+      date: c[0], 
       defendant: c[2] + " " + c[1],
       room: c[4],
       time: c[5],

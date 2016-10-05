@@ -9,11 +9,10 @@ var sendQueued = require("../sendQueued.js");
 var expect = require("chai").expect;
 var assert = require("chai").assert;
 var nock = require('nock');
-var moment = require("moment");
+var now = require("../utils/dates").now;
 
 var db = require('../db');
-var Knex = require('knex');
-var knex = Knex.initialize({
+var knex = require('knex')({
   client: 'pg',
   connection: process.env.DATABASE_URL
 });
@@ -43,6 +42,10 @@ describe("with 2 valid queued cases (same citation)", function() {
     });
   });
 
+  /**
+   *  nocks are not being hit because the time is coming from the database as 1AM instead of 1PM, so the bodies of the messages
+   *  do not match....look into whats up...
+   */
   it("sends the correct info to Twilio and updates the queued to sent", function(done) {
     var number = "+12223334444";
     var message1 = "(1/2) Hello from the Alaska State Court System.";
@@ -112,8 +115,7 @@ describe("with a queued non-existent case", function() {
       .post('/2010-04-01/Accounts/test/Messages.json', "To=" + encodeURIComponent(number) + "&From=%2Btest&Body=" + encodeURIComponent(message))
       .reply(200, {"status":200}, { 'access-control-allow-credentials': 'true'});
 
-
-    knex("queued").update({created_at: moment().clone().subtract(18, 'days')}).then(function() {
+    knex("queued").update({created_at: now().clone().subtract(18, 'days')}).then(function() {
       sendQueued().then(function(res) {
         knex("queued").select("*").then(function(rows) {
           expect(rows[0].sent).to.equal(true);
@@ -125,7 +127,9 @@ describe("with a queued non-existent case", function() {
 });
 
 function turnerData(v) {
-  return { date: '27-MAR-15',
+  return { 
+    //date: '27-MAR-15',
+    date: '2015-03-27T08:00:00.000Z',
     defendant: 'Frederick Turner',
     room: 'CNVCRT',
     time: '01:00:00 PM',

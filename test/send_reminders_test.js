@@ -7,13 +7,11 @@ process.env.TWILIO_PHONE_NUMBER = "+test";
 require('dotenv').config();
 var sendReminders = require("../sendReminders.js");
 var expect = require("chai").expect;
-var assert = require("chai").assert;
 var nock = require('nock');
 var moment = require("moment");
 
 var db = require('../db');
-var Knex = require('knex');
-var knex = Knex.initialize({
+var knex = require('knex')({
     client: 'pg',
     connection: process.env.DATABASE_URL
 });
@@ -63,7 +61,9 @@ describe("with a reminder that hasn't been sent", function() {
 });
 
 function turnerData(v) {
-    return { date: '27-MAR-15',
+    return { 
+        //date: '27-MAR-15',
+        date: '2015-03-27T08:00:00.000Z',        
         defendant: 'TURNER, FREDERICK T',
         room: 'CNVCRT',
         time: '01:00:00 PM',

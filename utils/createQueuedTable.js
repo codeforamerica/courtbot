@@ -1,8 +1,6 @@
 // Creates the reminders table.
-var Knex = require('knex');
 require('dotenv').config();
-
-var knex = Knex.initialize({
+var knex = require('knex')({
   client: 'pg',
   connection: process.env.DATABASE_URL
 });

@@ -4,16 +4,12 @@ var assert = require("chai").assert;
 var nock = require('nock');
 var tk = require('timekeeper');
 var fs = require('fs');
-var Promise = require('bluebird');
-var moment = require("moment");
 var url = require('url');
 
-var Knex = require('knex');
-var knex = Knex.initialize({
+var knex = require('knex')({
   client: 'pg',
   connection: process.env.DATABASE_URL
 });
-
 
 var data_hostname = "http://" + url.parse(process.env.DATA_URL).hostname;
 console.log("Host: " + data_hostname);

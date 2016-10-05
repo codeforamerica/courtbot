@@ -1,13 +1,9 @@
 // setup ENV dependencies
 
 require('dotenv').config();
+var fs = require("fs");
 var expect = require("chai").expect;
-var assert = require("chai").assert;
 var nock = require('nock');
-var tk = require('timekeeper');
-var fs = require('fs');
-var Promise = require('bluebird');
-var moment = require("moment");
 var _ = require("underscore");
 var cookieParser = require("cookie-parser");
 var crypto = require('crypto');
@@ -25,18 +21,26 @@ afterEach(function () {
   sess.destroy();
 });
 
-var Knex = require('knex');
-var knex = Knex.initialize({
+var knex = require('knex')({
   client: 'pg',
   connection: process.env.DATABASE_URL
 });
 
 nock.enableNetConnect('127.0.0.1');
 
+/**
+* Altered this to do a local read of the expected content to get expected content length because
+* on windows machine the content length was 354 and not the hard-coded 341 (maybe windows character encoding?)
+*
+* It is partly a guess that it is okay to make this change because I am assuming the unit tests
+* only should run where app.settings.env == 'development' (web.js) -- this is what causes public/index.html
+* to be served, rather than "hello I am courtbot..."
+*/
 describe("GET /", function() {
   it("responds with web form test input", function(done) {
+    var expectedContent = fs.readFileSync("public/index.html", "utf8");
     sess.get('/').
-    expect('Content-Length', '341').
+    expect('Content-Length', expectedContent.length).
     expect(200).
     end(function(err, res) {
       if (err) return done(err);
@@ -470,7 +474,9 @@ context("with session.askedQueued", function() {
 });
 
 function turnerData(v) {
-  return { date: '27-MAR-15',
+  return { 
+    //date: '27-MAR-15',
+    date: "2015-03-27T08:00:00.000Z",
     defendant: 'Frederick Turner',
     room: 'CNVCRT',
     time: '01:00:00 PM',
