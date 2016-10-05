@@ -49,19 +49,10 @@ function sendReminderMessages(reminders) {
       client.sendMessage({
         to: phone,
         from: process.env.TWILIO_PHONE_NUMBER,
-        body: '(1/2) Reminder: It appears you have a court case tomorrow at ' + moment("1980-01-01 " + reminder.time).format("h:mm A") +
-        ' at ' + reminder.room + "."
+        body: 'Reminder: It appears you have a court case tomorrow at ' + moment("1980-01-01 " + reminder.time).format("h:mm A") +
+        ' at ' + reminder.room + ". You should confirm your case date and time by going to ' + process.env.COURT_PUBLIC_URL + '. - Alaska State Court System"
 
       }, function(err, result) {
-        if (err) {
-          console.log(err)
-        }
-        client.sendMessage({
-          to: phone,
-          from: process.env.TWILIO_PHONE_NUMBER,
-          body: '(2/2) You should confirm your case date and time by going to ' + process.env.COURT_PUBLIC_URL + '. - Alaska State Court System'
-
-        }, function(err, result) {
           if (err) {
             console.log(err);
           }
