@@ -23,6 +23,15 @@ module.exports = {
 	},
 
 	/**
+	 * Convert string date to UTC moment with correct timezone
+	 * @param  {string} date string value of date to be converted
+	 * @return {moment} UTC moment representing given date.
+	 */
+	toMoment: function(date) {
+		return moment.tz(date, "MM/DD/YYYY", module.exports.timezone()).utc();
+	},
+
+	/**
 	 * Take separate date and time and combine them into single moment object
 	 * 
 	 * @param  {string} date date in format UTC or DD-MMM-YY

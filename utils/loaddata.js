@@ -6,6 +6,7 @@ var request = require('request');
 var parse = require('csv-parse');
 var Promise = require('bluebird');
 var sha1 = require('sha1');
+var dates = require("./dates");
 require('dotenv').config();
 
 var knex = require('knex')({
@@ -24,7 +25,6 @@ var knex = require('knex')({
 });
 
 var loadData = function () {
-  // var yesterday = moment().subtract('days', 1).format('MMDDYYYY');
   var url = process.env.DATA_URL;
 
   console.log('Downloading latest CSV file...');
@@ -73,25 +73,17 @@ var extractCourtData = function(rows) {
   var casesMap = {};
   var citationsMap = {};
 
-  var latest = function(date1, date2) {
-    if (moment(date1).isAfter(date2)) {
-      return date1;
-    } else {
-      return date2;
-    }
-  };
-
   rows.forEach(function(c) {
-    var citationInfo = c[8];
+    var citationInfo = c[8].split(":");
     var newCitation = {
       id: c[6],
-      violation: citationInfo.split(":")[0],
-      description: citationInfo.split(":")[1],
+      violation: citationInfo[0],
+      description: citationInfo[1],
       location: c[6].substr(0,3)
     };
 
     var newCase = {
-      date: c[0], 
+      date: dates.toMoment(c[0]), 
       defendant: c[2] + " " + c[1],
       room: c[4],
       time: c[5],
@@ -111,9 +103,9 @@ var extractCourtData = function(rows) {
     // If we've seen this case, this is an additional citation on it
     // Otherwise, both the case and the citation are new.
     if (prevCitation && prevCase) {
-      prevCase.date = latest(prevCase.date, newCase.date);
+      prevCase.date = moment.max(prevCase.date, newCase.date);
     } else if (prevCase) {
-      prevCase.date = latest(prevCase.date, newCase.date);
+      prevCase.date = moment.max(prevCase.date, newCase.date);
       prevCase.citations.push(newCitation);
       citationsMap[citationLookup] = newCitation;
     } else {
