@@ -63,8 +63,7 @@ function processCitationMessage(queued) {
           datetime = dates.fromDateAndTime(queued.relatedCitation.date, queued.relatedCitation.time);
 
       Promise.resolve()
-        .then(sendMessage(phone, process.env.TWILIO_PHONE_NUMBER, messages.greetingOneOfTwo()))
-        .then(sendMessage(phone, process.env.TWILIO_PHONE_NUMBER, messages.greetingTwoOfTwo(name, datetime, queued.relatedCitation.room)))
+        .then(sendMessage(phone, process.env.TWILIO_PHONE_NUMBER, messages.greetingMessage(name, datetime, queued.relatedCitation.room)))
         .then(updateSentWithReminder(queued.queuedMessage.queued_id))
         .then(resolve);
     } else if (dates.hasSatTooLong(queued.queuedMessage.created_at)) {
@@ -146,13 +145,10 @@ function genericResolver(resolve, errPrefix) {
  */
 module.exports = function() {
   return new Promise(function(resolve, reject) {
-    try{
-      findQueued()
-        .then(forEachResult(retrieveCitation))
-        .then(forEachResult(processCitationMessage))
-        .then(resolve, reject);
-    } catch(e) {
-      reject(e);
-    }
+    findQueued()
+      .then(forEachResult(retrieveCitation))
+      .then(forEachResult(processCitationMessage))
+      .then(resolve, reject)
+      .catch(reject);
   });
 };

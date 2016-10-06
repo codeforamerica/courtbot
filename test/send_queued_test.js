@@ -43,23 +43,14 @@ describe("with 2 valid queued cases (same citation)", function() {
 
   it("sends the correct info to Twilio and updates the queued to sent", function(done) {
     var number = "+12223334444";
-    var message1 = "(1/2) Hello from the Alaska State Court System.";
-    var message2 = "(2/2) We found a case for Frederick Turner scheduled on Fri, Mar 27th at 1:00 PM, at CNVCRT. Would you like a courtesy reminder the day before? (reply YES or NO)";
+    var msg = "Hello from the Alaska State Court System. We found a case for Frederick Turner scheduled on Fri, Mar 27th at 1:00 PM, at CNVCRT. Would you like a courtesy reminder the day before? (reply YES or NO)";
 
     nock('https://api.twilio.com:443')
-        .post('/2010-04-01/Accounts/test/Messages.json', "To=" + encodeURIComponent(number) + "&From=%2Btest&Body=" + encodeURIComponent(message1))
+        .post('/2010-04-01/Accounts/test/Messages.json', "To=" + encodeURIComponent(number) + "&From=%2Btest&Body=" + encodeURIComponent(msg))
         .reply(200, {"status":200}, { 'access-control-allow-credentials': 'true'});
 
     nock('https://api.twilio.com:443')
-        .post('/2010-04-01/Accounts/test/Messages.json', "To=" + encodeURIComponent(number) + "&From=%2Btest&Body=" + encodeURIComponent(message2))
-        .reply(200, {"status":200}, { 'access-control-allow-credentials': 'true'});
-
-    nock('https://api.twilio.com:443')
-        .post('/2010-04-01/Accounts/test/Messages.json', "To=" + encodeURIComponent(number) + "&From=%2Btest&Body=" + encodeURIComponent(message1))
-        .reply(200, {"status":200}, { 'access-control-allow-credentials': 'true'});
-
-    nock('https://api.twilio.com:443')
-        .post('/2010-04-01/Accounts/test/Messages.json', "To=" + encodeURIComponent(number) + "&From=%2Btest&Body=" + encodeURIComponent(message2))
+        .post('/2010-04-01/Accounts/test/Messages.json', "To=" + encodeURIComponent(number) + "&From=%2Btest&Body=" + encodeURIComponent(msg))
         .reply(200, {"status":200}, { 'access-control-allow-credentials': 'true'});
 
     sendQueued().then(function(res) {
