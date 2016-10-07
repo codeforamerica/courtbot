@@ -67,7 +67,6 @@ function sendReminderMessages(reminders) {
         });
       });
     });
-  });
 };
 
 module.exports = function() {
