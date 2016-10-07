@@ -38,7 +38,6 @@ module.exports = {
 	    if (err) {
 	      console.log(errPrefix || "genericCallbackResolver()", err);
 	    }
-	    console.log("completed wrong step!!!");
 	    resolve(result);
 	  };
 	}
