@@ -40,7 +40,7 @@ function sendReminderMessages(reminders) {
         to: phone,
         from: process.env.TWILIO_PHONE_NUMBER,
         body: 'Reminder: It appears you have a court case tomorrow at ' + moment("1980-01-01 " + reminder.time).format("h:mm A") +
-        ' at ' + reminder.room + ". You should confirm your case date and time by going to ' + process.env.COURT_PUBLIC_URL + '. - Alaska State Court System"
+        ' at ' + reminder.room + '. You should confirm your case date and time by going to ' + process.env.COURT_PUBLIC_URL + '. - Alaska State Court System'
 
       }, function(err, result) {
           if (err) {
