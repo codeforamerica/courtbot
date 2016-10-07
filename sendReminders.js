@@ -7,6 +7,11 @@ var knex = require('knex')({
   client: 'pg',
   connection: process.env.DATABASE_URL
 });
+var decipher = crypto.createDecipher('aes256', process.env.PHONE_ENCRYPTION_KEY);
+var messages = require("./utils/messages");
+var promises = require("./utils/promises"),
+    forEachResult = promises.forEachResult,
+    callbackHandler = promises.genericCallbackResolver;
 
 /**
  * Find all reminders for which a reminder has not been sent.  
@@ -16,11 +21,9 @@ var knex = require('knex')({
  * @return {array} Promise to return results
  */
 var findReminders = function() {
-
   return knex('reminders')
     .where('sent', false)
     .join('cases', 'reminders.case_id', '=', 'cases.id')
-    //.whereRaw("\"cases\".\"date\"::date - " + "(now() AT TIME ZONE \'UTC\' AT TIME ZONE \'-9\')::date = 1")
     .whereRaw('("cases"."date" + interval \'8 hours\') < (now() + interval \'24 hours\')')
     .select();
 };
@@ -31,52 +34,32 @@ var findReminders = function() {
  * @param  {array} reminders List of reminders to be sent. 
  * @return {Promise}  Promise to send reminders.
  */
-function sendReminderMessages(reminders) {
+var sendReminder = function(reminder) {
   return new Promise(function(resolve, reject) {
-    if (reminders.length === 0) {
-      console.log('No reminders to send out today.');
-      resolve();
-    }
+    var phone = decipher.update(reminder.phone, 'hex', 'utf8') + decipher.final('utf8');
+    console.log("Phone: " + phone);
 
-    var count = 0;
-
-    // Send SMS reminder
-    reminders.forEach(function(reminder) {
-      var decipher = crypto.createDecipher('aes256', process.env.PHONE_ENCRYPTION_KEY);
-      var phone = decipher.update(reminder.phone, 'hex', 'utf8') + decipher.final('utf8');
-      console.log("Phone: " + phone);
-
-      client.sendMessage({
-        to: phone,
-        from: process.env.TWILIO_PHONE_NUMBER,
-        body: 'Reminder: It appears you have a court case tomorrow at ' + moment("1980-01-01 " + reminder.time).format("h:mm A") +
-        ' at ' + reminder.room + ". You should confirm your case date and time by going to ' + process.env.COURT_PUBLIC_URL + '. - Alaska State Court System"
-
-      }, function(err, result) {
-          if (err) {
-            console.log(err);
-          }
-          console.log('Reminder sent to ' + reminder.phone);
-          // Update table
-          knex('reminders')
-            .where('reminder_id', '=', reminder.reminder_id)
-            .update({'sent': true})
-            .asCallback(function(err, results) {
-              if (err) {
-                console.log(err);
-              }
-            }).then(function(err, data) {
-            if (err) {
-              console.log(err);
-            }
-            count++;
-            if (count === reminders.length) {
-              resolve();
-            }
-          });
-        });
+    messages.send(phone, process.env.TWILIO_PHONE_NUMBER, messages.reminder(reminder))
+      .then(function() {
+        resolve(reminder);
       });
   });
+};
+
+/**
+ * Update statuses of reminders that we send messages for.
+ * 
+ * @param  {Object} reminder reminder record that needs to be updated in db.
+ * @return {Promise} Promise to update reminder.
+ */
+var updateReminderStatus = function(reminder) {
+  console.log('Reminder sent to ' + reminder.phone);
+  return new Promise(function(resolve, reject) {
+    knex('reminders')
+      .where('reminder_id', '=', reminder.reminder_id)
+      .update({'sent': true})
+      .asCallback(callbackHandler(resolve, "updateReminderStatus()"));
+  });  
 };
 
 /**
@@ -89,8 +72,9 @@ function sendReminderMessages(reminders) {
  */
 module.exports = function() {
   return new Promise(function(resolve, reject) {
-    findReminders().then(function(resp) {
-      sendReminderMessages(resp).then(resolve, reject);
-    }).catch(reject);
-  });
+    findReminders()
+      .then(forEachResult(sendReminder))
+      .then(forEachResult(updateReminderStatus))
+      .then(resolve, reject);
+    });
 };

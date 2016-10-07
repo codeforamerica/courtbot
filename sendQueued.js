@@ -3,13 +3,13 @@ var crypto = require('crypto'),
     client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN),
     db = require('./db.js'),
     Promise = require('bluebird'),
-    moment = require('moment-timezone'),
     dates = require("./utils/dates"),
     strings = require("./utils/strings"),
     messages = require("./utils/messages"),
     promises = require("./utils/promises"),
     forEachResult = promises.forEachResult,
     chainable = promises.chainablePromise,
+    genericResolver = promises.genericCallbackResolver,
     knex = require('knex')({
       client: 'pg',
       connection: process.env.DATABASE_URL
@@ -62,32 +62,16 @@ function processCitationMessage(queued) {
       var name = strings.scrubName(queued.relatedCitation.defendant),
           datetime = dates.fromDateAndTime(queued.relatedCitation.date, queued.relatedCitation.time);
 
-      Promise.resolve()
-        .then(sendMessage(phone, process.env.TWILIO_PHONE_NUMBER, messages.greetingMessage(name, datetime, queued.relatedCitation.room)))
+      messages.send(phone, process.env.TWILIO_PHONE_NUMBER, messages.greetingMessage(name, datetime, queued.relatedCitation.room))
         .then(updateSentWithReminder(queued.queuedMessage.queued_id))
         .then(resolve);
     } else if (dates.hasSatTooLong(queued.queuedMessage.created_at)) {
-      Promise.resolve()
-        .then(sendMessage(phone, process.env.TWILIO_PHONE_NUMBER, messages.unableToFindCitationForTooLong()))
+      messages.send(phone, process.env.TWILIO_PHONE_NUMBER, messages.unableToFindCitationForTooLong())
         .then(updateSentWithoutReminder(queued.queuedMessage.queued_id))
         .then(resolve);
     } else {
       resolve();
     }
-  });
-};
-
-/**
- * Send a twilio message
- * 
- * @param  {string} to   phone number message will be sent to
- * @param  {string} from who the message is being sent from
- * @param  {string} body message to be sent
- * @return {Promise} Promise to send message.
- */
-function sendMessage(to, from, body) {
-  return chainable(function(resolve, reject) {
-    client.sendMessage({to: to, from: from, body: body}, genericResolver(resolve, "client.sendMessage"));
   });
 };
 
@@ -121,21 +105,6 @@ function updateSentWithoutReminder(queuedId) {
           .update({'sent': true})
           .asCallback(genericResolver(resolve, "updateSentWithoutReminder()"));
     });
-};
-
-/**
- * Generic callback handler for resolving a promise once a call has completed.
- * 
- * @param  {function} resolve resolve function for Promise that is to be resolved.
- * @param  {string} errPrefix String prefix for error message if call fails and an error is returned.
- */
-function genericResolver(resolve, errPrefix) {
-  return function(err, result) {
-    if (err) {
-      return console.log(errPrefix, err);
-    }
-    resolve(result);
-  };
 };
 
 /**

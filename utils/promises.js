@@ -25,5 +25,21 @@ module.exports = {
 	  return function() {
 	    return new Promise(resolver);
 	  };
+	},
+
+	/**
+	 * Generic callback handler for resolving a promise once a call has completed.
+	 * 
+	 * @param  {function} resolve resolve function for Promise that is to be resolved.
+	 * @param  {string} errPrefix String prefix for error message if call fails and an error is returned.
+	 */
+	genericCallbackResolver: function(resolve, errPrefix) {
+	  return function(err, result) {
+	    if (err) {
+	      console.log(errPrefix || "genericCallbackResolver()", err);
+	    }
+	    console.log("completed wrong step!!!");
+	    resolve(result);
+	  };
 	}
 }

@@ -1,3 +1,10 @@
+var twilio = require('twilio');
+var client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+var dates = require("./dates");
+var promises = require("./promises"),
+	chainable = promises.chainablePromise,
+	genericResolver = promises.genericCallbackResolver;
+
 module.exports = {
 
 	/**
@@ -22,5 +29,37 @@ module.exports = {
 	 */
 	unableToFindCitationForTooLong: function() {
         return "We haven\'t been able to find your court case. You can go to " + process.env.COURT_PUBLIC_URL + " for more information. - Alaska State Court System";
+	},
+
+	/**
+	 * Reminder message body
+	 * 
+	 * @param  {Object} reminder reminder record.
+	 * @return {string} message body.
+	 */
+	reminder: function(reminder) {
+		return "Reminder: It appears you have a court case tomorrow at " + 
+			dates.fromDateAndTime(dates.now(), reminder.time).format("h:mm A") +
+        	" at " + reminder.room + 
+        	". You should confirm your case date and time by going to " + 
+        	process.env.COURT_PUBLIC_URL + 
+        	". - Alaska State Court System";
+	},
+	
+	/**
+	 * Send a twilio message
+	 * 
+	 * @param  {string} to   phone number message will be sent to
+	 * @param  {string} from who the message is being sent from
+	 * @param  {string} body message to be sent
+	 * @param  {function} function for resolving callback
+	 * @return {Promise} Promise to send message.
+	 */
+	send: function(to, from, body, resolver) {
+		return new Promise(function(resolve, reject) {
+			client.sendMessage({to: to, from: from, body: body}, resolver ? resolver : genericResolver(resolve, "client.message"));			
+		});
 	}
+
+
 }
