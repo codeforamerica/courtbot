@@ -5,24 +5,11 @@ var moment = require('moment');
 var request = require('request');
 var parse = require('csv-parse');
 var Promise = require('bluebird');
+var callFn = require("./promises").callFn;
 var sha1 = require('sha1');
 var dates = require("./dates");
 require('dotenv').config();
-
-var knex = require('knex')({
-  client: 'pg',
-  connection: process.env.DATABASE_URL,
-  pool: {
-    min: 0,
-    max: 7,
-    afterCreate: function(connection, callback) {
-      connection.query("SET TIME ZONE 'UTC';", function(err) {
-        callback(err, connection);
-      });
-    }
-  }
-
-});
+var manager = require("./db/manager");
 
 var loadData = function () {
   var url = process.env.DATA_URL;
@@ -128,59 +115,14 @@ var recreateDB = function(cases, callback) {
 
     var chunks = chunk(cases, 1000);
     return Promise.all(chunks.map(function(chunk) {
-      return knex('cases').insert(chunk);
+      return manager.insertTableChunk("cases", chunk);
     }));
   };
 
-  knex.schema
-    .dropTableIfExists('cases')
-    .then(createCasesTable)
-    .then(insertCases)
-    .then(createIndexingFunction)
-    .then(dropIndex)
-    .then(createIndex)
-    .then(close)
-    .then(function() {
-      callback();
-    });
-};
-
-var createCasesTable = function() {
-  return knex.schema.createTable('cases', function(table) {
-    table.string('id', 100).primary();
-    table.string('defendant', 100);
-    table.timestamp('date');
-    table.string('time', 100);
-    table.string('room', 100);
-    table.json('citations');
-  });
-};
-
-// Creating an index for citation ids, stored in a JSON array
-// Using this strategy: http://stackoverflow.com/a/18405706
-var createIndexingFunction = function () {
-  var text = ['CREATE OR REPLACE FUNCTION json_val_arr(_j json, _key text)',
-              '  RETURNS text[] AS',
-              "'",
-              'SELECT array_agg(elem->>_key)',
-              'FROM   json_array_elements(_j) AS x(elem)',
-              "'",
-              '  LANGUAGE sql IMMUTABLE;'].join('\n');
-  return knex.raw(text);
-};
-
-var dropIndex = function() {
-  var text = "DROP INDEX IF EXISTS citation_ids_gin_idx";
-  return knex.raw(text);
-};
-
-var createIndex = function() {
-  var text = "CREATE INDEX citation_ids_gin_idx ON cases USING GIN (json_val_arr(citations, 'id'))";
-  return knex.raw(text);
-};
-
-var close = function() {
-  return knex.client.pool.destroy();
+  manager.dropTable("cases")
+    .then(callFn(manager.createTable, "cases", insertCases))
+    .then(manager.closeConnection)
+    .then(callback);
 };
 
 var chunk = function(arr, len) {

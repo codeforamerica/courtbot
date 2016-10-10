@@ -10,6 +10,7 @@ var expect = require("chai").expect;
 var assert = require("chai").assert;
 var nock = require('nock');
 var now = require("../utils/dates").now;
+var manager = require("../utils/db/manager");
 
 var db = require('../db');
 var knex = require('knex')({
@@ -22,23 +23,27 @@ nock('https://api.twilio.com:443').log(console.log);
 
 describe("with 2 valid queued cases (same citation)", function() {
   beforeEach(function(done) {
-    knex('cases').del().then(function() {
-      knex('cases').insert([turnerData()]).then(function() {
-        knex("queued").del().then(function() {
-          db.addQueued({
-              citationId: "4928456",
-              phone: "+12223334444"
-            }, function(err, data) {
+    function initData() {
+      knex('cases').del().then(function() {
+        knex('cases').insert([turnerData()]).then(function() {
+          knex("queued").del().then(function() {
             db.addQueued({
-              citationId: "4928456",
-              phone: "+12223334444"
-            }, function(err, data) {
-              done(err);
+                citationId: "4928456",
+                phone: "+12223334444"
+              }, function(err, data) {
+              db.addQueued({
+                citationId: "4928456",
+                phone: "+12223334444"
+              }, function(err, data) {
+                done(err);
+              });
             });
           });
         });
       });
-    });
+    };
+    
+    manager.ensureTablesExist().then(initData);
   });
 
   it("sends the correct info to Twilio and updates the queued to sent", function(done) {

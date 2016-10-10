@@ -9,6 +9,7 @@ var sendReminders = require("../sendReminders.js");
 var expect = require("chai").expect;
 var nock = require('nock');
 var moment = require("moment");
+var manager = require("../utils/db/manager");
 
 var db = require('../db');
 var knex = require('knex')({
@@ -22,22 +23,26 @@ nock('https://api.twilio.com:443').log(console.log);
 
 describe("with a reminder that hasn't been sent", function() {
     beforeEach(function(done) {
-        knex('cases').del()
-            .then(function() {
-                return knex('cases').insert([turnerData()])
-            })
-            .then(function() {
-                return knex('reminders').del()
-            })
-            .then(function() {
-                return db.addReminder({
-                    caseId: "677167760f89d6f6ddf7ed19ccb63c15486a0eab",
-                    phone: "+12223334444",
-                    originalCase: turnerData()
-                }, function(err, data) {
-                    done(err);
+        function initData() {
+            knex('cases').del()
+                .then(function() {
+                    return knex('cases').insert([turnerData()])
+                })
+                .then(function() {
+                    return knex('reminders').del()
+                })
+                .then(function() {
+                    return db.addReminder({
+                        caseId: "677167760f89d6f6ddf7ed19ccb63c15486a0eab",
+                        phone: "+12223334444",
+                        originalCase: turnerData()
+                    }, function(err, data) {
+                        done(err);
+                    });
                 });
-            });
+        };
+
+        manager.ensureTablesExist().then(initData);       
     });
 
     it("sends the correct info to Twilio and updates the reminder to sent", function(done) {
