@@ -1,7 +1,7 @@
 // Downloads the latest courtdate CSV file and
 // rebuilds the database. For best results, load nightly.
 var http = require('http');
-var moment = require('moment');
+var moment = require('moment-timezone');
 var request = require('request');
 var parse = require('csv-parse');
 var Promise = require('bluebird');
