@@ -121,7 +121,7 @@ app.post('/sms', function(req, res) {
 
 // You can pay online if ALL your individual citations can be paid online
 var canPayOnline = function(courtCase) {
-  console.log("canPayOnline courtCase = " + courtCase);
+  console.log("canPayOnline citations = " + courtCase.citations);
   var eligible = true;
   courtCase.citations.forEach(function(citation) {
     if (citation.payable !== '1') eligible = false;
