@@ -3,7 +3,7 @@ var Knex = require('knex');
 
 var knex = Knex.initialize({
   client: 'pg',
-  connection: process.env.DATABASE_URL
+  connection: process.env.HEROKU_POSTGRESQL_NAVY_URL
 });
 
 var createTable = function() {
