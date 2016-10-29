@@ -21,8 +21,9 @@ exports.fuzzySearch = function(str, callback) {
 
   // Search for Citations
   var citation = escapeSQL(parts[0]);
-  var citationSearch = knex.raw("'{\"" + citation + "\"}'::text[] <@ (json_val_arr(citations, 'id'))");
-  query = query.orWhere(citationSearch);
+  //var citationSearch = knex.raw("'{\"" + citation + "\"}'::text[] <@ (json_val_arr(citations, 'id'))");
+  //query = query.orWhere(citationSearch);
+  query = query.orWhere('citations', 'like', '%' + citation + '%');
   console.log('Query =' + query);
 
   // Limit to ten results
