@@ -38,7 +38,9 @@ app.get('/cases', function(req, res) {
     // Add readable dates, to avoid browser side date issues
     data.forEach(function(d) {
       console.log("Fuzzy Search Record = " + d);
-      d.readableDate = moment(d.date).format('dddd, MMM');
+      // Lou 10/28/16 -- In the db currently the date field is already 'readable' and moment can't parse it. Restore when db is fixed.
+      //d.readableDate = moment(d.date).format('dddd, MMM Do');
+      d.readableDate = d.date;
       d.payable = canPayOnline(d);
     });
     
