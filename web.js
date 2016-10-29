@@ -121,12 +121,15 @@ app.post('/sms', function(req, res) {
 
 // You can pay online if ALL your individual citations can be paid online
 var canPayOnline = function(courtCase) {
-  console.log("canPayOnline citations = " + courtCase.citations);
-  var eligible = true;
-  courtCase.citations.forEach(function(citation) {
-    if (citation.payable !== '1') eligible = false;
-  });
-  return eligible;
+  // Lou 10/28/16 -- the citations data isn't json and doesn't have a payable attribute so this code is not working.
+  // Restore the below logic if we can figure out what happened with the db.
+  return false;
+
+  //var eligible = true;
+  //courtCase.citations.forEach(function(citation) {
+  //  if (citation.payable !== '1') eligible = false;
+  //});
+  //return eligible;
 };
 
 var cleanupName = function(name) {
