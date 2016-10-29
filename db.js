@@ -8,9 +8,8 @@ var knex = Knex.initialize({
 exports.findCitation = function(citation, callback) {
   // Postgres JSON search based on prebuilt index
   citation = escapeSQL(citation.toUpperCase());
-  //var citationSearch = knex.raw("'{\"" + citation + "\"}'::text[] <@ (json_val_arr(citations, 'id'))");
-  //knex('cases').where(citationSearch).select().exec(callback);
-  knex('cases').where('citations', 'like', '%' + citation + '%').select().exec(callback);
+  var citationSearch = knex.raw("'{\"" + citation + "\"}'::text[] <@ (json_val_arr(citations, 'id'))");
+  knex('cases').where(citationSearch).select().exec(callback);
 };
 
 exports.fuzzySearch = function(str, callback) {
@@ -22,10 +21,8 @@ exports.fuzzySearch = function(str, callback) {
 
   // Search for Citations
   var citation = escapeSQL(parts[0]);
-  //var citationSearch = knex.raw("'{\"" + citation + "\"}'::text[] <@ (json_val_arr(citations, 'id'))");
-  //query = query.orWhere(citationSearch);
-  query = query.orWhere('citations', 'like', '%' + citation + '%');
-  console.log('Query =' + query);
+  var citationSearch = knex.raw("'{\"" + citation + "\"}'::text[] <@ (json_val_arr(citations, 'id'))");
+  query = query.orWhere(citationSearch);
 
   // Limit to ten results
   query = query.limit(10);

@@ -38,9 +38,7 @@ app.get('/cases', function(req, res) {
     // Add readable dates, to avoid browser side date issues
     data.forEach(function(d) {
       console.log("Fuzzy Search Record = " + d);
-      // Lou 10/28/16 -- In the db currently the date field is already 'readable' and moment can't parse it. Restore when db is fixed.
-      //d.readableDate = moment(d.date).format('dddd, MMM Do');
-      d.readableDate = d.date;
+      d.readableDate = moment(d.date).format('dddd, MMM Do');
       d.payable = canPayOnline(d);
     });
     
@@ -123,15 +121,11 @@ app.post('/sms', function(req, res) {
 
 // You can pay online if ALL your individual citations can be paid online
 var canPayOnline = function(courtCase) {
-  // Lou 10/28/16 -- the citations data isn't json and doesn't have a payable attribute so this code is not working.
-  // Restore the below logic if we can figure out what happened with the db.
-  return false;
-
-  //var eligible = true;
-  //courtCase.citations.forEach(function(citation) {
-  //  if (citation.payable !== '1') eligible = false;
-  //});
-  //return eligible;
+  var eligible = true;
+  courtCase.citations.forEach(function(citation) {
+    if (citation.payable !== '1') eligible = false;
+  });
+  return eligible;
 };
 
 var cleanupName = function(name) {
