@@ -38,7 +38,7 @@ app.get('/cases', function(req, res) {
     // Add readable dates, to avoid browser side date issues
     data.forEach(function(d) {
       console.log("Fuzzy Search Record = " + d);
-      d.readableDate = moment(d.date).format('dddd, MMM Do');
+      d.readableDate = moment(d.date).format('dddd, MMM');
       d.payable = canPayOnline(d);
     });
     
