@@ -8,8 +8,9 @@ var knex = Knex.initialize({
 exports.findCitation = function(citation, callback) {
   // Postgres JSON search based on prebuilt index
   citation = escapeSQL(citation.toUpperCase());
-  var citationSearch = knex.raw("'{\"" + citation + "\"}'::text[] <@ (json_val_arr(citations, 'id'))");
-  knex('cases').where(citationSearch).select().exec(callback);
+  //var citationSearch = knex.raw("'{\"" + citation + "\"}'::text[] <@ (json_val_arr(citations, 'id'))");
+  //knex('cases').where(citationSearch).select().exec(callback);
+  knex('cases').where('citations', 'like', '%' + citation + '%').select().exec(callback);
 };
 
 exports.fuzzySearch = function(str, callback) {

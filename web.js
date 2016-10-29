@@ -37,6 +37,7 @@ app.get('/cases', function(req, res) {
     console.log("Fuzzy Search Error = " + err);
     // Add readable dates, to avoid browser side date issues
     data.forEach(function(d) {
+      console.log("Fuzzy Search Record = " + d);
       d.readableDate = moment(d.date).format('dddd, MMM Do');
       d.payable = canPayOnline(d);
     });
@@ -120,6 +121,7 @@ app.post('/sms', function(req, res) {
 
 // You can pay online if ALL your individual citations can be paid online
 var canPayOnline = function(courtCase) {
+  console.log("canPayOnline courtCase = " + courtCase);
   var eligible = true;
   courtCase.citations.forEach(function(citation) {
     if (citation.payable !== '1') eligible = false;
