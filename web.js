@@ -34,6 +34,7 @@ app.get('/cases', function(req, res) {
   if (!req.query || !req.query.q) return res.send(400);
 
   db.fuzzySearch(req.query.q, function(err, data) {
+    console.log("Fuzzy Search Error = " + err);
     // Add readable dates, to avoid browser side date issues
     data.forEach(function(d) {
       d.readableDate = moment(d.date).format('dddd, MMM Do');
