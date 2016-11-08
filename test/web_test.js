@@ -11,6 +11,7 @@ var tk = require("timekeeper");
 var Session = require('supertest-session')({
   app: require('../web')
 });
+
 var manager = require("../utils/db/manager");
 var knex = manager.knex();
 var TEST_UTC_DATE = "2015-03-27T13:00:00-08:00";
@@ -21,13 +22,13 @@ beforeEach(function () {
   sess = new Session();
 
   var time = new Date(1425297600000); // Freeze to March 2, 2015. Yesterday is March 1
-  //tk.freeze(time);
+  tk.freeze(time);
 });
 
 afterEach(function () {
   sess.destroy();
 
-  //tk.reset();
+  tk.reset();
 });
 
 nock.enableNetConnect('127.0.0.1');
