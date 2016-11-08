@@ -44,7 +44,7 @@ describe("for a given date", function() {
                         console.log("TESTING HOUR: " + hr);
                         //console.log(JSON.stringify(results[0]));
                         //console.log(results[0].time, testDateTime.toString());
-                        //console.log(testDateTime.format());
+                        console.log(dates.fromUtc(results[0].date).format(), testDateTime.format());
                         expect(results.length).to.equal(1);
                         expect(dates.fromUtc(results[0].date).format()).to.equal(testDateTime.format());
                         expect(results[0].time).to.equal(dates.toFormattedTime(testDateTime))
