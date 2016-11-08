@@ -129,7 +129,8 @@ var _createTable = {
 			module.exports.knex().schema.createTableIfNotExists("cases", function(table){
 				table.string('id', 100).primary();
 				table.string('defendant', 100);
-				table.timestamp('date');
+				//table.timestamp('date');
+				table.specificType("date", "timestamptz")
 				table.string('time', 100);
 				table.string('room', 100);
 				table.json('citations');
