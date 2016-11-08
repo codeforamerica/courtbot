@@ -21,13 +21,13 @@ beforeEach(function () {
   sess = new Session();
 
   var time = new Date(1425297600000); // Freeze to March 2, 2015. Yesterday is March 1
-  tk.freeze(time);
+  //tk.freeze(time);
 });
 
 afterEach(function () {
   sess.destroy();
 
-  tk.reset();
+  //tk.reset();
 });
 
 nock.enableNetConnect('127.0.0.1');
