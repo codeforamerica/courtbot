@@ -15,7 +15,14 @@ module.exports = {
 		if(!KNEX) {
 			KNEX = require("knex")({
 				client: "pg",
-				connection: process.env.DATABASE_URL
+				connection: process.env.DATABASE_URL,
+				pool: {
+					afterCreate: function(connection, callback) {
+						connection.query("SET TIME ZONE 'UTC';", function(err) {
+							callback(err, connection);
+						});
+					}
+				}
 			});
 		}
 
@@ -129,8 +136,8 @@ var _createTable = {
 			module.exports.knex().schema.createTableIfNotExists("cases", function(table){
 				table.string('id', 100).primary();
 				table.string('defendant', 100);
-				//table.timestamp('date');
-				table.specificType("date", "timestamptz")
+				table.timestamp('date');
+				//table.specificType("date", "timestamptz");
 				table.string('time', 100);
 				table.string('room', 100);
 				table.json('citations');

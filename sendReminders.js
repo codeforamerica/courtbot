@@ -20,11 +20,16 @@ var promises = require("./utils/promises"),
  * @return {array} Promise to return results
  */
 module.exports.findReminders = function() {
-  var dayAfterTomorrow = dates.now().add("2", "days").format();
+  //database is converting dates to UTC offset 0 (+8 hours), so we need to convert our comparrison date
+  //to UTC prior to comparing.
+  //
+  //Really this is saying I want anything from prior to 8AM 2 days from now (anything tomorrow UTC time).
+  var dayAfterTomorrow = dates.now().add("2", "days").hour(0).minute(0).utcOffset(0).format();
+  console.log("DAT", dayAfterTomorrow);
   return knex('reminders')
     .where('sent', false)
     .join('cases', 'reminders.case_id', '=', 'cases.id')
-    .whereRaw('date ("cases"."date") < date \'' + dayAfterTomorrow + '\'')
+    .whereRaw('date ("cases"."date") <= date \'' + dayAfterTomorrow + '\'')
     .select();
 };
 
