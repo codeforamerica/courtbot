@@ -21,28 +21,22 @@ module.exports = {
 	timezoneOffset: function() {
 		return process.env.TIMEZONE_OFFSET;
 	},
-
-	/**
-	 * Used by node postgres driver for mapping timestamptz type strings to the correct string format to be processed
-	 * once returned by a query.
-	 *
-	 * @todo: code should be refactored so that all inserts/retrieves/updates are done through a single module, and that
-	 * 			module should handle data transformations, all in one place.
-	 * 
-	 * @param  {string} date ISO formatted 0 offset UTC date.
-	 * @return {string}      UTC formatted date with the correct offset.
-	 */
-	pgDateParser: function(date) {
-		//console.log("HIT OUR CUSTOM PARSER:", moment(date).utcOffset(module.exports.timezoneOffset()).format());
-		return moment(date).utcOffset(module.exports.timezoneOffset()).format();
-	},
-
+	
 	/**
 	 * Get current moment timestamp, using our environment timezone.
 	 * @return {moment} moment object
 	 */
 	now: function() {
 		return moment.utc().utcOffset(module.exports.timezoneOffset());
+	},
+
+	/**
+	 * ISO formatted date string to UTC formatted date string with UTC offset.
+	 * @param  {string} date ISO formatted date string
+	 * @return {string}      UTC formatted date string
+	 */
+	isoToUtc: function(date) {
+		return moment.utc(date).utcOffset(module.exports.timezoneOffset()).format();
 	},
 
 	/**
@@ -53,18 +47,7 @@ module.exports = {
 	fromUtc: function(date) {
 		return moment.utc(date).utcOffset(module.exports.timezoneOffset());
 	},
-
-
-	/**
-	 * Compare 2 date strings and return the newer of the two.
-	 * @param  {string} left  utc formatted date string
-	 * @param  {string} right utc formatted date string
-	 * @return {string}       newer utc formatted date string
-	 */
-	newer: function(left, right) {
-		return moment.max(module.exports.fromUtc(left), module.exports.fromUtc(right)).format();
-	},
-
+	
 	/**
 	 * Take separate date and time and combine them into single moment object
 	 * 

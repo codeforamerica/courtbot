@@ -5,10 +5,7 @@ var manager = require("../utils/db/manager");
 var Promise = require("bluebird");
 
 var db = require('../db');
-var knex = require('knex')({
-    client: 'pg',
-    connection: process.env.DATABASE_URL
-});
+var knex = manager.knex();
 
 var dates = require("../utils/dates"),
     TEST_CASE_ID = "677167760f89d6f6ddf7ed19ccb63c15486a0eab",

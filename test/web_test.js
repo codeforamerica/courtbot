@@ -11,7 +11,8 @@ var tk = require("timekeeper");
 var Session = require('supertest-session')({
   app: require('../web')
 });
-
+var manager = require("../utils/db/manager");
+var knex = manager.knex();
 var TEST_UTC_DATE = "2015-03-27T13:00:00-08:00";
 
 var sess;
@@ -27,11 +28,6 @@ afterEach(function () {
   sess.destroy();
 
   tk.reset();
-});
-
-var knex = require('knex')({
-  client: 'pg',
-  connection: process.env.DATABASE_URL
 });
 
 nock.enableNetConnect('127.0.0.1');

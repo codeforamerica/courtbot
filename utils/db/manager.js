@@ -2,17 +2,26 @@ require("dotenv").config();
 var Promise = require('bluebird');
 var promises = require("../promises"),
 	callFn = promises.callFn,
-	chainable = promises.chainablePromise;
+	chainable = promises.chainablePromise,
+	dates = require("../dates");
 
 var TIMESTAMPTZ_OID = 1184;
-require("pg").types.setTypeParser(TIMESTAMPTZ_OID, require("../dates").pgDateParser);
-var knex = require("knex")({
-  client: "pg",
-  connection: process.env.DATABASE_URL
-});
+require("pg").types.setTypeParser(TIMESTAMPTZ_OID, dates.isoToUtc);
 
+var KNEX;
 
 module.exports = {
+	knex: function() {
+		if(!KNEX) {
+			KNEX = require("knex")({
+				client: "pg",
+				connection: process.env.DATABASE_URL
+			});
+		}
+
+		return KNEX;
+	},
+
 	/**
 	 * Ensure all necessary tables exist.  
 	 * 
@@ -51,7 +60,7 @@ module.exports = {
 	 */
 	dropTable: function(table) {
 		return new Promise(function(resolve, reject) {
-			knex.schema.dropTableIfExists(table).asCallback(function(){
+			module.exports.knex().schema.dropTableIfExists(table).asCallback(function(){
 				console.log("Dropped existing table \"" + table + "\"");
 				resolve();
 			});
@@ -72,7 +81,7 @@ module.exports = {
 				console.log("No Table Creation Instructions found for table \"" + table + "\".");
 				resolve();
 			} else {
-				knex.schema.hasTable(table).then(function(exists) {
+				module.exports.knex().schema.hasTable(table).then(function(exists) {
 					if(exists) {
 						console.log("Table \"" + table + "\" already exists.  Will not create.");
 						resolve();
@@ -96,7 +105,7 @@ module.exports = {
 	 * @return {void} 
 	 */
 	insertTableChunk: function(table, chunk) {
-		return knex(table).insert(chunk);
+		return module.exports.knex()(table).insert(chunk);
 	},
 
 	/**
@@ -105,7 +114,7 @@ module.exports = {
 	 * @return {void} 
 	 */
 	closeConnection: function() {
-		return knex.client.pool.destroy();
+		return module.exports.knex().client.pool.destroy();
 	}
 };
 
@@ -117,7 +126,7 @@ module.exports = {
 var _createTable = {
 	cases: function(cb) {
 		return new Promise(function(resolve, reject) {
-			knex.schema.createTableIfNotExists("cases", function(table){
+			module.exports.knex().schema.createTableIfNotExists("cases", function(table){
 				table.string('id', 100).primary();
 				table.string('defendant', 100);
 				table.timestamp('date');
@@ -132,7 +141,7 @@ var _createTable = {
 	},
 	queued: function(cb) {
 		return new Promise(function(resolve, reject) {
-			knex.schema.createTableIfNotExists("queued", function(table) {
+			module.exports.knex().schema.createTableIfNotExists("queued", function(table) {
 				table.increments("queued_id").primary();
 				table.dateTime("created_at");
 				table.string("citation_id", 100);
@@ -147,7 +156,7 @@ var _createTable = {
 	},
 	reminders: function(cb) {
 		return new Promise(function(resolve, reject) {
-			knex.schema.createTableIfNotExists("reminders", function(table) {
+			module.exports.knex().schema.createTableIfNotExists("reminders", function(table) {
 				table.increments("reminder_id").primary();
 				table.dateTime("created_at");
 				table.string("case_id", 100);
@@ -196,9 +205,9 @@ var _createIndexForCases = function() {
 			"'",
 			'  LANGUAGE sql IMMUTABLE;'].join('\n');
 
-		knex.raw(cases_indexing_function)
-			.then(knex.raw("DROP INDEX IF EXISTS citation_ids_gin_idx"))
-			.then(knex.raw("CREATE INDEX citation_ids_gin_idx ON cases USING GIN (json_val_arr(citations, 'id'))"))
+		module.exports.knex().raw(cases_indexing_function)
+			.then(module.exports.knex().raw("DROP INDEX IF EXISTS citation_ids_gin_idx"))
+			.then(module.exports.knex().raw("CREATE INDEX citation_ids_gin_idx ON cases USING GIN (json_val_arr(citations, 'id'))"))
 			.then(resolve);
 	});
 };

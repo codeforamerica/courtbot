@@ -9,14 +9,9 @@ var crypto = require('crypto'),
     promises = require("./utils/promises"),
     forEachResult = promises.forEachResult,
     chainable = promises.chainablePromise,
-    genericResolver = promises.genericCallbackResolver;
-
-var TIMESTAMPTZ_OID = 1184;
-require("pg").types.setTypeParser(TIMESTAMPTZ_OID, require("./utils/dates").pgDateParser);
-var knex = require('knex')({
-  client: 'pg',
-  connection: process.env.DATABASE_URL
-});
+    genericResolver = promises.genericCallbackResolver,
+    manager = require("./utils/db/manager"),
+    knex = manager.knex();
 
 /**
  * Retrieve array of queued messages that have not been sent, if any exist.

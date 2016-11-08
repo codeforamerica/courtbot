@@ -11,12 +11,8 @@ var assert = require("chai").assert;
 var nock = require('nock');
 var now = require("../utils/dates").now;
 var manager = require("../utils/db/manager");
-
 var db = require('../db');
-var knex = require('knex')({
-  client: 'pg',
-  connection: process.env.DATABASE_URL
-});
+var knex = manager.knex();
 
 nock.disableNetConnect();
 nock('https://api.twilio.com:443').log(console.log);

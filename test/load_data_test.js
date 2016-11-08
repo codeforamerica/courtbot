@@ -5,11 +5,8 @@ var nock = require('nock');
 var tk = require('timekeeper');
 var fs = require('fs');
 var url = require('url');
-
-var knex = require('knex')({
-  client: 'pg',
-  connection: process.env.DATABASE_URL
-});
+var manager = require("../utils/db/manager");
+var knex = manager.knex();
 
 var data_hostname = "http://" + url.parse(process.env.DATA_URL).hostname;
 console.log("Host: " + data_hostname);

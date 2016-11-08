@@ -2,12 +2,8 @@ var crypto = require('crypto');
 var twilio = require('twilio');
 var client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 var Promise = require('bluebird');
-var TIMESTAMPTZ_OID = 1184;
-require("pg").types.setTypeParser(TIMESTAMPTZ_OID, require("./utils/dates").pgDateParser);
-var knex = require('knex')({
-  client: 'pg',
-  connection: process.env.DATABASE_URL
-});
+var manager = require("./utils/db/manager");
+var knex = manager.knex();
 var decipher = crypto.createDecipher('aes256', process.env.PHONE_ENCRYPTION_KEY);
 var messages = require("./utils/messages");
 var dates = require("./utils/dates");

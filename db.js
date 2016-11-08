@@ -1,20 +1,7 @@
 var crypto = require('crypto');
 require('dotenv').config();
-var TIMESTAMPTZ_OID = 1184;
-require("pg").types.setTypeParser(TIMESTAMPTZ_OID, require("./utils/dates").pgDateParser);
-
-var knex = require('knex')({
-  client: 'pg',
-  connection: process.env.DATABASE_URL,
-  pool: {
-    afterCreate: function(connection, callback) {
-      connection.query("SET TIME ZONE 'UTC';", function(err) {
-        callback(err, connection);
-      });
-    }
-  }
-
-});
+var manager = require("./utils/db/manager");
+var knex = manager.knex();
 var now = require("./utils/dates").now;
 
 exports.findCitation = function(citation, callback) {
