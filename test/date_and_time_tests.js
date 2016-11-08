@@ -44,7 +44,7 @@ describe("for a given date", function() {
                 updateCaseDate(TEST_CASE_ID, testDateTime)
                     .then(findReminders)
                     .then(function(results) {
-                        //console.log("TESTING HOUR: " + hr);
+                        console.log("TESTING HOUR: " + hr);
                         //console.log(JSON.stringify(results[0]));
                         //console.log(results[0].time, testDateTime.toString());
                         //console.log(testDateTime.format());
