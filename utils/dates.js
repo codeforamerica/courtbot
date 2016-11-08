@@ -36,6 +36,7 @@ module.exports = {
 	 * @return {string}      UTC formatted date string
 	 */
 	isoToUtc: function(date) {
+		console.log("RAW DATE FROM DB:", date);
 		return moment.utc(date).utcOffset(module.exports.timezoneOffset()).format();
 	},
 
