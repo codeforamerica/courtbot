@@ -1,5 +1,8 @@
 var crypto = require('crypto');
 require('dotenv').config();
+var TIMESTAMPTZ_OID = 1184;
+require("pg").types.setTypeParser(TIMESTAMPTZ_OID, require("./utils/dates").pgDateParser);
+
 var knex = require('knex')({
   client: 'pg',
   connection: process.env.DATABASE_URL,

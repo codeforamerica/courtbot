@@ -12,6 +12,8 @@ var Session = require('supertest-session')({
   app: require('../web')
 });
 
+var TEST_UTC_DATE = "2015-03-27T13:00:00-08:00";
+
 var sess;
 
 beforeEach(function () {
@@ -482,7 +484,7 @@ context("with session.askedQueued", function() {
 function turnerData(v) {
   return { 
     //date: '27-MAR-15',
-    date: "2015-03-27T08:00:00.000Z",
+    date: TEST_UTC_DATE,
     defendant: 'Frederick Turner',
     room: 'CNVCRT',
     time: '01:00:00 PM',
@@ -493,7 +495,7 @@ function turnerData(v) {
 
 function turnerDataAsObject(v) {
   var data = turnerData(v);
-  data.date = "2015-03-27T08:00:00.000Z";
+  data.date = TEST_UTC_DATE;
   data.citations = JSON.parse(data.citations);
   data.readableDate = "Friday, Mar 27th";
   return data;
@@ -501,7 +503,7 @@ function turnerDataAsObject(v) {
 
 function rawTurnerDataAsObject(v) {
   var data = turnerData(v);
-  data.date = "2015-03-27T08:00:00.000Z";
+  data.date = TEST_UTC_DATE;
   data.citations = JSON.parse(data.citations);
   return data;
 }

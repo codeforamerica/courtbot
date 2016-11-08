@@ -40,7 +40,7 @@ module.exports = {
 	 */
 	reminder: function(reminder) {
 		return "Reminder: It appears you have a court case tomorrow at " + 
-			dates.fromDateAndTime(dates.now(), reminder.time).format("h:mm A") +
+			dates.fromUtc(reminder.date).format("h:mm A") +
         	" at " + reminder.room + 
         	". You should confirm your case date and time by going to " + 
         	process.env.COURT_PUBLIC_URL + 

@@ -9,11 +9,14 @@ var crypto = require('crypto'),
     promises = require("./utils/promises"),
     forEachResult = promises.forEachResult,
     chainable = promises.chainablePromise,
-    genericResolver = promises.genericCallbackResolver,
-    knex = require('knex')({
-      client: 'pg',
-      connection: process.env.DATABASE_URL
-    });
+    genericResolver = promises.genericCallbackResolver;
+
+var TIMESTAMPTZ_OID = 1184;
+require("pg").types.setTypeParser(TIMESTAMPTZ_OID, require("./utils/dates").pgDateParser);
+var knex = require('knex')({
+  client: 'pg',
+  connection: process.env.DATABASE_URL
+});
 
 /**
  * Retrieve array of queued messages that have not been sent, if any exist.
@@ -60,7 +63,7 @@ function processCitationMessage(queued) {
 
     if (queued.citationFound) {
       var name = strings.scrubName(queued.relatedCitation.defendant),
-          datetime = dates.fromDateAndTime(queued.relatedCitation.date, queued.relatedCitation.time);
+          datetime = dates.fromUtc(queued.relatedCitation.date);
 
       messages.send(phone, process.env.TWILIO_PHONE_NUMBER, messages.greetingMessage(name, datetime, queued.relatedCitation.room))
         .then(updateSentWithReminder(queued.queuedMessage.queued_id))
@@ -87,7 +90,7 @@ function updateSentWithReminder(queuedId) {
           .where('queued_id', '=', queuedId)
           .update({'sent': true,
                     'asked_reminder': true,
-                    'asked_reminder_at' : dates.now()})
+                    'asked_reminder_at' : dates.now().format()})
           .asCallback(genericResolver(resolve, "updateSentWithReminder()"));
     });
 };

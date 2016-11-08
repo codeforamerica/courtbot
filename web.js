@@ -1,7 +1,6 @@
 var twilio = require('twilio');
 var express = require('express');
 var logfmt = require('logfmt');
-var moment = require('moment');
 var db = require('./db');
 var dates = require("./utils/dates");
 require('dotenv').config();
@@ -47,7 +46,7 @@ app.get('/cases', function(req, res) {
     // Add readable dates, to avoid browser side date issues
     if (data) {
       data.forEach(function (d) {
-        d.readableDate = moment(d.date).format('dddd, MMM Do');
+        d.readableDate = dates.fromUtc(d.date).format('dddd, MMM Do');
       });
     }
 
@@ -137,7 +136,7 @@ app.post('/sms', askedReminderMiddleware, function(req, res, next) {
     } else {
       var match = results[0];
       var name = cleanupName(match.defendant);
-      var datetime = dates.fromDateAndTime(match.date, match.time);
+      var datetime = dates.fromUtc(match.date);
 
       twiml.sms('Found a case for ' + name + ' scheduled on ' + datetime.format("ddd, MMM Do") + ' at ' + datetime.format("h:mm A") +', at ' + match.room +'. Would you like a courtesy reminder the day before? (reply YES or NO)');
 

@@ -1,7 +1,6 @@
 // Downloads the latest courtdate CSV file and
 // rebuilds the database. For best results, load nightly.
 var http = require('http');
-var moment = require('moment-timezone');
 var request = require('request');
 var parse = require('csv-parse');
 var Promise = require('bluebird');
@@ -9,6 +8,8 @@ var callFn = require("./promises").callFn;
 var sha1 = require('sha1');
 var dates = require("./dates");
 require('dotenv').config();
+var TIMESTAMPTZ_OID = 1184;
+require("pg").types.setTypeParser(TIMESTAMPTZ_OID, require("./dates").pgDateParser);
 var manager = require("./db/manager");
 
 var loadData = function () {
@@ -70,12 +71,14 @@ var extractCourtData = function(rows) {
     };
 
     var newCase = {
-      date: dates.toMoment(c[0]), 
+      date: dates.fromDateAndTime(c[0], c[5]).format(), 
       defendant: c[2] + " " + c[1],
       room: c[4],
       time: c[5],
       citations: []
     };
+
+    //console.log("INCOMING: ", c[0], "|", c[5], "|", newCase.date);
 
     // Since no values here are actually unique, we create some lookups
     var citationLookup = newCitation.id + newCitation.violation;
@@ -90,9 +93,9 @@ var extractCourtData = function(rows) {
     // If we've seen this case, this is an additional citation on it
     // Otherwise, both the case and the citation are new.
     if (prevCitation && prevCase) {
-      prevCase.date = moment.max(prevCase.date, newCase.date);
+      prevCase.date = dates.newer(prevCase.date, newCase.date);
     } else if (prevCase) {
-      prevCase.date = moment.max(prevCase.date, newCase.date);
+      prevCase.date = dates.newer(prevCase.date, newCase.date);
       prevCase.citations.push(newCitation);
       citationsMap[citationLookup] = newCitation;
     } else {

@@ -4,19 +4,11 @@ var promises = require("../promises"),
 	callFn = promises.callFn,
 	chainable = promises.chainablePromise;
 
+var TIMESTAMPTZ_OID = 1184;
+require("pg").types.setTypeParser(TIMESTAMPTZ_OID, require("../dates").pgDateParser);
 var knex = require("knex")({
   client: "pg",
-  connection: process.env.DATABASE_URL,
-  pool: {
-    min: 0,
-    max: 7,
-    afterCreate: function(connection, callback) {
-      connection.query("SET TIME ZONE 'UTC';", function(err) {
-        callback(err, connection);
-      });
-    }
-  }
-
+  connection: process.env.DATABASE_URL
 });
 
 
@@ -136,7 +128,6 @@ var _createTable = {
 			.then(callFn(_postCreateCallback, cb))
 			.then(_createIndexForCases)				
 			.then(resolve);
-			
 		});
 	},
 	queued: function(cb) {

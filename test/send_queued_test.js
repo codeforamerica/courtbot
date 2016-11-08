@@ -60,7 +60,7 @@ describe("with 2 valid queued cases (same citation)", function() {
 
     sendQueued().then(function(res) {
       knex("queued").select("*").then(function(rows) {
-        console.log("Rows: " + JSON.stringify(rows));
+        //console.log("Rows: " + JSON.stringify(rows));
         expect(rows[0].sent).to.equal(true);
         expect(rows[0].asked_reminder).to.equal(true);
         expect(rows[0].asked_reminder_at).to.notNull;

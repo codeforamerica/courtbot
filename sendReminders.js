@@ -2,29 +2,33 @@ var crypto = require('crypto');
 var twilio = require('twilio');
 var client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 var Promise = require('bluebird');
-var moment = require("moment");
+var TIMESTAMPTZ_OID = 1184;
+require("pg").types.setTypeParser(TIMESTAMPTZ_OID, require("./utils/dates").pgDateParser);
 var knex = require('knex')({
   client: 'pg',
   connection: process.env.DATABASE_URL
 });
 var decipher = crypto.createDecipher('aes256', process.env.PHONE_ENCRYPTION_KEY);
 var messages = require("./utils/messages");
+var dates = require("./utils/dates");
 var promises = require("./utils/promises"),
     forEachResult = promises.forEachResult,
     callbackHandler = promises.genericCallbackResolver;
 
+
+
 /**
  * Find all reminders for which a reminder has not been sent.  
- *   1.)  cases.date should have been inserted as UTC for anchorage.  
- *   2.)  we must convert "now()" to UTC from wherever our server sits, then convert to anchorage from there.
+ *   1.)  If the date of the case is less than now + 2 days, then it is tomorrow or before tomorrow.
  *   
  * @return {array} Promise to return results
  */
-var findReminders = function() {
+module.exports.findReminders = function() {
+  var dayAfterTomorrow = dates.now().add("2", "days").format();
   return knex('reminders')
     .where('sent', false)
     .join('cases', 'reminders.case_id', '=', 'cases.id')
-    .whereRaw('("cases"."date" + interval \'8 hours\') < (now() + interval \'24 hours\')')
+    .whereRaw('date ("cases"."date") < date \'' + dayAfterTomorrow + '\'')
     .select();
 };
 
@@ -70,9 +74,9 @@ var updateReminderStatus = function(reminder) {
  *   
  * @return {Promise} Promise to send messages and update statuses.
  */
-module.exports = function() {
+module.exports.sendReminders = function() {
   return new Promise(function(resolve, reject) {
-    findReminders()
+    module.exports.findReminders()
       .then(forEachResult(sendReminder))
       .then(forEachResult(updateReminderStatus))
       .then(resolve, reject);
