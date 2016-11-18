@@ -4,16 +4,9 @@ var assert = require("chai").assert;
 var nock = require('nock');
 var tk = require('timekeeper');
 var fs = require('fs');
-var Promise = require('bluebird');
-var moment = require("moment");
 var url = require('url');
-
-var Knex = require('knex');
-var knex = Knex.initialize({
-  client: 'pg',
-  connection: process.env.DATABASE_URL
-});
-
+var manager = require("../utils/db/manager");
+var knex = manager.knex();
 
 var data_hostname = "http://" + url.parse(process.env.DATA_URL).hostname;
 console.log("Host: " + data_hostname);
@@ -24,6 +17,10 @@ describe("Loading of Data", function() {
   beforeEach(function() {
     var time = new Date(1425297600000); // Freeze to March 2, 2015. Yesterday is March 1
     tk.freeze(time);
+  });
+
+  afterEach(function(){
+    tk.reset();
   });
 
   describe("With a 404 on the CSV", function() {

@@ -1,4 +1,4 @@
-var runnerScript = require("../sendReminders.js");
+var runnerScript = require("../sendReminders.js").sendReminders;
 
 runnerScript().then(function(success) {
   console.log(success);

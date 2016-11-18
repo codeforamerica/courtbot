@@ -1,130 +1,121 @@
-var crypto = require('crypto');
-var Knex = require('knex');
-var twilio = require('twilio');
-var client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-var db = require('./db.js');
-var Promise = require('bluebird');
-var knex = Knex.initialize({
-  client: 'pg',
-  connection: process.env.DATABASE_URL
-});
-var moment = require('moment');
+var crypto = require('crypto'),
+    twilio = require('twilio'),
+    client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN),
+    db = require('./db.js'),
+    Promise = require('bluebird'),
+    dates = require("./utils/dates"),
+    strings = require("./utils/strings"),
+    messages = require("./utils/messages"),
+    promises = require("./utils/promises"),
+    forEachResult = promises.forEachResult,
+    chainable = promises.chainablePromise,
+    genericResolver = promises.genericCallbackResolver,
+    manager = require("./utils/db/manager"),
+    knex = manager.knex();
 
-
+/**
+ * Retrieve array of queued messages that have not been sent, if any exist.
+ * 
+ * @return {Promise} Promise to return an array of queued messages that have not been sent
+ */
 var findQueued = function() {
   return knex('queued')
     .where('sent', false)
     .select();
 };
 
-function sendQueuedMessage(queued) {
-  return new Promise(function (resolve, reject) {
-    if (queued.length === 0) {
-      console.log('No queued messages to send today.');
-      resolve();
-    }
-
-    var count = 0;
-    queued.forEach(function(queuedCitation) {
-      db.findCitation(queuedCitation.citation_id, function(err, results) {
-        var decipher = crypto.createDecipher('aes256', process.env.PHONE_ENCRYPTION_KEY);
-        var phone = decipher.update(queuedCitation.phone, 'hex', 'utf8') + decipher.final('utf8');
-
-        if (results && results.length > 0) {
-          var match = results[0];
-          var name = cleanupName(match.defendant);
-          var date = moment(match.date).format('ddd, MMM Do');
-          client.sendMessage({
-            to: phone,
-            from: process.env.TWILIO_PHONE_NUMBER,
-            body: '(1/2) Hello from the Alaska State Court System.'
-          }, function(err, result) {
-            if (err) {
-              return console.log("client.sendMessage", err);
-            }
-            client.sendMessage({
-              to: phone,
-              from: process.env.TWILIO_PHONE_NUMBER,
-              body: '(2/2) We found a case for ' + name + ' scheduled on ' + date + ' at ' + moment("1980-01-01 " + match.time).format("h:mm A") +', at ' + match.room +'. Would you like a courtesy reminder the day before? (reply YES or NO)'
-            }, function(err, result) {
-              if (err) {
-                return console.log("client.sendMessage", err);
-              }
-
-              console.log('Queued message sent to ' + phone);
-
-              knex('queued')
-                  .where('queued_id', '=', queuedCitation.queued_id)
-                  .update({'sent': true,
-                            'asked_reminder': true,
-                            'asked_reminder_at' : new Date()})
-                  .exec(function (err, results) {
-                    if (err) {
-                      console.log(err);
-                    }
-
-                    count++;
-
-                    if (count === queued.length) {
-                      resolve();
-                    }
-                  });
-            });
-          });
-        } else {
-          var daysSinceCreation = moment().diff(moment(queuedCitation.created_at), 'days');
-
-          if (daysSinceCreation > parseInt(process.env.QUEUE_TTL_DAYS)) {
-            knex('queued')
-              .where('queued_id', '=', queuedCitation.queued_id)
-              .update({'sent': true})
-              .exec(function(err, results) {
-                if (err) {
-                  console.log(err);
-                }
-              });
-
-            client.sendMessage({
-              to: phone,
-              from: process.env.TWILIO_PHONE_NUMBER,
-              body: "We haven\'t been able to find your court case. You can go to " + process.env.COURT_PUBLIC_URL + " for more information. - Alaska State Court System"
-            }, function(err, result) {
-              if (err) {
-                return console.log(err);
-              }
-              count++;
-              if (count === queued.length) {
-                resolve();
-              }
-            });
-          } else {
-            count++;
-            if (count === queued.length) {
-              resolve();
-            }
-          }
-        }
+/**
+ * Find a citation that is related to a queued message.
+ * 
+ * @param  {Object} queuedMessage for which we want to lookup citation data.
+ * @return {Promise}  promise to retrieve citation data.
+ */
+function retrieveCitation(queuedMessage) {
+  return new Promise(function(resolve, reject) {
+    db.findCitation(queuedMessage.citation_id, function(err, results) {
+      resolve({
+        queuedMessage: queuedMessage,
+        citationFound: results.length > 0,
+        relatedCitation: (results.length ? results[0] : false)
       });
     });
   });
-}
-
-var cleanupName = function(name) {
-  // Switch LAST, FIRST to FIRST LAST
-  // var bits = name.split(',');
-  // name = bits[1] + ' ' + bits[0];  // Alaska already has this format
-  name = name.trim();
-
-  // Change FIRST LAST to First Last
-  name = name.replace(/\w\S*/g, function(txt) { return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase(); });
-
-  return name;
 };
 
+/**
+ * Process citation:
+ *   1.)  Citation data found:  send message to defendant asking if they want a reminder
+ *   2.)  Citation data not found and message has been queued too long:  send a "not found" message to defendant.
+ *   3.)  N/A do nothing and leave queued.
+ * 
+ * @param  {Object} queued queued message and citation data(if found)
+ * @return {Promise} promise to process queued message (if applicable)
+ */
+function processCitationMessage(queued) {
+  return new Promise(function(resolve, reject) {
+    var decipher = crypto.createDecipher('aes256', process.env.PHONE_ENCRYPTION_KEY),
+        phone = decipher.update(queued.queuedMessage.phone, 'hex', 'utf8') + decipher.final('utf8');
+
+    if (queued.citationFound) {
+      var name = strings.scrubName(queued.relatedCitation.defendant),
+          datetime = dates.fromUtc(queued.relatedCitation.date);
+
+      messages.send(phone, process.env.TWILIO_PHONE_NUMBER, messages.greetingMessage(name, datetime, queued.relatedCitation.room))
+        .then(updateSentWithReminder(queued.queuedMessage.queued_id))
+        .then(resolve);
+    } else if (dates.hasSatTooLong(queued.queuedMessage.created_at)) {
+      messages.send(phone, process.env.TWILIO_PHONE_NUMBER, messages.unableToFindCitationForTooLong())
+        .then(updateSentWithoutReminder(queued.queuedMessage.queued_id))
+        .then(resolve);
+    } else {
+      resolve();
+    }
+  });
+};
+
+/**
+ * Update queued message in db to indicate it has been sent, and that a reminder will be sent.
+ * 
+ * @param  {string} queuedId index by which to lookup queued message for update.    
+ * @return {Promise} function to recieve results and Promise to perform update.
+ */
+function updateSentWithReminder(queuedId) {
+    return chainable(function(resolve, reject) {
+        knex('queued')
+          .where('queued_id', '=', queuedId)
+          .update({'sent': true,
+                    'asked_reminder': true,
+                    'asked_reminder_at' : dates.now().format()})
+          .asCallback(genericResolver(resolve, "updateSentWithReminder()"));
+    });
+};
+
+/**
+ * Update data for queued message to indicate it has been sent but no reminder is required.
+ * 
+ * @param  {string} queuedId index to be used for lookup of queued message when updating.
+ * @return {function} function to recieve results and Promise to perform update.
+ */
+function updateSentWithoutReminder(queuedId) {
+    return chainable(function(resolve, reject) {
+        knex('queued')
+          .where('queued_id', '=', queuedId)
+          .update({'sent': true})
+          .asCallback(genericResolver(resolve, "updateSentWithoutReminder()"));
+    });
+};
+
+/**
+ * Hook for processing all applicable queued messages.
+ * 
+ * @return {Promise} Promise to process all queued messages.
+ */
 module.exports = function() {
   return new Promise(function(resolve, reject) {
-    findQueued().then(function(resp) {
-      sendQueuedMessage(resp).then(resolve, reject);
-    }).catch(reject);
+    findQueued()
+      .then(forEachResult(retrieveCitation))
+      .then(forEachResult(processCitationMessage))
+      .then(resolve, reject)
+      .catch(reject);
   });
 };

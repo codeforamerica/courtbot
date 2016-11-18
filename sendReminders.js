@@ -1,78 +1,85 @@
 var crypto = require('crypto');
-var Knex = require('knex');
 var twilio = require('twilio');
 var client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 var Promise = require('bluebird');
-var moment = require("moment");
+var manager = require("./utils/db/manager");
+var knex = manager.knex();
+var decipher = crypto.createDecipher('aes256', process.env.PHONE_ENCRYPTION_KEY);
+var messages = require("./utils/messages");
+var dates = require("./utils/dates");
+var promises = require("./utils/promises"),
+    forEachResult = promises.forEachResult,
+    callbackHandler = promises.genericCallbackResolver;
 
 
-var knex = Knex.initialize({
-  client: 'pg',
-  connection: process.env.DATABASE_URL
-});
 
-// Finds reminders for cases happening tomorrow
-// TO FIX: converts cases.date to actual UTC then compares it to UTC 24 hours out
-var findReminders = function() {
+/**
+ * Find all reminders for which a reminder has not been sent.  
+ *   1.)  If the date of the case is less than now + 2 days, then it is tomorrow or before tomorrow.
+ *   
+ * @return {array} Promise to return results
+ */
+module.exports.findReminders = function() {
+  //database is converting dates to UTC offset 0 (+8 hours), so we need to convert our comparrison date
+  //to UTC prior to comparing.
+  //
+  //Really this is saying I want anything from prior to 8AM 2 days from now (anything tomorrow UTC time).
+  var dayAfterTomorrow = dates.now().add("2", "days").hour(0).minute(0).utcOffset(0).format();
+  console.log("DAT", dayAfterTomorrow);
   return knex('reminders')
     .where('sent', false)
     .join('cases', 'reminders.case_id', '=', 'cases.id')
-    .whereRaw('("cases"."date" + interval \'8 hours\') < (now() + interval \'24 hours\')')
+    .whereRaw('date ("cases"."date") <= date \'' + dayAfterTomorrow + '\'')
     .select();
 };
 
-function sendReminderMessages(reminders) {
+/**
+ * Send court appearance reminder via twilio REST API
+ * 
+ * @param  {array} reminders List of reminders to be sent. 
+ * @return {Promise}  Promise to send reminders.
+ */
+var sendReminder = function(reminder) {
   return new Promise(function(resolve, reject) {
-    if (reminders.length === 0) {
-      console.log('No reminders to send out today.');
-      resolve();
-    }
+    var phone = decipher.update(reminder.phone, 'hex', 'utf8') + decipher.final('utf8');
+    console.log("Phone: " + phone);
 
-    var count = 0;
-
-    // Send SMS reminder
-    reminders.forEach(function(reminder) {
-      var decipher = crypto.createDecipher('aes256', process.env.PHONE_ENCRYPTION_KEY);
-      var phone = decipher.update(reminder.phone, 'hex', 'utf8') + decipher.final('utf8');
-      console.log("Phone: " + phone);
-
-      client.sendMessage({
-        to: phone,
-        from: process.env.TWILIO_PHONE_NUMBER,
-        body: 'Reminder: It appears you have a court case tomorrow at ' + moment("1980-01-01 " + reminder.time).format("h:mm A") +
-        ' at ' + reminder.room + '. You should confirm your case date and time by going to ' + process.env.COURT_PUBLIC_URL + '. - Alaska State Court System'
-
-      }, function(err, result) {
-          if (err) {
-            console.log(err);
-          }
-          console.log('Reminder sent to ' + reminder.phone);
-          // Update table
-          knex('reminders')
-              .where('reminder_id', '=', reminder.reminder_id)
-              .update({'sent': true})
-              .exec(function (err, results) {
-                if (err) {
-                  console.log(err);
-                }
-              }).then(function (err, data) {
-            if (err) {
-              console.log(err);
-            }
-            count++;
-            if (count === reminders.length) {
-              resolve();
-            }
-          });
-        });
+    messages.send(phone, process.env.TWILIO_PHONE_NUMBER, messages.reminder(reminder))
+      .then(function() {
+        resolve(reminder);
       });
-    });
+  });
 };
 
-module.exports = function() {
+/**
+ * Update statuses of reminders that we send messages for.
+ * 
+ * @param  {Object} reminder reminder record that needs to be updated in db.
+ * @return {Promise} Promise to update reminder.
+ */
+var updateReminderStatus = function(reminder) {
+  console.log('Reminder sent to ' + reminder.phone);
   return new Promise(function(resolve, reject) {
-    findReminders().then(function(resp) {
-      sendReminderMessages(resp).then(resolve, reject);
-    }).catch(reject);
-  });
+    knex('reminders')
+      .where('reminder_id', '=', reminder.reminder_id)
+      .update({'sent': true})
+      .asCallback(callbackHandler(resolve, "updateReminderStatus()"));
+  });  
+};
+
+/**
+ * Main function for executing: 
+ *   1.)  The retrieval of court date reminders
+ *   2.)  Sending reminder messages via twilio
+ *   3.)  Updating the status of the court reminder messages
+ *   
+ * @return {Promise} Promise to send messages and update statuses.
+ */
+module.exports.sendReminders = function() {
+  return new Promise(function(resolve, reject) {
+    module.exports.findReminders()
+      .then(forEachResult(sendReminder))
+      .then(forEachResult(updateReminderStatus))
+      .then(resolve, reject);
+    });
 };

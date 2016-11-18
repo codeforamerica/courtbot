@@ -1,24 +1,14 @@
 var crypto = require('crypto');
-var Knex = require('knex');
 require('dotenv').config();
-var knex = Knex.initialize({
-  client: 'pg',
-  connection: process.env.DATABASE_URL,
-  pool: {
-    afterCreate: function(connection, callback) {
-      connection.query("SET TIME ZONE 'America/Anchorage';", function(err) {
-        callback(err, connection);
-      });
-    }
-  }
-
-});
+var manager = require("./utils/db/manager");
+var knex = manager.knex();
+var now = require("./utils/dates").now;
 
 exports.findCitation = function(citation, callback) {
   // Postgres JSON search based on prebuilt index
   citation = escapeSQL(citation.toUpperCase());
   var citationSearch = knex.raw("'{\"" + citation + "\"}'::text[] <@ (json_val_arr(citations, 'id'))");
-  knex('cases').where(citationSearch).select().exec(callback);
+  knex('cases').where(citationSearch).select().asCallback(callback);
 };
 
 // Find queued citations that we have asked about adding reminders
@@ -56,7 +46,7 @@ exports.fuzzySearch = function(str, callback) {
 
   // Limit to ten results
   query = query.limit(10);
-  query.exec(callback);
+  query.asCallback(callback);
 };
 
 exports.addReminder = function(data, callback) {
@@ -67,9 +57,9 @@ exports.addReminder = function(data, callback) {
     case_id: data.caseId,
     sent: false,
     phone: encryptedPhone,
-    created_at: new Date(),
+    created_at: now(),
     original_case: data.originalCase,
-  }).exec(callback);
+  }).asCallback(callback);
 };
 
 exports.addQueued = function(data, callback) {
@@ -80,8 +70,8 @@ exports.addQueued = function(data, callback) {
     citation_id: data.citationId,
     sent: false,
     phone: encryptedPhone,
-    created_at: new Date(),
-  }).exec(callback);
+    created_at: now()
+  }).asCallback(callback);
 };
 
 var escapeSQL = function(val) {

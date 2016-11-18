@@ -1,42 +1,51 @@
 // setup ENV dependencies
 
 require('dotenv').config();
+var fs = require("fs");
 var expect = require("chai").expect;
-var assert = require("chai").assert;
 var nock = require('nock');
-var tk = require('timekeeper');
-var fs = require('fs');
-var Promise = require('bluebird');
-var moment = require("moment");
 var _ = require("underscore");
 var cookieParser = require("cookie-parser");
 var crypto = require('crypto');
+var tk = require("timekeeper");
 var Session = require('supertest-session')({
   app: require('../web')
 });
+
+var manager = require("../utils/db/manager");
+var knex = manager.knex();
+var TEST_UTC_DATE = "2015-03-27T13:00:00-08:00";
 
 var sess;
 
 beforeEach(function () {
   sess = new Session();
+
+  var time = new Date(1425297600000); // Freeze to March 2, 2015. Yesterday is March 1
+  tk.freeze(time);
 });
 
 afterEach(function () {
   sess.destroy();
-});
 
-var Knex = require('knex');
-var knex = Knex.initialize({
-  client: 'pg',
-  connection: process.env.DATABASE_URL
+  tk.reset();
 });
 
 nock.enableNetConnect('127.0.0.1');
 
+/**
+* Altered this to do a local read of the expected content to get expected content length because
+* on windows machine the content length was 354 and not the hard-coded 341 (maybe windows character encoding?)
+*
+* It is partly a guess that it is okay to make this change because I am assuming the unit tests
+* only should run where app.settings.env == 'development' (web.js) -- this is what causes public/index.html
+* to be served, rather than "hello I am courtbot..."
+*/
 describe("GET /", function() {
   it("responds with web form test input", function(done) {
+    var expectedContent = fs.readFileSync("public/index.html", "utf8");
     sess.get('/').
-    expect('Content-Length', '341').
+    expect('Content-Length', expectedContent.length).
     expect(200).
     end(function(err, res) {
       if (err) return done(err);
@@ -169,7 +178,8 @@ describe("POST /sms", function() {
           expect(200).
           end(function(err, res) {
             if (err) { return done(err); }
-            expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>(1/2) Could not find a case with that number. It can take several days for a case to appear in our system.</Sms><Sms>(2/2) Would you like us to keep checking for the next ' + process.env.QUEUE_TTL_DAYS + ' days and text you if we find it? (reply YES or NO)</Sms></Response>');
+            expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Could not find a case with that number. It can take several days for a case to appear in our system. Would you like us to keep checking for the next 10 days and text you if we find it? (reply YES or NO)</Sms></Response>');
+            //expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>(1/2) Could not find a case with that number. It can take several days for a case to appear in our system.</Sms><Sms>(2/2) Would you like us to keep checking for the next ' + process.env.QUEUE_TTL_DAYS + ' days and text you if we find it? (reply YES or NO)</Sms></Response>');
             done();
           });
         });
@@ -229,7 +239,8 @@ describe("POST /sms", function() {
           if (err) {
             return done(err);
           }
-          expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>(1/2) Sounds good. We will attempt to text you a courtesy reminder the day before your case. Note that case schedules frequently change.</Sms><Sms>(2/2) You should always confirm your case date and time by going to ' + process.env.COURT_PUBLIC_URL + '</Sms></Response>');
+          //expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>(1/2) Sounds good. We will attempt to text you a courtesy reminder the day before your case. Note that case schedules frequently change.</Sms><Sms>(2/2) You should always confirm your case date and time by going to ' + process.env.COURT_PUBLIC_URL + '</Sms></Response>');
+          expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Sounds good. We will attempt to text you a courtesy reminder the day before your case. Note that case schedules frequently change. You should always confirm your case date and time by going to http://courts.alaska.gov</Sms></Response>');
           expect(getConnectCookie().askedReminder).to.equal(false);
           setTimeout(function () { // This is a hack because the DB operation happens ASYNC
             knex("reminders").select("*").groupBy("reminders.reminder_id").count('* as count').then(function (rows) {
@@ -293,7 +304,8 @@ describe("POST /sms", function() {
           if (err) {
             return done(err);
           }
-          expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>(1/2) Sounds good. We will attempt to text you a courtesy reminder the day before your case. Note that case schedules frequently change.</Sms><Sms>(2/2) You should always confirm your case date and time by going to ' + process.env.COURT_PUBLIC_URL + '</Sms></Response>');
+          //expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>(1/2) Sounds good. We will attempt to text you a courtesy reminder the day before your case. Note that case schedules frequently change.</Sms><Sms>(2/2) You should always confirm your case date and time by going to ' + process.env.COURT_PUBLIC_URL + '</Sms></Response>');
+          expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Sounds good. We will attempt to text you a courtesy reminder the day before your case. Note that case schedules frequently change. You should always confirm your case date and time by going to http://courts.alaska.gov</Sms></Response>');
           expect(getConnectCookie().askedReminder).to.equal(false);
           setTimeout(function () { // This is a hack because the DB operation happens ASYNC
             knex("reminders").select("*").groupBy("reminders.reminder_id").count('* as count').then(function (rows) {
@@ -467,7 +479,9 @@ context("with session.askedQueued", function() {
 });
 
 function turnerData(v) {
-  return { date: '27-MAR-15',
+  return { 
+    //date: '27-MAR-15',
+    date: TEST_UTC_DATE,
     defendant: 'Frederick Turner',
     room: 'CNVCRT',
     time: '01:00:00 PM',
@@ -478,7 +492,7 @@ function turnerData(v) {
 
 function turnerDataAsObject(v) {
   var data = turnerData(v);
-  data.date = "2015-03-27T08:00:00.000Z";
+  data.date = TEST_UTC_DATE;
   data.citations = JSON.parse(data.citations);
   data.readableDate = "Friday, Mar 27th";
   return data;
@@ -486,7 +500,7 @@ function turnerDataAsObject(v) {
 
 function rawTurnerDataAsObject(v) {
   var data = turnerData(v);
-  data.date = "2015-03-27T08:00:00.000Z";
+  data.date = TEST_UTC_DATE;
   data.citations = JSON.parse(data.citations);
   return data;
 }
