@@ -49,6 +49,8 @@ heroku config:set PHONE_ENCRYPTION_KEY=<random string>
 heroku config:set DATA_URL=<court records csv location>
 heroku config:set COURT_PUBLIC_URL=<where to send people for more info>
 heroku config:set QUEUE_TTL_DAYS=<# days to keep a citation on the search queue>
+heroku config:set TIMEZONE=<standard timezone ex. America/Anchorage>
+heroku config:set TIMEZONE_OFFSET=<Subtraction from GMT -08:00>
 git push heroku master
 heroku run node utils/createQueuedTable.js
 heroku run node utils/createRemindersTable.js
