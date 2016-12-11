@@ -87,7 +87,7 @@ app.post('/sms', askedReminderMiddleware, function(req, res, next) {
         phone: req.body.From,
         originalCase: JSON.stringify(req.match)
       }, function(err, data) {});
-      twiml.sms('Sounds good. We will attempt to text you a courtesy reminder the day before your case. Note that case schedules frequently change. You should always confirm your case date and time by going to ' + process.env.COURT_PUBLIC_URL);
+      twiml.sms('Sounds good. We will attempt to text you a courtesy reminder the day before your hearing date. Note that court schedules frequently change. You should always confirm your hearing date and time by going to ' + process.env.COURT_PUBLIC_URL);
       req.session.askedReminder = false;
       res.send(twiml.toString());
     } else {
