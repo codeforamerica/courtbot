@@ -21,7 +21,7 @@ var sess;
 beforeEach(function () {
   sess = new Session();
 
-  var time = new Date(1425297600000); // Freeze to March 2, 2015. Yesterday is March 1
+  var time = new Date(1425297600000); // Freeze to March 2, 2015. 12 Noon. Yesterday is March 1
   tk.freeze(time);
 });
 
@@ -178,7 +178,7 @@ describe("POST /sms", function() {
           expect(200).
           end(function(err, res) {
             if (err) { return done(err); }
-            expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Could not find a case with that number. It can take several days for a case to appear in our system. Would you like us to keep checking for the next 10 days and text you if we find it? (reply YES or NO)</Sms></Response>');
+            expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Could not find a case with that number. It can take several days for a case to appear in our system. Would you like us to keep checking for the next ' + process.env.QUEUE_TTL_DAYS + ' days and text you if we find it? (reply YES or NO)</Sms></Response>');
             //expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>(1/2) Could not find a case with that number. It can take several days for a case to appear in our system.</Sms><Sms>(2/2) Would you like us to keep checking for the next ' + process.env.QUEUE_TTL_DAYS + ' days and text you if we find it? (reply YES or NO)</Sms></Response>');
             done();
           });

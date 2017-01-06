@@ -58,6 +58,15 @@ heroku run node runners/load.js
 heroku open
 ```
 
+The dotenv module will try and load a .env file to get the environment variables as an alternative to the above "heroku config" commands.
+If you don't have this file, dotenv will throw an ENOENT error, but things will still work. To get rid of this error, do this:
+```
+heroku run bash --app <APP_NAME>
+touch .env
+exit
+```
+
+
 Finally, you'll want to setup scheduler to run the various tasks each day. Here's the recommended config:
 
 ![scheduler settings](https://cloud.githubusercontent.com/assets/1435836/4785655/2893dd9a-5d83-11e4-9618-d743bee27d2f.png)
