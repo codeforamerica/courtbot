@@ -14,14 +14,15 @@ var Session = require('supertest-session')({
 
 var manager = require("../utils/db/manager");
 var knex = manager.knex();
-var TEST_UTC_DATE = "2015-03-27T13:00:00-08:00";
+var dates = require("../utils/dates");
+var TEST_UTC_DATE = "2015-03-27T13:00:00" + dates.timezoneOffset();
 
 var sess;
 
 beforeEach(function () {
   sess = new Session();
 
-  var time = new Date(1425297600000); // Freeze to March 2, 2015. 12 Noon. Yesterday is March 1
+  var time = new Date("2016-06-01T12:00:00"); // Freeze
   tk.freeze(time);
 });
 

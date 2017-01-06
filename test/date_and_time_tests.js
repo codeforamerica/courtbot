@@ -10,7 +10,7 @@ var knex = manager.knex();
 var dates = require("../utils/dates"),
     TEST_CASE_ID = "677167760f89d6f6ddf7ed19ccb63c15486a0eab",
     TEST_HOURS = [-10,-9,-8,-7,-6,-5,-4,-3,-2,-1,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49],
-    TEST_UTC_DATE = "2015-03-27T08:00:00-08:00";
+    TEST_UTC_DATE = "2015-03-27T08:00:00" + dates.timezoneOffset();
 
 describe("for a given date", function() {
     beforeEach(function(done) {
@@ -43,7 +43,7 @@ describe("for a given date", function() {
                     .then(findReminders)
                     .then(function(results) {
                         if (results[0]) console.log(dates.fromUtc(results[0].date).format(), testDateTime.format());
-                        if ((hr > 0) && (hr < 25)) {  // Should only find reminders for the next day
+                        if ((hr >= 0) && (hr < 24)) {  // Should only find reminders for the next day
                             console.log("Reminder found for hour ", hr)
                             expect(results.length).to.equal(1);
                             expect(dates.fromUtc(results[0].date).format()).to.equal(testDateTime.format());

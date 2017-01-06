@@ -19,7 +19,9 @@ module.exports = {
 	 * @return {int} offset
 	 */
 	timezoneOffset: function() {
-		return process.env.TIMEZONE_OFFSET;
+		var tz = moment.tz(Date.now(), process.env.TIMEZONE).format('Z');
+		console.log("Now: " + Date.now());
+		return tz;
 	},
 	
 	/**
