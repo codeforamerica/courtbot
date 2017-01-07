@@ -69,6 +69,13 @@ var extractCourtData = function(rows) {
       location: c[6].substr(0,3)
     };
 
+    // If we want to test reminders, set all dates to tomorrow
+    if (process.env.TEST_TOMORROW_DATES) {
+      console.log("Before: " + c[0]);
+      c[0] = moment().add(1, "days").format("MM/DD/YYYY");
+      console.log("After: " + c[0]);
+    }
+
     var newCase = {
       date: dates.fromDateAndTime(c[0], c[5]), 
       defendant: c[2] + " " + c[1],

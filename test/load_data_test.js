@@ -15,7 +15,7 @@ console.log("Path: " + data_path);
 
 describe("Loading of Data", function() {
   beforeEach(function() {
-    var time = new Date("2016-06-01T12:00:00"); // Freeze
+    var time = new Date("2016-03-01T12:00:00"); // Freeze
     tk.freeze(time);
   });
 

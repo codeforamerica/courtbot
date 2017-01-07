@@ -15,12 +15,14 @@ module.exports = {
 	},
 
 	/**
-	 * UTC timezone offset in minutes.
+	 * UTC timezone offset in minutes
+	 * @atDate - Effective date for the offset
 	 * @return {int} offset
 	 */
-	timezoneOffset: function() {
-		var tz = moment.tz(Date.now(), process.env.TIMEZONE).format('Z');
-		console.log("Now: " + Date.now());
+	timezoneOffset: function(atDate) {
+		var dt = atDate ? atDate : moment().format("YYYY-MM-DD");
+		var tz = moment.tz(dt, process.env.TIMEZONE).format('Z');
+		console.log("Date: " + moment(dt).format("YYYY-MM-DD") + " Offset: " + tz);
 		return tz;
 	},
 	
@@ -39,7 +41,9 @@ module.exports = {
 	 */
 	isoToUtc: function(date) {
 		console.log("RAW DATE FROM DB:", date);
-		return moment.utc(date).utcOffset(module.exports.timezoneOffset()).format();
+		var dt = moment.utc(date);
+		dt = dt.utcOffset(module.exports.timezoneOffset(dt)).format();
+		return dt;
 	},
 
 	/**
@@ -48,7 +52,9 @@ module.exports = {
 	 * @return {moment}      moment using appropriate timezone offset
 	 */
 	fromUtc: function(date) {
-		return moment.utc(date).utcOffset(module.exports.timezoneOffset());
+		var dt = moment.utc(date);
+		dt = dt.utcOffset(module.exports.timezoneOffset(dt));
+		return dt;
 	},
 	
 	/**
@@ -59,7 +65,7 @@ module.exports = {
 	 * @return {moment} moment combine separate date and time into a single date and time moment object.
 	 */
 	fromDateAndTime: function(date, time) {
-		return moment(date + " " + time + " " + module.exports.timezoneOffset(), "MM/DD/YYYY hh:mm A Z");
+		return moment(date + " " + time + " " + module.exports.timezoneOffset(date), "MM/DD/YYYY hh:mm A Z");
 	},
 
 	/**
