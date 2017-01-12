@@ -70,7 +70,7 @@ var extractCourtData = function(rows) {
     };
 
     // If we want to test reminders, set all dates to tomorrow
-    if (process.env.TEST_TOMORROW_DATES) {
+    if (process.env.TEST_TOMORROW_DATES === "1") {
       console.log("Before: " + c[0]);
       c[0] = moment().add(1, "days").format("MM/DD/YYYY");
       console.log("After: " + c[0]);
