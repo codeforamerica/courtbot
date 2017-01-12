@@ -15,8 +15,7 @@ var knex = manager.knex();
 
 var dates = require("../utils/dates"),
     TEST_CASE_ID = "677167760f89d6f6ddf7ed19ccb63c15486a0eab",
-    TEST_HOURS = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23],
-    TEST_UTC_DATE = "2015-03-27T08:00:00-08:00";
+    TEST_UTC_DATE = "2015-03-27T08:00:00" + dates.timezoneOffset("2015-03-27");
 
 nock.disableNetConnect();
 nock('https://api.twilio.com:443').log(console.log);

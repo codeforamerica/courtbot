@@ -6,7 +6,7 @@ var now = require("./utils/dates").now;
 
 exports.findCitation = function(citation, callback) {
   // Postgres JSON search based on prebuilt index
-  citation = escapeSQL(citation.toUpperCase());
+  citation = escapeSQL(citation.toUpperCase().trim());
   var citationSearch = knex.raw("'{\"" + citation + "\"}'::text[] <@ (json_val_arr(citations, 'id'))");
   knex('cases').where(citationSearch).select().asCallback(callback);
 };
@@ -33,6 +33,7 @@ exports.findAskedQueued = function(phone, callback) {
 };
 
 exports.fuzzySearch = function(str, callback) {
+  str = str.trim();
   var parts = str.toUpperCase().split(" ");
 
   // Search for Names

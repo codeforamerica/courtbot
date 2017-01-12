@@ -50,13 +50,22 @@ heroku config:set DATA_URL=<court records csv location>
 heroku config:set COURT_PUBLIC_URL=<where to send people for more info>
 heroku config:set QUEUE_TTL_DAYS=<# days to keep a citation on the search queue>
 heroku config:set TIMEZONE=<standard timezone ex. America/Anchorage>
-heroku config:set TIMEZONE_OFFSET=<Subtraction from GMT -08:00>
+heroku config:set TEST_TOMORROW_DATES=<1 if you want all court dates to be tomorrow to test reminders>
 git push heroku master
 heroku run node utils/createQueuedTable.js
 heroku run node utils/createRemindersTable.js
 heroku run node runners/load.js
 heroku open
 ```
+
+The dotenv module will try and load a .env file to get the environment variables as an alternative to the above "heroku config" commands.
+If you don't have this file, dotenv will throw an ENOENT error, but things will still work. To get rid of this error, do this:
+```
+heroku run bash --app <APP_NAME>
+touch .env
+exit
+```
+
 
 Finally, you'll want to setup scheduler to run the various tasks each day. Here's the recommended config:
 

@@ -14,14 +14,15 @@ var Session = require('supertest-session')({
 
 var manager = require("../utils/db/manager");
 var knex = manager.knex();
-var TEST_UTC_DATE = "2015-03-27T13:00:00-08:00";
+var dates = require("../utils/dates");
+var TEST_UTC_DATE = "2015-03-27T13:00:00" + dates.timezoneOffset("2015-03-27");
 
 var sess;
 
 beforeEach(function () {
   sess = new Session();
 
-  var time = new Date(1425297600000); // Freeze to March 2, 2015. Yesterday is March 1
+  var time = new Date("2016-03-01T12:00:00"); // Freeze
   tk.freeze(time);
 });
 
@@ -99,6 +100,21 @@ describe("GET /cases", function() {
     });
   });
 
+  it("finds find id with leading and trailing spaces", function(done) {
+    knex('cases').del().then(function() {
+      knex('cases').insert([turnerData()]).then(function() {
+        sess.get('/cases?q=%204928456%20').
+        expect(200).
+        end(function(err, res) {
+          if (err) return done(err);
+          expect(sortObject(JSON.parse(res.text))["0"]).to.deep.equal(turnerDataAsObject());
+          done();
+        });
+      });
+    });
+  });
+
+
   it("doesnt find partial matches of id", function(done) {
     knex('cases').del().then(function() {
       knex('cases').insert([turnerData()]).then(function() {
@@ -129,7 +145,7 @@ describe("POST /sms", function() {
 
   context("without session set", function() {
     context("with 1 matching court case", function() {
-      var params = { Body: "4928456",
+      var params = { Body: " 4928456 ",
         From: "+12223334444"};
 
       beforeEach(function(done) {
@@ -178,7 +194,7 @@ describe("POST /sms", function() {
           expect(200).
           end(function(err, res) {
             if (err) { return done(err); }
-            expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Could not find a case with that number. It can take several days for a case to appear in our system. Would you like us to keep checking for the next 10 days and text you if we find it? (reply YES or NO)</Sms></Response>');
+            expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Could not find a case with that number. It can take several days for a case to appear in our system. Would you like us to keep checking for the next ' + process.env.QUEUE_TTL_DAYS + ' days and text you if we find it? (reply YES or NO)</Sms></Response>');
             //expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>(1/2) Could not find a case with that number. It can take several days for a case to appear in our system.</Sms><Sms>(2/2) Would you like us to keep checking for the next ' + process.env.QUEUE_TTL_DAYS + ' days and text you if we find it? (reply YES or NO)</Sms></Response>');
             done();
           });
@@ -234,7 +250,7 @@ describe("POST /sms", function() {
     var cookieArr = ['connect.sess=' + encodeURIComponent(cookieStr) + '; Path=/; HttpOnly'];
     describe("User responding askedReminder session", function() {
       it("YES - creates a reminder and responds appropriately", function (done) {
-        var params = { Body: "yEs", From: "+12223334444" };
+        var params = { Body: " yEs ", From: "+12223334444" };
         sess.post('/sms').set('Cookie', cookieArr[0]).send(params).expect(200).end(function (err, res) {
           if (err) {
             return done(err);
@@ -257,7 +273,7 @@ describe("POST /sms", function() {
         });
       });
       it("NO - doesn't create a reminder and responds appropriately", function (done) {
-        var params = { Body: "nO", From: "+12223334444" };
+        var params = { Body: " nO ", From: "+12223334444" };
         sess.post('/sms').set('Cookie', cookieArr).send(params).expect(200).end(function (err, res) {
           if (err) {
             return done(err);
@@ -299,7 +315,7 @@ describe("POST /sms", function() {
     describe("User responding to a queued message", function() {
       var cookieArr = [""];
       it("YES - creates a reminder and responds appropriately", function (done) {
-        var params = { Body: "yEs", From: "+12223334444" };
+        var params = { Body: " yEs ", From: "+12223334444" };
         sess.post('/sms').set('Cookie', cookieArr[0]).send(params).expect(200).end(function (err, res) {
           if (err) {
             return done(err);
@@ -322,7 +338,7 @@ describe("POST /sms", function() {
         });
       });
       it("NO - doesn't create a reminder and responds appropriately", function (done) {
-        var params = { Body: "nO", From: "+12223334444" };
+        var params = { Body: " nO ", From: "+12223334444" };
         sess.post('/sms').set('Cookie', cookieArr[0]).send(params).expect(200).end(function (err, res) {
           if (err) {
             return done(err);
@@ -365,7 +381,7 @@ describe("POST /sms", function() {
     describe("User responding to an old queued message", function() {
       var cookieArr = [""];
       it("YES - doesn't find citation", function(done) {
-        var params = { Body: "yEs", From: "+12223334444" };
+        var params = { Body: " yEs ", From: "+12223334444" };
         sess.post('/sms').send(params).expect(200).end(function (err, res) {
           if (err) {
             return done(err);
@@ -378,7 +394,7 @@ describe("POST /sms", function() {
         });
       });
       it("NO - doesn't find citation", function(done) {
-        var params = { Body: "nO", From: "+12223334444" };
+        var params = { Body: " nO ", From: "+12223334444" };
         sess.post('/sms').send(params).expect(200).end(function (err, res) {
           if (err) {
             return done(err);
@@ -405,7 +421,7 @@ context("with session.askedQueued", function() {
   cookieStr = "s:" + cookieStr;
   var cookieArr = ['connect.sess='+encodeURIComponent(cookieStr)+'; Path=/; HttpOnly'];
   describe("the user texts YES", function() {
-    var params = { Body: "Y", From: "+12223334444" };
+    var params = { Body: " Y ", From: "+12223334444" };
     it("creates a queued", function(done) {
       sess.
       post('/sms').
@@ -443,7 +459,7 @@ context("with session.askedQueued", function() {
   });
 
   describe("the user texts NO", function() {
-    var params = { Body: "No", From: "+12223334444" };
+    var params = { Body: " No ", From: "+12223334444" };
 
     it("doesn't create a queued", function(done) {
       sess.

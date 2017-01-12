@@ -159,11 +159,11 @@ var cleanupName = function(name) {
 };
 
 function isResponseYes(text) {
-  text = text.toUpperCase();
+  text = text.toUpperCase().trim();
   return (text === 'YES' || text === 'YEA' || text === 'YUP' || text === 'Y');
 }
 function isResponseNo(text) {
-  text = text.toUpperCase();
+  text = text.toUpperCase().trim();
   return (text === 'NO' || text ==='N');
 }
 
