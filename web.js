@@ -3,6 +3,7 @@ var express = require('express');
 var logfmt = require('logfmt');
 var db = require('./db');
 var dates = require("./utils/dates");
+var rollbar = require('rollbar');
 require('dotenv').config();
 
 var app = express();
@@ -22,27 +23,27 @@ if (app.settings.env === 'development') {
 }
 
 // Allows CORS
-app.all('*', function(req, res, next) {
+app.all('*', function (req, res, next) {
   res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Headers", "X-Requested-With");
   next();
 });
 
 // Enable CORS support for IE8.
-app.get('/proxy.html', function(req, res) {
+app.get('/proxy.html', function (req, res) {
   res.send('<!DOCTYPE HTML>\n' + '<script src="http://jpillora.com/xdomain/dist/0.6/xdomain.min.js" master="http://www.courtrecords.alaska.gov"></script>');
 });
 
-app.get('/', function(req, res) {
+app.get('/', function (req, res) {
   res.status(200).send('Hello, I am Courtbot. I have a heart of justice and a knowledge of court cases.');
 });
 
 // Fuzzy search that returns cases with a partial name match or
 // an exact citation match
-app.get('/cases', function(req, res) {
+app.get('/cases', function (req, res) {
   if (!req.query || !req.query.q) return res.send(400);
 
-  db.fuzzySearch(req.query.q, function(err, data) {
+  db.fuzzySearch(req.query.q, function (err, data) {
     // Add readable dates, to avoid browser side date issues
     if (data) {
       data.forEach(function (d) {
@@ -76,7 +77,7 @@ function askedReminderMiddleware(req, res, next) {
 }
 
 // Respond to text messages that come in from Twilio
-app.post('/sms', askedReminderMiddleware, function(req, res, next) {
+app.post('/sms', askedReminderMiddleware, function (req, res, next) {
   var twiml = new twilio.TwimlResponse();
   var text = req.body.Body.toUpperCase();
 
@@ -86,7 +87,12 @@ app.post('/sms', askedReminderMiddleware, function(req, res, next) {
         caseId: req.match.id,
         phone: req.body.From,
         originalCase: JSON.stringify(req.match)
-      }, function(err, data) {});
+      }, function (err, data) {
+        if (err) {
+          rollbar.handleError(err, req);
+        }
+      });
+
       twiml.sms('Sounds good. We will attempt to text you a courtesy reminder the day before your hearing date. Note that court schedules frequently change. You should always confirm your hearing date and time by going to ' + process.env.COURT_PUBLIC_URL);
       req.session.askedReminder = false;
       res.send(twiml.toString());
@@ -103,7 +109,7 @@ app.post('/sms', askedReminderMiddleware, function(req, res, next) {
       db.addQueued({
         citationId: req.session.citationId,
         phone: req.body.From
-      }, function(err, data) {
+      }, function (err, data) {
         if (err) {
           next(err);
         }
@@ -120,7 +126,7 @@ app.post('/sms', askedReminderMiddleware, function(req, res, next) {
     }
   }
 
-  db.findCitation(text, function(err, results) {
+  db.findCitation(text, function (err, results) {
     // If we can't find the case, or find more than one case with the citation
     // number, give an error and recommend they call in.
     if (!results || results.length === 0 || results.length > 1) {
@@ -138,7 +144,7 @@ app.post('/sms', askedReminderMiddleware, function(req, res, next) {
       var name = cleanupName(match.defendant);
       var datetime = dates.fromUtc(match.date);
 
-      twiml.sms('Found a case for ' + name + ' scheduled on ' + datetime.format("ddd, MMM Do") + ' at ' + datetime.format("h:mm A") +', at ' + match.room +'. Would you like a courtesy reminder the day before? (reply YES or NO)');
+      twiml.sms('Found a case for ' + name + ' scheduled on ' + datetime.format("ddd, MMM Do") + ' at ' + datetime.format("h:mm A") + ', at ' + match.room + '. Would you like a courtesy reminder the day before? (reply YES or NO)');
 
       req.session.match = match;
       req.session.askedReminder = true;
@@ -149,11 +155,11 @@ app.post('/sms', askedReminderMiddleware, function(req, res, next) {
   });
 });
 
-var cleanupName = function(name) {
+var cleanupName = function (name) {
   name = name.trim();
 
   // Change FIRST LAST to First Last
-  name = name.replace(/\w\S*/g, function(txt) { return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase(); });
+  name = name.replace(/\w\S*/g, function (txt) { return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase(); });
 
   return name;
 };
@@ -164,7 +170,7 @@ function isResponseYes(text) {
 }
 function isResponseNo(text) {
   text = text.toUpperCase().trim();
-  return (text === 'NO' || text ==='N');
+  return (text === 'NO' || text === 'N');
 }
 
 // Error handling Middleware
@@ -173,6 +179,7 @@ app.use(function (err, req, res, next) {
     // during development, return the trace to the client for
     // helpfulness
     console.log("Error: " + err.message);
+    rollbar.handleError(err, req);
     if (app.settings.env !== 'production') {
       return res.status(500).send(err.stack)
     }
@@ -180,9 +187,14 @@ app.use(function (err, req, res, next) {
     return res.status(500).send('Sorry, internal server error')
   }
 });
+// Send all uncaught excpetions to Rollbar???
+var options = {
+  exitOnUncaughtException: true
+};
+rollbar.handleUncaughtExceptionsAndRejections(process.env.ROLLBAR_ACCESS_TOKEN, options);
 
 var port = Number(process.env.PORT || 5000);
-app.listen(port, function() {
+app.listen(port, function () {
   console.log("Listening on " + port);
 });
 

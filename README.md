@@ -41,8 +41,11 @@ First, get a twilio account and auth token as described above. Then:
 heroku create <app name>
 heroku addons:add heroku-postgresql
 heroku addons:add scheduler
+heroku addons:create rollbar:free
 heroku config:set COOKIE_SECRET=<random string>
 heroku config:set TWILIO_ACCOUNT=<twilio account>
+heroku config:set ROLLBAR_ACCESS_TOKEN = <rollbar access token>
+heroku config:set ROLLBAR_ENDPOINT = <rollbar endpoint>
 heroku config:set TWILIO_AUTH_TOKEN=<twilio auth token>
 heroku config:set TWILIO_PHONE_NUMBER=<twilio phone number>
 heroku config:set PHONE_ENCRYPTION_KEY=<random string>
