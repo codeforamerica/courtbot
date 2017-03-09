@@ -43,7 +43,7 @@ heroku addons:add heroku-postgresql
 heroku addons:add scheduler
 heroku addons:create rollbar:free
 heroku config:set COOKIE_SECRET=<random string>
-heroku config:set TWILIO_ACCOUNT=<twilio account>
+heroku config:set TWILIO_ACCOUNT_SID=<twilio account>
 heroku config:set ROLLBAR_ACCESS_TOKEN = <rollbar access token>
 heroku config:set ROLLBAR_ENDPOINT = <rollbar endpoint>
 heroku config:set TWILIO_AUTH_TOKEN=<twilio auth token>
