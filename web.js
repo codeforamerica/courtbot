@@ -45,7 +45,7 @@ app.get('/cases', function (req, res, next) {
 
   db.fuzzySearch(req.query.q, function (err, data) {
     if (err) {
-      next(err);
+      return next(err);
     }
     // Add readable dates, to avoid browser side date issues
     if (data) {
@@ -92,7 +92,7 @@ app.post('/sms', askedReminderMiddleware, function (req, res, next) {
         originalCase: JSON.stringify(req.match)
       }, function (err, data) {
         if (err) {
-          next(err);
+          return next(err);
         }
         twiml.sms('Sounds good. We will attempt to text you a courtesy reminder the day before your hearing date. Note that court schedules frequently change. You should always confirm your hearing date and time by going to ' + process.env.COURT_PUBLIC_URL);
         req.session.askedReminder = false;
@@ -132,7 +132,7 @@ app.post('/sms', askedReminderMiddleware, function (req, res, next) {
     // If we can't find the case, or find more than one case with the citation
     // number, give an error and recommend they call in.
     if (err) {
-      next(err);
+      return next(err);
     }
     if (!results || results.length === 0 || results.length > 1) {
       var correctLengthCitation = 6 <= text.length && text.length <= 25;
