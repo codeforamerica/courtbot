@@ -25,25 +25,28 @@ describe("with a reminder that hasn't been sent", function () {
         manager.ensureTablesExist()
             .then(clearTable("cases"))
             .then(clearTable("reminders"))
-            .then(loadCases(case1))
+            .then(loadCases([case1, case2]))
             //.then(Promise.all(t))
             //.then(loadCases([smithData()]))
             //.then(addTestReminder)
-            .then( function() {return Promise.all(t)})
+            //.then(addTestReminder2(reminder1))
+            .then(function () {
+                return Promise.all([addTestReminder2(reminder1)])
+            })
             //.then(addTestReminder2)
             .then(function () {
                 done();
             });
 
-            // reminderArray.forEach(function(item){
-            //     console.log(item.originalCase.defendant);
-            //     addTestReminder2(item);
-            // });
-
-    
+        // reminderArray.forEach(function(item){
+        //     console.log(item.originalCase.defendant);
+        //     addTestReminder2(item);
+        // });
 
 
-});
+
+
+    });
 
     it("sends the correct info to Twilio and updates the reminder to sent", function (done) {
         var number = "+12223334444";
@@ -165,18 +168,18 @@ var reminder2 = {
 }
 
 var a = new Promise(function (resolve, reject) {
-        //console.log("Adding Test Reminder");
-        db.addReminder({
-            caseId: TEST_CASE_ID,
-            phone: "+12223334444",
-            originalCase: case1
-        }, function (err, data) {
-            if (err) {
-                reject(err);
-            } else {
-                resolve();
-            }
-        });
+    //console.log("Adding Test Reminder");
+    db.addReminder({
+        caseId: TEST_CASE_ID,
+        phone: "+12223334444",
+        originalCase: case1
+    }, function (err, data) {
+        if (err) {
+            reject(err);
+        } else {
+            resolve();
+        }
     });
+});
 var t = [a];
 var reminderArray = [reminder1];
