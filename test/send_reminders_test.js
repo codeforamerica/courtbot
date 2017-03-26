@@ -26,11 +26,7 @@ describe("with a reminder that hasn't been sent", function () {
             .then(clearTable("cases"))
             .then(clearTable("reminders"))
             .then(loadCases([case1, case2]))
-            .then(function () {
-                return Promise.all([reminder1, reminder2].map(function (reminder) {
-                    return addTestReminder(reminder);
-                }))
-            })
+            .then(addTestReminders([reminder1, reminder2]))
             .then(function () {
                 done();
             });
@@ -56,6 +52,8 @@ describe("with a reminder that hasn't been sent", function () {
                         console.log(JSON.stringify(rows));
 
                         expect(rows[0].sent).to.equal(true);
+                        expect(rows[1].sent).to.equal(true);
+
                         done();
                     }).catch(done);
                 });
@@ -78,6 +76,14 @@ function loadCases(cases) {
         });
     };
 };
+
+function addTestReminders(reminders) {
+    return function () {
+        return Promise.all(reminders.map(function (reminder) {
+            return addTestReminder(reminder);
+        }))
+    }
+}
 
 function addTestReminder(reminder) {
     return new Promise(function (resolve, reject) {
@@ -119,10 +125,10 @@ var case1 = {
 var case2 = {
     //date: '27-MAR-15',
     date: TEST_UTC_DATE,
-    defendant: 'SMITH, FREDERICK T',
+    defendant: 'SMITH, Bob J',
     room: 'CNVJAIL',
     time: '01:00:00 PM',
-    citations: '[{"id":"4928457","violation":"40-8-76.1","description":"DRIVING TO SLOW...","location":"22 NUNYA DR"}]',
+    citations: '[{"id":"4928457","violation":"40-8-78.1","description":"DRIVING TO SLOW...","location":"22 NUNYA DR"}]',
     id: "677167760f89d6f6ddf7ed19ccb63c15486a0eac"
 };
 
