@@ -80,7 +80,6 @@ function loadCases(cases) {
 };
 
 function addTestReminder(reminder) {
-    //return function () {
     return new Promise(function (resolve, reject) {
         //console.log("Adding Test Reminder");
         db.addReminder({
@@ -95,7 +94,6 @@ function addTestReminder(reminder) {
             }
         });
     });
-    // }
 };
 
 function clearTable(table) {
