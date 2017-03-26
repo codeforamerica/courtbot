@@ -31,12 +31,27 @@ describe("with a reminder that hasn't been sent", function () {
             //.then(addTestReminder)
             //.then(addTestReminder2(reminder1))
             .then(function () {
-                return Promise.all([addTestReminder2(reminder1)])
+                return Promise.all(reminderArray.map(function (reminder) {
+                    return addTestReminder2(reminder);
+                }))
             })
             //.then(addTestReminder2)
             .then(function () {
                 done();
             });
+
+        // return c.scraper.load().then(function () {
+        //     return Promise.all(c.people.map(function (person) {
+        //         var personUrl = url + "/" + person;
+        //         return c.checkPerson(personUrl);
+        //     }));
+        // }).then(function (results) {
+        //     // `results` is an array containing the results of the `checkPerson()` calls
+        // });
+        // var promiseArray = c.people.map(function (person) {
+        //     var personUrl = url + "/" + person;
+        //     return c.checkPerson(personUrl)
+        // })
 
         // reminderArray.forEach(function(item){
         //     console.log(item.originalCase.defendant);
@@ -109,7 +124,7 @@ function addTestReminder() {
 };
 
 function addTestReminder2(reminder) {
-    return function () {
+    //return function () {
         return new Promise(function (resolve, reject) {
             //console.log("Adding Test Reminder");
             db.addReminder({
@@ -124,7 +139,7 @@ function addTestReminder2(reminder) {
                 }
             });
         });
-    }
+   // }
 };
 
 function clearTable(table) {
@@ -182,4 +197,4 @@ var a = new Promise(function (resolve, reject) {
     });
 });
 var t = [a];
-var reminderArray = [reminder1];
+var reminderArray = [reminder1, reminder2];
