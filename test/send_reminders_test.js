@@ -26,41 +26,14 @@ describe("with a reminder that hasn't been sent", function () {
             .then(clearTable("cases"))
             .then(clearTable("reminders"))
             .then(loadCases([case1, case2]))
-            //.then(Promise.all(t))
-            //.then(loadCases([smithData()]))
-            //.then(addTestReminder)
-            //.then(addTestReminder2(reminder1))
             .then(function () {
-                return Promise.all(reminderArray.map(function (reminder) {
-                    return addTestReminder2(reminder);
+                return Promise.all([reminder1, reminder2].map(function (reminder) {
+                    return addTestReminder(reminder);
                 }))
             })
-            //.then(addTestReminder2)
             .then(function () {
                 done();
             });
-
-        // return c.scraper.load().then(function () {
-        //     return Promise.all(c.people.map(function (person) {
-        //         var personUrl = url + "/" + person;
-        //         return c.checkPerson(personUrl);
-        //     }));
-        // }).then(function (results) {
-        //     // `results` is an array containing the results of the `checkPerson()` calls
-        // });
-        // var promiseArray = c.people.map(function (person) {
-        //     var personUrl = url + "/" + person;
-        //     return c.checkPerson(personUrl)
-        // })
-
-        // reminderArray.forEach(function(item){
-        //     console.log(item.originalCase.defendant);
-        //     addTestReminder2(item);
-        // });
-
-
-
-
     });
 
     it("sends the correct info to Twilio and updates the reminder to sent", function (done) {
@@ -106,13 +79,14 @@ function loadCases(cases) {
     };
 };
 
-function addTestReminder() {
+function addTestReminder(reminder) {
+    //return function () {
     return new Promise(function (resolve, reject) {
         //console.log("Adding Test Reminder");
         db.addReminder({
-            caseId: TEST_CASE_ID,
-            phone: "+12223334444",
-            originalCase: case1
+            caseId: reminder.caseId,
+            phone: reminder.phone,
+            originalCase: reminder.originalCase
         }, function (err, data) {
             if (err) {
                 reject(err);
@@ -121,25 +95,7 @@ function addTestReminder() {
             }
         });
     });
-};
-
-function addTestReminder2(reminder) {
-    //return function () {
-        return new Promise(function (resolve, reject) {
-            //console.log("Adding Test Reminder");
-            db.addReminder({
-                caseId: reminder.caseId,
-                phone: reminder.phone,
-                originalCase: reminder.originalCase
-            }, function (err, data) {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve();
-                }
-            });
-        });
-   // }
+    // }
 };
 
 function clearTable(table) {
@@ -161,6 +117,7 @@ var case1 = {
     id: "677167760f89d6f6ddf7ed19ccb63c15486a0eab"
 
 };
+
 var case2 = {
     //date: '27-MAR-15',
     date: TEST_UTC_DATE,
@@ -176,25 +133,9 @@ var reminder1 = {
     phone: "+12223334444",
     originalCase: case1
 }
+
 var reminder2 = {
     caseId: case2.id,
     phone: "+12223334445",
     originalCase: case2
 }
-
-var a = new Promise(function (resolve, reject) {
-    //console.log("Adding Test Reminder");
-    db.addReminder({
-        caseId: TEST_CASE_ID,
-        phone: "+12223334444",
-        originalCase: case1
-    }, function (err, data) {
-        if (err) {
-            reject(err);
-        } else {
-            resolve();
-        }
-    });
-});
-var t = [a];
-var reminderArray = [reminder1, reminder2];
