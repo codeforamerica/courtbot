@@ -20,33 +20,33 @@ var dates = require("../utils/dates"),
 nock.disableNetConnect();
 nock('https://api.twilio.com:443').log(console.log);
 
-describe("with one reminder that hasn't been sent", function () {
+describe("with one reminder that hasn't been sent", function() {
     beforeEach(function (done) {
         manager.ensureTablesExist()
             .then(clearTable("cases"))
             .then(clearTable("reminders"))
             .then(loadCases([case1]))
             .then(addTestReminders([reminder1]))
-            .then(function () {
+            .then(function(){
                 done();
             });
     });
 
-    it("sends the correct info to Twilio and updates the reminder to sent", function (done) {
+    it("sends the correct info to Twilio and updates the reminder to sent", function(done) {
         var number = "+12223334444";
         var message1 = "(1/2) Reminder: It appears you have a court case tomorrow at 2:00 PM at NEWROOM.";
         var message2 = "(2/2) You should confirm your case date and time by going to " + process.env.COURT_PUBLIC_URL + ". - Alaska State Court System";
 
-        knex("cases").update({ date: dates.now().add(1, 'days'), time: '02:00:00 PM', room: 'NEWROOM' })
-            .then(function () {
+        knex("cases").update({date: dates.now().add(1, 'days'), time: '02:00:00 PM', room: 'NEWROOM' })
+            .then(function() {
                 nock('https://api.twilio.com:443')
                     .post('/2010-04-01/Accounts/test/Messages.json', "To=" + encodeURIComponent(number) + "&From=%2Btest&Body=" + encodeURIComponent(message1))
-                    .reply(200, { "status": 200 }, { 'access-control-allow-credentials': 'true' });
+                    .reply(200, {"status":200}, { 'access-control-allow-credentials': 'true'});
                 nock('https://api.twilio.com:443')
                     .post('/2010-04-01/Accounts/test/Messages.json', "To=" + encodeURIComponent(number) + "&From=%2Btest&Body=" + encodeURIComponent(message2))
-                    .reply(200, { "status": 200 }, { 'access-control-allow-credentials': 'true' });
+                    .reply(200, {"status":200}, { 'access-control-allow-credentials': 'true'});
 
-                sendReminders().then(function (res) {
+                sendReminders().then(function(res) {
                     knex("reminders").where({ sent: true }).select("*").then(function (rows) {
 
                         console.log(JSON.stringify(rows));
@@ -57,8 +57,8 @@ describe("with one reminder that hasn't been sent", function () {
                     }).catch(done);
                 });
 
-            }, function (err, data) {
-                if (err) {
+            }, function(err, data) {
+                if(err) {
                     console.log("ERROR", err);
                     done();
                 }
@@ -128,14 +128,14 @@ function addTestReminders(reminders) {
 }
 
 function addTestReminder(reminder) {
-    return new Promise(function (resolve, reject) {
+    return new Promise(function(resolve, reject) {
         //console.log("Adding Test Reminder");
         db.addReminder({
             caseId: reminder.caseId,
             phone: reminder.phone,
             originalCase: reminder.originalCase
-        }, function (err, data) {
-            if (err) {
+        }, function(err, data) {
+            if(err) {
                 reject(err);
             } else {
                 resolve();
@@ -145,8 +145,8 @@ function addTestReminder(reminder) {
 };
 
 function clearTable(table) {
-    return function () {
-        return new Promise(function (resolve, reject) {
+    return function() {
+        return new Promise(function(resolve, reject) {
             //console.log("Clearing table: " + table);
             knex(table).del().then(resolve, reject);
         });
