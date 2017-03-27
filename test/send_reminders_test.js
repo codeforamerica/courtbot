@@ -20,13 +20,13 @@ var dates = require("../utils/dates"),
 nock.disableNetConnect();
 nock('https://api.twilio.com:443').log(console.log);
 
-describe("with a reminder that hasn't been sent", function () {
+describe("with one reminder that hasn't been sent", function () {
     beforeEach(function (done) {
         manager.ensureTablesExist()
             .then(clearTable("cases"))
             .then(clearTable("reminders"))
-            .then(loadCases([case1, case2]))
-            .then(addTestReminders([reminder1, reminder2]))
+            .then(loadCases([case1]))
+            .then(addTestReminders([reminder1]))
             .then(function () {
                 done();
             });
@@ -47,12 +47,11 @@ describe("with a reminder that hasn't been sent", function () {
                     .reply(200, { "status": 200 }, { 'access-control-allow-credentials': 'true' });
 
                 sendReminders().then(function (res) {
-                    knex("reminders").select("*").then(function (rows) {
+                    knex("reminders").where({ sent: true }).select("*").then(function (rows) {
 
                         console.log(JSON.stringify(rows));
 
-                        expect(rows[0].sent).to.equal(true);
-                        expect(rows[1].sent).to.equal(true);
+                        expect(rows.length).to.equal(1);
 
                         done();
                     }).catch(done);
@@ -65,8 +64,51 @@ describe("with a reminder that hasn't been sent", function () {
                 }
             });
     });
-
 });
+
+describe("with two reminders that haven't been sent", function () {
+    beforeEach(function (done) {
+        manager.ensureTablesExist()
+            .then(clearTable("cases"))
+            .then(clearTable("reminders"))
+            .then(loadCases([case1, case2]))
+            .then(addTestReminders([reminder1, reminder2]))
+            .then(function () {
+                done();
+            });
+    });
+
+    it("sends the correct info to Twilio and updates the reminder(s) to sent", function (done) {
+        nock('https://api.twilio.com:443')
+            .filteringPath(function (path) {
+                return '/';
+            })
+            .post('/')
+            .times(2)
+            .reply(200, { "status": 200 }, { 'access-control-allow-credentials': 'true' });
+
+        knex("cases").update({ date: dates.now().add(1, 'days'), time: '02:00:00 PM', room: 'NEWROOM' })
+            .then(function () {
+                sendReminders().then(function (res) {
+                    knex("reminders").where({ sent: true }).select("*").then(function (rows) {
+
+                        console.log(JSON.stringify(rows));
+
+                        expect(rows.length).to.equal(2);
+
+                        done();
+                    }).catch(done);
+                });
+
+            }, function (err, data) {
+                if (err) {
+                    console.log("ERROR", err);
+                    done();
+                }
+            });
+    });
+});
+
 
 function loadCases(cases) {
     return function () {
