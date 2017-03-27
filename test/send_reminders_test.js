@@ -111,8 +111,8 @@ describe("with two reminders that haven't been sent", function () {
 
 
 function loadCases(cases) {
-    return function () {
-        return new Promise(function (resolve, reject) {
+    return function() {
+        return new Promise(function(resolve, reject) {
             //console.log("Adding test case.");
             knex("cases").insert(cases).then(resolve, reject);
         });
