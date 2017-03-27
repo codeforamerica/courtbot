@@ -4,7 +4,6 @@ var client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKE
 var Promise = require('bluebird');
 var manager = require("./utils/db/manager");
 var knex = manager.knex();
-//var decipher = crypto.createDecipher('aes256', process.env.PHONE_ENCRYPTION_KEY);
 var messages = require("./utils/messages");
 var dates = require("./utils/dates");
 var promises = require("./utils/promises"),
