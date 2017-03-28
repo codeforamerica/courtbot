@@ -33,6 +33,8 @@ To start the web service:
 npm start
 ```
 
+Now you can interact with a mock of the service at http://localhost:5000.
+
 ## Deploying to Heroku
 
 First, get a twilio account and auth token as described above. Then:
