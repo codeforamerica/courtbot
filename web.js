@@ -166,7 +166,7 @@ var cleanupName = function (name) {
 };
 
 function cleanupText (text) {
-  text = text.replace(/[\r\n|\n].*/g, '', '');
+  text = text.replace(/[\r\n|\n].*/g, '');
 
   text = emojiStrip(text);
   text = text.trim();

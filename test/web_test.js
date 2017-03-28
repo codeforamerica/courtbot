@@ -167,7 +167,7 @@ describe("POST /sms", function() {
         });
       });
 
-      it.only("strips emojis from a text", function (done) {
+      it("strips emojis from a text", function (done) {
         sess.post('/sms')
           .send({
             Body: '4928456 😁',
