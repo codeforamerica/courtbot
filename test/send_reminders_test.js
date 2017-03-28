@@ -27,9 +27,8 @@ describe("with one reminder that hasn't been sent", function() {
             .then(clearTable("reminders"))
             .then(loadCases([case1]))
             .then(addTestReminders([reminder1]))
-            .then(function(){
-                done();
-            });
+            .then(function() { done(); })
+            .catch(done);
     });
 
     it("sends the correct info to Twilio and updates the reminder to sent", function(done) {
@@ -48,21 +47,15 @@ describe("with one reminder that hasn't been sent", function() {
 
                 sendReminders().then(function(res) {
                     knex("reminders").where({ sent: true }).select("*").then(function (rows) {
-
                         console.log(JSON.stringify(rows));
-
                         expect(rows.length).to.equal(1);
-
                         done();
-                    }).catch(done);
-                });
-
-            }, function(err, data) {
-                if(err) {
-                    console.log("ERROR", err);
-                    done();
-                }
-            });
+                    })
+                    .catch(done);
+                })
+                .catch(done);
+            })
+            .catch(done);
     });
 });
 
@@ -73,9 +66,8 @@ describe("with two reminders that haven't been sent", function () {
             .then(clearTable("reminders"))
             .then(loadCases([case1, case2]))
             .then(addTestReminders([reminder1, reminder2]))
-            .then(function () {
-                done();
-            });
+            .then(function() { done(); })
+            .catch(done);
     });
 
     it("sends the correct info to Twilio and updates the reminder(s) to sent", function (done) {
@@ -91,24 +83,17 @@ describe("with two reminders that haven't been sent", function () {
             .then(function () {
                 sendReminders().then(function (res) {
                     knex("reminders").where({ sent: true }).select("*").then(function (rows) {
-
                         console.log(JSON.stringify(rows));
-
                         expect(rows.length).to.equal(2);
-
                         done();
-                    }).catch(done);
-                });
-
-            }, function (err, data) {
-                if (err) {
-                    console.log("ERROR", err);
-                    done();
-                }
-            });
+                    })
+                    .catch(done);
+                })
+                .catch(done);
+            })
+            .catch(done);
     });
 });
-
 
 function loadCases(cases) {
     return function() {
