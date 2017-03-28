@@ -114,7 +114,6 @@ describe("GET /cases", function() {
     });
   });
 
-
   it("doesnt find partial matches of id", function(done) {
     knex('cases').del().then(function() {
       knex('cases').insert([turnerData()]).then(function() {
@@ -166,6 +165,48 @@ describe("POST /sms", function() {
           expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Found a case for Frederick Turner scheduled on Fri, Mar 27th at 1:00 PM, at CNVCRT. Would you like a courtesy reminder the day before? (reply YES or NO)</Sms></Response>');
           done();
         });
+      });
+
+      it.only("strips emojis from a text", function (done) {
+        sess.post('/sms')
+          .send({
+            Body: '4928456 😁',
+            From: "+12223334444"
+          })
+          .expect(200)
+          .end(function(err, res) {
+            if(err) return done(err);
+            expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Found a case for Frederick Turner scheduled on Fri, Mar 27th at 1:00 PM, at CNVCRT. Would you like a courtesy reminder the day before? (reply YES or NO)</Sms></Response>');
+            done();
+          });
+      });
+
+      it("strips everything after newlines and carriage returns from id", function (done) {
+        sess.post('/sms')
+          .send({
+            Body: '4928456\r\n-Simon',
+            From: "+12223334444"
+          })
+          .expect(200)
+          .end(function(err, res) {
+            if(err) return done(err);
+            expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Found a case for Frederick Turner scheduled on Fri, Mar 27th at 1:00 PM, at CNVCRT. Would you like a courtesy reminder the day before? (reply YES or NO)</Sms></Response>');
+            done();
+          });
+      });
+
+      it("strips everything after newlines and carriage returns from id", function (done) {
+        sess.post('/sms')
+          .send({
+            Body: '4928456\n-Simon',
+            From: "+12223334444"
+          })
+          .expect(200)
+          .end(function(err, res) {
+            if(err) return done(err);
+            expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Found a case for Frederick Turner scheduled on Fri, Mar 27th at 1:00 PM, at CNVCRT. Would you like a courtesy reminder the day before? (reply YES or NO)</Sms></Response>');
+            done();
+          });
       });
 
       it("sets match and askedReminder on session", function(done) {
@@ -495,7 +536,7 @@ context("with session.askedQueued", function() {
 });
 
 function turnerData(v) {
-  return { 
+  return {
     //date: '27-MAR-15',
     date: TEST_UTC_DATE,
     defendant: 'Frederick Turner',
