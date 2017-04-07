@@ -4,6 +4,8 @@ var logfmt = require('logfmt');
 var db = require('./db');
 var dates = require("./utils/dates");
 var rollbar = require('rollbar');
+var emojiStrip = require('emoji-strip');
+
 require('dotenv').config();
 
 var app = express();
@@ -82,7 +84,7 @@ function askedReminderMiddleware(req, res, next) {
 // Respond to text messages that come in from Twilio
 app.post('/sms', askedReminderMiddleware, function (req, res, next) {
   var twiml = new twilio.TwimlResponse();
-  var text = req.body.Body.toUpperCase();
+  var text = cleanupText(req.body.Body.toUpperCase());
 
   if (req.askedReminder) {
     if (isResponseYes(text)) {
@@ -155,7 +157,6 @@ app.post('/sms', askedReminderMiddleware, function (req, res, next) {
       req.session.askedReminder = true;
     }
 
-
     res.send(twiml.toString());
   });
 });
@@ -169,10 +170,19 @@ var cleanupName = function (name) {
   return name;
 };
 
+function cleanupText (text) {
+  text = text.replace(/[\r\n|\n].*/g, '');
+
+  text = emojiStrip(text);
+  text = text.trim();
+  return text;
+}
+
 function isResponseYes(text) {
   text = text.toUpperCase().trim();
   return (text === 'YES' || text === 'YEA' || text === 'YUP' || text === 'Y');
 }
+
 function isResponseNo(text) {
   text = text.toUpperCase().trim();
   return (text === 'NO' || text === 'N');
@@ -186,13 +196,13 @@ app.use(function (err, req, res, next) {
     console.log("Error: " + err.message);
     rollbar.handleError(err, req);
     if (app.settings.env !== 'production') {
-      return res.status(500).send(err.stack)
+      return res.status(500).send(err.stack);
     }
 
-    return res.status(500).send('Sorry, internal server error')
+    return res.status(500).send('Sorry, internal server error');
   }
 });
-// Send all uncaught excpetions to Rollbar???
+// Send all uncaught exceptions to Rollbar???
 var options = {
   exitOnUncaughtException: true
 };
