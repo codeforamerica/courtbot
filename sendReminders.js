@@ -4,7 +4,6 @@ var client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKE
 var Promise = require('bluebird');
 var manager = require("./utils/db/manager");
 var knex = manager.knex();
-var decipher = crypto.createDecipher('aes256', process.env.PHONE_ENCRYPTION_KEY);
 var messages = require("./utils/messages");
 var dates = require("./utils/dates");
 var promises = require("./utils/promises"),
@@ -43,6 +42,10 @@ module.exports.findReminders = function() {
  */
 var sendReminder = function(reminder) {
   return new Promise(function(resolve, reject) {
+    // Be careful when refactoring this function, the decipher object needs to be created
+    //    each time a reminder is sent because the decipher.final() method destroys the object
+    //    Reference: https://nodejs.org/api/crypto.html#crypto_decipher_final_output_encoding
+    var decipher = crypto.createDecipher('aes256', process.env.PHONE_ENCRYPTION_KEY);
     var phone = decipher.update(reminder.phone, 'hex', 'utf8') + decipher.final('utf8');
     console.log("Phone: " + phone);
 
