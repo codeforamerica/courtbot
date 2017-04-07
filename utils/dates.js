@@ -16,16 +16,29 @@ module.exports = {
 
 	/**
 	 * UTC timezone offset in minutes
-	 * @atDate - Effective date for the offset
+	 * @atDate - Effective date for the offset (MM/DD/YYYY, YYYY-MM-DD, moment, or default to today if null)
 	 * @return {int} offset
 	 */
 	timezoneOffset: function(atDate) {
-		var dt = atDate ? atDate : moment().format("YYYY-MM-DD");
+		var dt = "";
+		if (atDate) {
+			if (typeof atDate == "string") {
+				if (atDate.indexOf("/") == -1)  {
+					dt = atDate;   // String in YYYY-MM-DD already
+				} else {
+					dt = moment(atDate, "MM/DD/YYYY").format("YYYY-MM-DD");   // String in MM/DD/YYYY
+				}
+			} else {
+				dt = atDate.format("YYYY-MM-DD");    // Moment object
+			}
+		} else {
+			dt = moment().format("YYYY-MM-DD");      // Default to today
+		}
 		var tz = moment.tz(dt, process.env.TIMEZONE).format('Z');
 		console.log("Date: " + moment(dt).format("YYYY-MM-DD") + " Offset: " + tz);
 		return tz;
 	},
-	
+
 	/**
 	 * Get current moment timestamp, using our environment timezone.
 	 * @return {moment} moment object
