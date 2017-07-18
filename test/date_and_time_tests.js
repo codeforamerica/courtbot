@@ -35,6 +35,7 @@ describe("for a given date", function() {
     });
 
     it("datetime matches for all hours in a day", function(done) {
+        this.timeout(5000); // This may take a while
         var test = function(hr) {
             return new Promise(function(resolve, reject) {
                 var testDateTime = dates.now().add(1, "days").hour(0).add(hr, "hours");

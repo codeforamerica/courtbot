@@ -12,7 +12,7 @@
   "author": "Sam Hashemi",
   "license": "MIT",
   "engines": {
-    "node": "0.10.x"
+    "node": "6.11.1"
   },
   "dependencies": {
     "async": "~0.2.10",
