@@ -15,6 +15,8 @@ var Session = require('supertest-session')({
 var manager = require("../utils/db/manager");
 var knex = manager.knex();
 var dates = require("../utils/dates");
+var moment = require("moment-timezone");
+
 var TEST_UTC_DATE = "2015-03-27T13:00:00" + dates.timezoneOffset("2015-03-27");
 
 var sess;
@@ -22,7 +24,7 @@ var sess;
 beforeEach(function () {
   sess = new Session();
 
-  var time = new Date("2016-03-01T12:00:00"); // Freeze
+  var time = new Date("2016-03-01T12:00:00" + dates.timezoneOffset("2016-03-01")); // Freeze
   tk.freeze(time);
 });
 
@@ -35,13 +37,13 @@ afterEach(function () {
 nock.enableNetConnect('127.0.0.1');
 
 /**
-* Altered this to do a local read of the expected content to get expected content length because
-* on windows machine the content length was 354 and not the hard-coded 341 (maybe windows character encoding?)
-*
-* It is partly a guess that it is okay to make this change because I am assuming the unit tests
-* only should run where app.settings.env == 'development' (web.js) -- this is what causes public/index.html
-* to be served, rather than "hello I am courtbot..."
-*/
+ * Altered this to do a local read of the expected content to get expected content length because
+ * on windows machine the content length was 354 and not the hard-coded 341 (maybe windows character encoding?)
+ *
+ * It is partly a guess that it is okay to make this change because I am assuming the unit tests
+ * only should run where app.settings.env == 'development' (web.js) -- this is what causes public/index.html
+ * to be served, rather than "hello I am courtbot..."
+ */
 describe("GET /", function() {
   it("responds with web form test input", function(done) {
     var expectedContent = fs.readFileSync("public/index.html", "utf8");
@@ -169,44 +171,44 @@ describe("POST /sms", function() {
 
       it("strips emojis from a text", function (done) {
         sess.post('/sms')
-          .send({
-            Body: '4928456 😁',
-            From: "+12223334444"
-          })
-          .expect(200)
-          .end(function(err, res) {
-            if(err) return done(err);
-            expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Found a case for Frederick Turner scheduled on Fri, Mar 27th at 1:00 PM, at CNVCRT. Would you like a courtesy reminder the day before? (reply YES or NO)</Sms></Response>');
-            done();
-          });
+            .send({
+              Body: '4928456 😁',
+              From: "+12223334444"
+            })
+            .expect(200)
+            .end(function(err, res) {
+              if(err) return done(err);
+              expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Found a case for Frederick Turner scheduled on Fri, Mar 27th at 1:00 PM, at CNVCRT. Would you like a courtesy reminder the day before? (reply YES or NO)</Sms></Response>');
+              done();
+            });
       });
 
       it("strips everything after newlines and carriage returns from id", function (done) {
         sess.post('/sms')
-          .send({
-            Body: '4928456\r\n-Simon',
-            From: "+12223334444"
-          })
-          .expect(200)
-          .end(function(err, res) {
-            if(err) return done(err);
-            expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Found a case for Frederick Turner scheduled on Fri, Mar 27th at 1:00 PM, at CNVCRT. Would you like a courtesy reminder the day before? (reply YES or NO)</Sms></Response>');
-            done();
-          });
+            .send({
+              Body: '4928456\r\n-Simon',
+              From: "+12223334444"
+            })
+            .expect(200)
+            .end(function(err, res) {
+              if(err) return done(err);
+              expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Found a case for Frederick Turner scheduled on Fri, Mar 27th at 1:00 PM, at CNVCRT. Would you like a courtesy reminder the day before? (reply YES or NO)</Sms></Response>');
+              done();
+            });
       });
 
       it("strips everything after newlines and carriage returns from id", function (done) {
         sess.post('/sms')
-          .send({
-            Body: '4928456\n-Simon',
-            From: "+12223334444"
-          })
-          .expect(200)
-          .end(function(err, res) {
-            if(err) return done(err);
-            expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Found a case for Frederick Turner scheduled on Fri, Mar 27th at 1:00 PM, at CNVCRT. Would you like a courtesy reminder the day before? (reply YES or NO)</Sms></Response>');
-            done();
-          });
+            .send({
+              Body: '4928456\n-Simon',
+              From: "+12223334444"
+            })
+            .expect(200)
+            .end(function(err, res) {
+              if(err) return done(err);
+              expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Found a case for Frederick Turner scheduled on Fri, Mar 27th at 1:00 PM, at CNVCRT. Would you like a courtesy reminder the day before? (reply YES or NO)</Sms></Response>');
+              done();
+            });
       });
 
       it("sets match and askedReminder on session", function(done) {
@@ -271,6 +273,61 @@ describe("POST /sms", function() {
             expect(getConnectCookie().askedReminder).to.equal(undefined);
             expect(getConnectCookie().citationId).to.equal(undefined);
             done();
+          });
+        });
+      });
+    });
+
+    context("Same day court case or or case already happened", function() {
+      var params = { Body: "4928456", From: "+12223334444"  };
+
+      it("says case is same day", function(done) {
+        knex('cases').del().then(function () {
+          knex('cases').insert([turnerData("", dates.now().add(1, "hours"))]).then(function () {
+            sess.post('/sms').send(params).expect(200).end(function (err, res) {
+              if (err) {
+                return done(err);
+              }
+              expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Found a case for Frederick Turner scheduled on Tue, Mar 1st at 1:00 PM, at CNVCRT. Can&apos;t set reminders for cases happening the same day.</Sms></Response>');
+              expect(getConnectCookie().askedQueued).to.equal(undefined);
+              expect(getConnectCookie().askedReminder).to.equal(undefined);
+              expect(getConnectCookie().citationId).to.equal(undefined);
+              done();
+            });
+          });
+        });
+      });
+
+      it("says case is already happening (time is now)", function (done) {
+        knex('cases').del().then(function () {
+          knex('cases').insert([turnerData("", dates.now())]).then(function () {
+            sess.post('/sms').send(params).expect(200).end(function (err, res) {
+              if (err) {
+                return done(err);
+              }
+              expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Found a case for Frederick Turner scheduled on Tue, Mar 1st at 12:00 PM, at CNVCRT. It appears your case has already occurred.</Sms></Response>');
+              expect(getConnectCookie().askedQueued).to.equal(undefined);
+              expect(getConnectCookie().askedReminder).to.equal(undefined);
+              expect(getConnectCookie().citationId).to.equal(undefined);
+              done();
+            });
+          });
+        });
+      });
+
+      it("says case is already happening (time in the past)", function (done) {
+        knex('cases').del().then(function () {
+          knex('cases').insert([turnerData("", dates.now().subtract(2, "hours"))]).then(function () {
+            sess.post('/sms').send(params).expect(200).end(function (err, res) {
+              if (err) {
+                return done(err);
+              }
+              expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Found a case for Frederick Turner scheduled on Tue, Mar 1st at 10:00 AM, at CNVCRT. It appears your case has already occurred.</Sms></Response>');
+              expect(getConnectCookie().askedQueued).to.equal(undefined);
+              expect(getConnectCookie().askedReminder).to.equal(undefined);
+              expect(getConnectCookie().citationId).to.equal(undefined);
+              done();
+            });
           });
         });
       });
@@ -535,29 +592,29 @@ context("with session.askedQueued", function() {
   });
 });
 
-function turnerData(v) {
+function turnerData(v,d) {
   return {
     //date: '27-MAR-15',
-    date: TEST_UTC_DATE,
+    date: d||TEST_UTC_DATE,
     defendant: 'Frederick Turner',
     room: 'CNVCRT',
-    time: '01:00:00 PM',
+    time: moment.utc(d||TEST_UTC_DATE).format("hh:00:00 A"),
     citations: '[{"id":"4928456","violation":"40-8-76.1","description":"SAFETY BELT VIOLATION","location":"27 DECATUR ST"}]',
     id: '677167760f89d6f6ddf7ed19ccb63c15486a0eab' + (v||"")
   };
 }
 
-function turnerDataAsObject(v) {
-  var data = turnerData(v);
-  data.date = TEST_UTC_DATE;
+function turnerDataAsObject(v,d) {
+  var data = turnerData(v,d);
+  data.date = d||TEST_UTC_DATE;
   data.citations = JSON.parse(data.citations);
-  data.readableDate = "Friday, Mar 27th";
+  data.readableDate = moment.utc(d||TEST_UTC_DATE).format("dddd, MMM Do");
   return data;
 }
 
-function rawTurnerDataAsObject(v) {
-  var data = turnerData(v);
-  data.date = TEST_UTC_DATE;
+function rawTurnerDataAsObject(v,d) {
+  var data = turnerData(v,d);
+  data.date = d||TEST_UTC_DATE;
   data.citations = JSON.parse(data.citations);
   return data;
 }
