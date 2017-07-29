@@ -154,8 +154,6 @@ app.post('/sms', askedReminderMiddleware, function (req, res, next) {
 
       var caseInfo = 'Found a case for ' + name + ' scheduled on ' + datetime.format("ddd, MMM Do") + ' at ' + datetime.format("h:mm A") + ', at ' + match.room + '.';
 
-      console.log("Checking currency: " + datetime.diff(dates.now()));
-
       if ((datetime.diff(dates.now()) > 0) && (datetime.isSame(dates.now(), 'd'))) {
         twiml.sms(caseInfo + " Can\'t set reminders for hearings happening the same day.");
       } else {

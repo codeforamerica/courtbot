@@ -95,12 +95,5 @@ module.exports = {
 	 */
 	toFormattedTime: function(date) {
 		return moment(date).format("hh:mm A");
-	},
-
-	/**
-	 *  Format UTC date and put into local timezone
-	 */
-	toFormattedLocalDate: function(date, format) {
-		return fromUtc(date).tz(module.exports.timezone()).format(format);
 	}
 };
