@@ -4,11 +4,11 @@ var manager = require("./utils/db/manager");
 var knex = manager.knex();
 var now = require("./utils/dates").now;
 
-exports.findCitation = function(citation, callback) {
+exports.findCitation = function(citation) {
   // Postgres JSON search based on prebuilt index
   citation = escapeSQL(citation.toUpperCase().trim());
   var citationSearch = knex.raw("'{\"" + citation + "\"}'::text[] <@ (json_val_arr(citations, 'id'))");
-  knex('cases').where(citationSearch).select().asCallback(callback);
+  return knex('cases').where(citationSearch).select();
 };
 
 // Find queued citations that we have asked about adding reminders

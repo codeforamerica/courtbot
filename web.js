@@ -131,12 +131,8 @@ app.post('/sms', askedReminderMiddleware, function (req, res, next) {
     }
   }
 
-  db.findCitation(text, function (err, results) {
-    // If we can't find the case, or find more than one case with the citation
-    // number, give an error and recommend they call in.
-    if (err) {
-      return next(err);
-    }
+  db.findCitation(text)
+  .then( function(results) {
     if (!results || results.length === 0 || results.length > 1) {
       var correctLengthCitation = 6 <= text.length && text.length <= 25;
       if (correctLengthCitation) {
@@ -169,7 +165,11 @@ app.post('/sms', askedReminderMiddleware, function (req, res, next) {
     }
 
     res.send(twiml.toString());
-  });
+
+  })
+  .catch(function(err){
+    return next(err)
+  })
 });
 
 var cleanupName = function (name) {
