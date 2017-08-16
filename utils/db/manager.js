@@ -165,7 +165,6 @@ var _createTable = {
  * @return {Promise} Promise to create indexing function for and index for cases table.
  */
 var _createIndexForCases = function() {
-	return new Promise(function(resolve, reject){
 		var cases_indexing_function = [
 			'CREATE OR REPLACE FUNCTION json_val_arr(_j json, _key text)',
 			'  RETURNS text[] AS',
@@ -175,9 +174,7 @@ var _createIndexForCases = function() {
 			"'",
 			'  LANGUAGE sql IMMUTABLE;'].join('\n');
 
-		module.exports.knex().raw(cases_indexing_function)
+		return module.exports.knex().raw(cases_indexing_function)
 			.then(module.exports.knex().raw("DROP INDEX IF EXISTS citation_ids_gin_idx"))
 			.then(module.exports.knex().raw("CREATE INDEX citation_ids_gin_idx ON cases USING GIN (json_val_arr(citations, 'id'))"))
-			.then(resolve);
-	});
 };

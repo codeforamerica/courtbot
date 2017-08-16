@@ -1,9 +1,6 @@
 var twilio = require('twilio');
 var client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 var dates = require("./dates");
-var Promise = require("bluebird");
-var promises = require("./promises"),
-	genericResolver = promises.genericCallbackResolver;
 
 module.exports = {
 
