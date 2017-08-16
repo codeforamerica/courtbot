@@ -3,40 +3,45 @@
 var http = require('http');
 var request = require('request');
 var parse = require('csv-parse');
-var Promise = require('bluebird');
-var callFn = require("./promises").callFn;
 var sha1 = require('sha1');
 var dates = require("./dates");
 require('dotenv').config();
 var manager = require("./db/manager");
 var moment = require("moment-timezone");
 
-var loadData = function () {
+
+function loadData (){
+  return getCases()
+  .then(cases => recreateDB(cases))
+  .then(() => {
+    console.log('Database recreated! All systems are go.')
+    return true;
+  })
+}
+
+function getCases () {
   var url = process.env.DATA_URL;
 
   console.log('Downloading latest CSV file...');
 
   return new Promise(function (resolve, reject) {
     request.get(url, function(req, res) {
-      console.log('Parsing CSV File...');
-
       if (res.statusCode == 404) {
         console.log("404 page not found: ", url);
         reject("404 page not found");
       } else {
+
+        console.log('Parsing CSV File...');
+
         parse(res.body, {delimiter: ','}, function(err, rows) {
           if (err) {
             console.log('Unable to parse file: ', url);
             console.log(err);
-            reject(err);
+            return reject(err);
           }
-
           console.log('Extracting court case information...');
           var cases = extractCourtData(rows);
-          recreateDB(cases, function() {
-            console.log('Database recreated! All systems are go.');
-            resolve(true);
-          });
+          resolve(cases)
         });
       }
     });
@@ -77,7 +82,7 @@ var extractCourtData = function(rows) {
     }
 
     var newCase = {
-      date: dates.fromDateAndTime(c[0], c[5]), 
+      date: dates.fromDateAndTime(c[0], c[5]),
       defendant: c[2] + " " + c[1],
       room: c[4],
       time: c[5],
@@ -116,23 +121,29 @@ var extractCourtData = function(rows) {
   return cases;
 };
 
-var recreateDB = function(cases, callback) {
+var insertCases = function(cases) {
   // inserts cases, 1000 at a time.
-  var insertCases = function() {
-    // Make violations a JSON blob, to keep things simple
-    cases.forEach(function(c) { c.citations = JSON.stringify(c.citations); });
 
-    var chunks = chunk(cases, 1000);
-    return Promise.all(chunks.map(function(chunk) {
-      return manager.insertTableChunk("cases", chunk);
-    }));
-  };
+  // Make violations a JSON blob, to keep things simple
+  cases.forEach(function(c) { c.citations = JSON.stringify(c.citations); });
 
-  manager.dropTable("cases")
-    .then(callFn(manager.createTable, "cases", insertCases))
-    .then(manager.closeConnection)
-    .then(callback);
+  var chunks = chunk(cases, 1000);
+  return Promise.all(chunks.map(function(chunk) {
+    return manager.insertTableChunk("cases", chunk);
+  }));
 };
+
+
+var recreateDB = function(cases) {
+/* note: this creates the table (which also creates and index) then inserts the data,
+   according to (https://www.postgresql.org/docs/9.2/static/populate.html)
+   this may be slower than inserting bulk data before creating a new index. But, this is much cleaner */
+  return manager.dropTable("cases")
+    .then(() => manager.createTable("cases"))
+    .then(() => insertCases(cases))
+    .then(manager.closeConnection)
+
+  };
 
 var chunk = function(arr, len) {
   var chunks = [];

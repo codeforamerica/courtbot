@@ -3,7 +3,6 @@ var client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKE
 var dates = require("./dates");
 var Promise = require("bluebird");
 var promises = require("./promises"),
-	chainable = promises.chainablePromise,
 	genericResolver = promises.genericCallbackResolver;
 
 module.exports = {
@@ -13,14 +12,14 @@ module.exports = {
 	 *
 	 * @param  {string} name Name of cited person.
 	 * @param  {moment} datetime moment object containing date and time of court appearance.
-	 * @param  {string} room room of court appearance.	 * 
+	 * @param  {string} room room of court appearance.	 *
 	 * @return {String} Greetings message.
 	 */
 	greetingMessage: function(name, datetime, room) {
 		return "Hello from the Alaska State Court System. " +
-				"We found a case for " + name + " scheduled on " + 
-				datetime.format('ddd, MMM Do') + " at " + 
-				datetime.format("h:mm A") + ", at " + room + 
+				"We found a case for " + name + " scheduled on " +
+				datetime.format('ddd, MMM Do') + " at " +
+				datetime.format("h:mm A") + ", at " + room +
 				". Would you like a courtesy reminder the day before? (reply YES or NO)";
 	},
 
@@ -34,32 +33,35 @@ module.exports = {
 
 	/**
 	 * Reminder message body
-	 * 
+	 *
 	 * @param  {Object} reminder reminder record.
 	 * @return {string} message body.
 	 */
 	reminder: function(reminder) {
-		return "Reminder: It appears you have a court hearing tomorrow at " + 
+		return "Reminder: It appears you have a court hearing tomorrow at " +
 			dates.fromUtc(reminder.date).format("h:mm A") +
-        	" at " + reminder.room + 
-        	". You should confirm your hearing date and time by going to " + 
-        	process.env.COURT_PUBLIC_URL + 
+        	" at " + reminder.room +
+        	". You should confirm your hearing date and time by going to " +
+        	process.env.COURT_PUBLIC_URL +
         	". - Alaska State Court System";
 	},
-	
+
 	/**
 	 * Send a twilio message
-	 * 
+	 *
 	 * @param  {string} to   phone number message will be sent to
 	 * @param  {string} from who the message is being sent from
 	 * @param  {string} body message to be sent
 	 * @param  {function} function for resolving callback
 	 * @return {Promise} Promise to send message.
 	 */
-	send: function(to, from, body, resolver) {
-		return new Promise(function(resolve, reject) {
-			client.sendMessage({to: to, from: from, body: body}, resolver || genericResolver(resolve, "client.message"));			
-		});
+	send: function(to, from, body) {
+		return client.create({
+			to: to,
+			from: from,
+			body: body
+		})
+		.then(message => console.log("Sent message with SID:", message.sid))
 	}
 
 

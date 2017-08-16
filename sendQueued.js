@@ -1,6 +1,4 @@
 var crypto = require('crypto'),
-    twilio = require('twilio'),
-    client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN),
     db = require('./db.js'),
     dates = require("./utils/dates"),
     strings = require("./utils/strings"),

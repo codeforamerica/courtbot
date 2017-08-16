@@ -1,7 +1,4 @@
 var crypto = require('crypto');
-var twilio = require('twilio');
-var client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-//var Promise = require('bluebird');
 var manager = require("./utils/db/manager");
 var knex = manager.knex();
 var messages = require("./utils/messages");
