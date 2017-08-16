@@ -1,6 +1,4 @@
-//var twilio = require('twilio');
-const MessagingResponse = require('twilio').twiml.MessagingResponse;
-
+var twilio = require('twilio');
 var express = require('express');
 var logfmt = require('logfmt');
 var db = require('./db');
@@ -86,7 +84,7 @@ function askedReminderMiddleware(req, res, next) {
 
 // Respond to text messages that come in from Twilio
 app.post('/sms', askedReminderMiddleware, function (req, res, next) {
-  var twiml = new MessagingResponse();
+  var twiml = new twilio.TwimlResponse();
   var text = cleanupText(req.body.Body.toUpperCase());
 
   if (req.askedReminder) {
@@ -99,12 +97,12 @@ app.post('/sms', askedReminderMiddleware, function (req, res, next) {
         if (err) {
           return next(err);
         }
-        twiml.message('Sounds good. We will attempt to text you a courtesy reminder the day before your hearing date. Note that court schedules frequently change. You should always confirm your hearing date and time by going to ' + process.env.COURT_PUBLIC_URL);
+        twiml.sms('Sounds good. We will attempt to text you a courtesy reminder the day before your hearing date. Note that court schedules frequently change. You should always confirm your hearing date and time by going to ' + process.env.COURT_PUBLIC_URL);
         req.session.askedReminder = false;
         res.send(twiml.toString());
       });
     } else {
-      twiml.message('OK. You can always go to ' + process.env.COURT_PUBLIC_URL + ' for more information about your case and contact information.');
+      twiml.sms('OK. You can always go to ' + process.env.COURT_PUBLIC_URL + ' for more information about your case and contact information.');
       req.session.askedReminder = false;
       res.send(twiml.toString());
     }
@@ -120,13 +118,13 @@ app.post('/sms', askedReminderMiddleware, function (req, res, next) {
         if (err) {
           next(err);
         }
-        twiml.message('OK. We will keep checking for up to ' + process.env.QUEUE_TTL_DAYS + ' days. You can always go to ' + process.env.COURT_PUBLIC_URL + ' for more information about your case and contact information.');
+        twiml.sms('OK. We will keep checking for up to ' + process.env.QUEUE_TTL_DAYS + ' days. You can always go to ' + process.env.COURT_PUBLIC_URL + ' for more information about your case and contact information.');
         req.session.askedQueued = false;
         res.send(twiml.toString());
       });
       return;
     } else if (isResponseNo(text)) {
-      twiml.message('OK. You can always go to ' + process.env.COURT_PUBLIC_URL + ' for more information about your case and contact information.');
+      twiml.sms('OK. You can always go to ' + process.env.COURT_PUBLIC_URL + ' for more information about your case and contact information.');
       req.session.askedQueued = false;
       res.send(twiml.toString());
       return;
@@ -138,12 +136,12 @@ app.post('/sms', askedReminderMiddleware, function (req, res, next) {
     if (!results || results.length === 0 || results.length > 1) {
       var correctLengthCitation = 6 <= text.length && text.length <= 25;
       if (correctLengthCitation) {
-        twiml.message('Could not find a case with that number. It can take several days for a case to appear in our system. Would you like us to keep checking for the next ' + process.env.QUEUE_TTL_DAYS + ' days and text you if we find it? (reply YES or NO)');
+        twiml.sms('Could not find a case with that number. It can take several days for a case to appear in our system. Would you like us to keep checking for the next ' + process.env.QUEUE_TTL_DAYS + ' days and text you if we find it? (reply YES or NO)');
 
         req.session.askedQueued = true;
         req.session.citationId = text;
       } else {
-        twiml.message('Couldn\'t find your case. Case identifier should be 6 to 25 numbers and/or letters in length.');
+        twiml.sms('Couldn\'t find your case. Case identifier should be 6 to 25 numbers and/or letters in length.');
       }
     } else {
       var match = results[0];
@@ -153,12 +151,12 @@ app.post('/sms', askedReminderMiddleware, function (req, res, next) {
       var caseInfo = 'Found a case for ' + name + ' scheduled on ' + datetime.format("ddd, MMM Do") + ' at ' + datetime.format("h:mm A") + ', at ' + match.room + '.';
 
       if ((datetime.diff(dates.now()) > 0) && (datetime.isSame(dates.now(), 'd'))) {
-        twiml.message(caseInfo + " Can\'t set reminders for hearings happening the same day.");
+        twiml.sms(caseInfo + " Can\'t set reminders for hearings happening the same day.");
       } else {
         if (datetime.diff(dates.now()) <= 0) {
-          twiml.message(caseInfo + " It appears your hearing has already occurred.");
+          twiml.sms(caseInfo + " It appears your hearing has already occurred.");
         } else {
-          twiml.message('Found a case for ' + name + ' scheduled on ' + datetime.format("ddd, MMM Do") + ' at ' + datetime.format("h:mm A") + ', at ' + match.room + '. Would you like a courtesy reminder the day before? (reply YES or NO)');
+          twiml.sms('Found a case for ' + name + ' scheduled on ' + datetime.format("ddd, MMM Do") + ' at ' + datetime.format("h:mm A") + ', at ' + match.room + '. Would you like a courtesy reminder the day before? (reply YES or NO)');
 
           req.session.match = match;
           req.session.askedReminder = true;

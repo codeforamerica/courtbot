@@ -19,7 +19,7 @@ module.exports.findReminders = function() {
   //Checking for anything before tomorrow's midnight.
   var tomorrowMidnight = dates.now().add("2", "days").hour(0).minute(0).utcOffset(0).format();
   var todayMidnight = dates.now().add("1", "days").hour(0).minute(0).utcOffset(0).format();
-  console.log("DAT", tomorrowMidnight);
+  //console.log("DAT", tomorrowMidnight);
   return knex('reminders')
     .where('sent', false)
     .join('cases', 'reminders.case_id', '=', 'cases.id')

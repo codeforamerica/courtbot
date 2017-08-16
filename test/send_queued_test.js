@@ -38,7 +38,7 @@ describe("with 2 valid queued cases (same citation)", function() {
         });
       });
     };
-    
+
     manager.ensureTablesExist().then(initData);
   });
 
@@ -115,7 +115,7 @@ describe("with a queued non-existent case", function() {
 });
 
 function turnerData(v) {
-  return { 
+  return {
     //date: '27-MAR-15',
     date: '2015-03-27T08:00:00.000Z',
     defendant: 'Frederick Turner',

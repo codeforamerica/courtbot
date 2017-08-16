@@ -56,12 +56,9 @@ module.exports = {
 	 * @return {Promise} Promise to send message.
 	 */
 	send: function(to, from, body) {
-		return client.create({
-			to: to,
-			from: from,
-			body: body
+		return new Promise(function(resolve, reject) {
+			client.sendMessage({to: to, from: from, body: body}, resolve)
 		})
-		.then(message => console.log("Sent message with SID:", message.sid))
 	}
 
 
