@@ -45,40 +45,39 @@ describe("Loading of Data", function() {
     });
 
     it("hits the success callback correctly", function() {
-      return require("../utils/loaddata")().then(function(resp) {
-        expect(resp).to.equal(true);
-      }, assert.failed);
+      return require("../utils/loaddata")()
+      .then(resp => { expect(resp).to.equal(true)})
     });
 
     it("creates 36 cases", function() { // 38 lines, two sets of duplicates
-      return require("../utils/loaddata")().then(function(resp) {
-        return knex("cases").count('* as count').then(function(rows) {
+      return require("../utils/loaddata")()
+        .then(resp => knex("cases").count('* as count'))
+        .then(rows => {
           expect(rows[0].count).to.equal('36');
-        }, assert.failed);
-      }, assert.failed);
+        })
     });
 
     it("properly manages a single defendant", function() {
-      return require("../utils/loaddata")().then(function(resp) {
-        return knex("cases").where({ defendant: "Christopher Dunlap"}).then(function(rows) {
+      return require("../utils/loaddata")()
+        .then(resp => knex("cases").where({ defendant: "Christopher Dunlap"}))
+        .then(rows => {
           expect(rows[0].defendant).to.equal('Christopher Dunlap');
           expect(rows[0].room).to.equal('Petersburg Courthouse');
           expect(rows[0].citations.length).to.equal(1);
           expect(rows[0].citations[0].id).to.equal('PEFEP00391416');
-        }, assert.failed);
-      }, assert.failed);
+        })
     });
 
     it("properly manages a duplicate defendant", function() {
-      return require("../utils/loaddata")().then(function(resp) {
-        return knex("cases").where({ defendant: "Michael Guthrie"}).then(function(rows) {
+      return require("../utils/loaddata")()
+        .then(resp => knex("cases").where({ defendant: "Michael Guthrie"}))
+        .then(rows => {
           expect(rows[0].defendant).to.equal('Michael Guthrie');
           expect(rows[0].room).to.equal('Ketchikan Courthouse');
           expect(rows[0].citations.length).to.equal(2);
           expect(rows[0].citations[0].id).to.equal('KETEE000003760305');
           expect(rows[0].citations[1].id).to.equal('KETEE000003760307');
-        }, assert.failed);
-      }, assert.failed);
+        })
     });
   });
 });

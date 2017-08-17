@@ -9,7 +9,6 @@ var findReminders = sr.findReminders;
 var expect = require("chai").expect;
 var nock = require('nock');
 var manager = require("../utils/db/manager");
-var Promise = require("bluebird");
 var db = require('../db');
 var knex = manager.knex();
 
@@ -23,10 +22,10 @@ nock('https://api.twilio.com:443').log(console.log);
 describe("with one reminder that hasn't been sent", function() {
     beforeEach(function () {
        return manager.ensureTablesExist()
-            .then(() => clearTable("cases"))
-            .then(() => clearTable("reminders"))
-            .then(() => loadCases([case1]))
-            .then(() => addTestReminders([reminder1]))
+            .then(clearTable("cases"))
+            .then(clearTable("reminders"))
+            .then(loadCases([case1]))
+            .then(addTestReminders([reminder1]))
     });
 
     it("sends the correct info to Twilio and updates the reminder to sent", function() {
@@ -97,7 +96,7 @@ function addTestReminders(reminders) {
 }
 
 function addTestReminder(reminder) {
-    //console.log("Adding Test Reminder");
+    // console.log("Adding Test Reminder");
     return db.addReminder({
         caseId: reminder.caseId,
         phone: reminder.phone,

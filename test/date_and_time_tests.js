@@ -13,34 +13,30 @@ var dates = require("../utils/dates"),
     TEST_UTC_DATE = "2015-03-27T08:00:00" + dates.timezoneOffset("2015-03-27");
 
 describe("for a given date", function() {
-    beforeEach(function(done) {
-        manager.ensureTablesExist()
+    beforeEach(function() {
+        return manager.ensureTablesExist()
             .then(clearTable("cases"))
             .then(clearTable("reminders"))
             .then(loadCases([turnerData()]))
             .then(addTestReminder)
-            .then(function(){
-                done();
-            });
     });
 
 
-    it("datetime in table matches datetime on the client", function(done) {
+    it("datetime in table matches datetime on the client", function() {
 
-        knex.select("*").from("cases").where("date", TEST_UTC_DATE)
+        return knex.select("*").from("cases").where("date", TEST_UTC_DATE)
             .then(function(results) {
                 expect(results.length).to.equal(1);
-                done();
             });
     });
 
-    it("datetime matches for all hours in a day", function(done) {
+    it("datetime matches for all hours in a day", function() {
         this.timeout(5000); // This may take a while
         var test = function(hr) {
-            return new Promise(function(resolve, reject) {
-                var testDateTime = dates.now().add(1, "days").hour(0).add(hr, "hours");
+                console.log("hr: ", hr)
+                let testDateTime = dates.now().add(1, "days").hour(0).add(hr, "hours");
                 console.log("Now: ",dates.now().format());
-                updateCaseDate(TEST_CASE_ID, testDateTime)
+                return updateCaseDate(TEST_CASE_ID, testDateTime)
                     .then(findReminders)
                     .then(function(results) {
                         if (results[0]) console.log(dates.fromUtc(results[0].date).format(), testDateTime.format());
@@ -53,37 +49,30 @@ describe("for a given date", function() {
                             console.log("NO reminder found for hour ", hr)
                             expect(results.length).to.equal(0);
                         }
-                        resolve();
                     });
-            });
         };
+        return Promise.all(TEST_HOURS.map(hr => test(hr)))
 
-        Promise.resolve(TEST_HOURS)
-            .each(test)
-            .then(function() {done();})
-            .catch(done);
     });
 });
 
 function updateCaseDate(caseId, newDate) {
-    return new Promise(function(resolve, reject) {
-        console.log("Updating date to: " + newDate.format());
-        knex("cases")
+    console.log("Updating date to: " + newDate.format());
+    return  knex("cases")
             .where("id", "=", caseId)
             .update({
                 "date": newDate.format(),
                 "time": dates.toFormattedTime(newDate)
             })
-            .then(resolve);
-        knex('cases')
-            .where("id", "=", caseId)
-            .select()
-            .then(function(results) {
-                console.log("Stored: ", results[0].date, " ",results[0].time)
-            })
 
-    });
-};
+            .then(() => knex('cases')
+                .where("id", "=", caseId)
+                .select()
+                .then(function(results) {
+                    console.log("Stored: ", results[0].date, " ",results[0].time)
+                })
+            )
+}
 
 function loadCases(cases) {
     return function() {
