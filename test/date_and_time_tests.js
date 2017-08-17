@@ -2,7 +2,6 @@ require('dotenv').config();
 var findReminders = require("../sendReminders.js").findReminders;
 var expect = require("chai").expect;
 var manager = require("../utils/db/manager");
-var Promise = require("bluebird");
 
 var db = require('../db');
 var knex = manager.knex();
@@ -51,14 +50,11 @@ describe("for a given date", function() {
                         }
                     });
         };
-        //return Promise.all(TEST_HOURS.map(hr => test(hr)))
-        //return Promise.all(TEST_HOURS.reduce((pr, hr) => pr.then(test(hr)), Promise.resolve()))
-        function sequential(arr, index=0) {
-            if (index >= arr.length) return Promise.resolve()
-            return test(arr[index])
-                .then(r => sequential(arr, index + 1))
-        }
-        return sequential(TEST_HOURS)
+
+        // test() overwrites DB data with each iteration so it's important that the tests are done sequentially
+        return TEST_HOURS.reduce((p, hr) =>{
+            return p.then(r=> test(hr))
+        }, Promise.resolve())
 
     });
 });
