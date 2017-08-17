@@ -32,7 +32,7 @@ describe("for a given date", function() {
 
     it("datetime matches for all hours in a day", function() {
         this.timeout(5000); // This may take a while
-        var test = function(hr) {
+        let test = function(hr) {
                 console.log("hr: ", hr)
                 let testDateTime = dates.now().add(1, "days").hour(0).add(hr, "hours");
                 console.log("Now: ",dates.now().format());
@@ -51,7 +51,14 @@ describe("for a given date", function() {
                         }
                     });
         };
-        return Promise.all(TEST_HOURS.map(hr => test(hr)))
+        //return Promise.all(TEST_HOURS.map(hr => test(hr)))
+        //return Promise.all(TEST_HOURS.reduce((pr, hr) => pr.then(test(hr)), Promise.resolve()))
+        function sequential(arr, index=0) {
+            if (index >= arr.length) return Promise.resolve()
+            return test(arr[index])
+                .then(r => sequential(arr, index + 1))
+        }
+        return sequential(TEST_HOURS)
 
     });
 });
@@ -64,12 +71,12 @@ function updateCaseDate(caseId, newDate) {
                 "date": newDate.format(),
                 "time": dates.toFormattedTime(newDate)
             })
-
             .then(() => knex('cases')
                 .where("id", "=", caseId)
                 .select()
                 .then(function(results) {
                     console.log("Stored: ", results[0].date, " ",results[0].time)
+                    return results
                 })
             )
 }
