@@ -21,22 +21,20 @@ nock.disableNetConnect();
 nock('https://api.twilio.com:443').log(console.log);
 
 describe("with one reminder that hasn't been sent", function() {
-    beforeEach(function (done) {
-        manager.ensureTablesExist()
-            .then(clearTable("cases"))
-            .then(clearTable("reminders"))
-            .then(loadCases([case1]))
-            .then(addTestReminders([reminder1]))
-            .then(function() { done(); })
-            .catch(done);
+    beforeEach(function () {
+       return manager.ensureTablesExist()
+            .then(() => clearTable("cases"))
+            .then(() => clearTable("reminders"))
+            .then(() => loadCases([case1]))
+            .then(() => addTestReminders([reminder1]))
     });
 
-    it("sends the correct info to Twilio and updates the reminder to sent", function(done) {
+    it("sends the correct info to Twilio and updates the reminder to sent", function() {
         var number = "+12223334444";
         var message1 = "(1/2) Reminder: It appears you have a court case tomorrow at 2:00 PM at NEWROOM.";
         var message2 = "(2/2) You should confirm your case date and time by going to " + process.env.COURT_PUBLIC_URL + ". - Alaska State Court System";
 
-        knex("cases").update({date: dates.now().add(1, 'days'), time: '02:00:00 PM', room: 'NEWROOM' })
+        return knex("cases").update({date: dates.now().add(1, 'days'), time: '02:00:00 PM', room: 'NEWROOM' })
             .then(function() {
                 nock('https://api.twilio.com:443')
                     .post('/2010-04-01/Accounts/test/Messages.json', "To=" + encodeURIComponent(number) + "&From=%2Btest&Body=" + encodeURIComponent(message1))
@@ -45,32 +43,26 @@ describe("with one reminder that hasn't been sent", function() {
                     .post('/2010-04-01/Accounts/test/Messages.json', "To=" + encodeURIComponent(number) + "&From=%2Btest&Body=" + encodeURIComponent(message2))
                     .reply(200, {"status":200}, { 'access-control-allow-credentials': 'true'});
 
-                sendReminders().then(function(res) {
-                    knex("reminders").where({ sent: true }).select("*").then(function (rows) {
-                        console.log(JSON.stringify(rows));
-                        expect(rows.length).to.equal(1);
-                        done();
-                    })
-                    .catch(done);
-                })
-                .catch(done);
+                return sendReminders()
             })
-            .catch(done);
+            .then(res => knex("reminders").where({ sent: true }).select("*"))
+            .then(function (rows) {
+                console.log(JSON.stringify(rows));
+                expect(rows.length).to.equal(1);
+            })
     });
 });
 
 describe("with two reminders that haven't been sent", function () {
-    beforeEach(function (done) {
-        manager.ensureTablesExist()
+    beforeEach(function () {
+        return manager.ensureTablesExist()
             .then(clearTable("cases"))
             .then(clearTable("reminders"))
             .then(loadCases([case1, case2]))
             .then(addTestReminders([reminder1, reminder2]))
-            .then(function() { done(); })
-            .catch(done);
     });
 
-    it("sends the correct info to Twilio and updates the reminder(s) to sent", function (done) {
+    it("sends the correct info to Twilio and updates the reminder(s) to sent", function () {
         nock('https://api.twilio.com:443')
             .filteringPath(function (path) {
                 return '/';
@@ -79,28 +71,20 @@ describe("with two reminders that haven't been sent", function () {
             .times(2)
             .reply(200, { "status": 200 }, { 'access-control-allow-credentials': 'true' });
 
-        knex("cases").update({ date: dates.now().add(1, 'days'), time: '02:00:00 PM', room: 'NEWROOM' })
-            .then(function () {
-                sendReminders().then(function (res) {
-                    knex("reminders").where({ sent: true }).select("*").then(function (rows) {
-                        console.log(JSON.stringify(rows));
-                        expect(rows.length).to.equal(2);
-                        done();
-                    })
-                    .catch(done);
-                })
-                .catch(done);
+        return knex("cases").update({ date: dates.now().add(1, 'days'), time: '02:00:00 PM', room: 'NEWROOM' })
+            .then(() => sendReminders())
+            .then(res => knex("reminders").where({ sent: true }).select("*"))
+            .then(function (rows) {
+                console.log(JSON.stringify(rows));
+                expect(rows.length).to.equal(2);
             })
-            .catch(done);
-    });
+        });
 });
 
 function loadCases(cases) {
     return function() {
-        return new Promise(function(resolve, reject) {
-            //console.log("Adding test case.");
-            knex("cases").insert(cases).then(resolve, reject);
-        });
+        //console.log("Adding test case.");
+        return knex("cases").insert(cases);
     };
 };
 
@@ -113,28 +97,18 @@ function addTestReminders(reminders) {
 }
 
 function addTestReminder(reminder) {
-    return new Promise(function(resolve, reject) {
-        //console.log("Adding Test Reminder");
-        db.addReminder({
-            caseId: reminder.caseId,
-            phone: reminder.phone,
-            originalCase: reminder.originalCase
-        }, function(err, data) {
-            if(err) {
-                reject(err);
-            } else {
-                resolve();
-            }
-        });
-    });
-};
+    //console.log("Adding Test Reminder");
+    return db.addReminder({
+        caseId: reminder.caseId,
+        phone: reminder.phone,
+        originalCase: reminder.originalCase
+    })
+}
 
 function clearTable(table) {
     return function() {
-        return new Promise(function(resolve, reject) {
-            //console.log("Clearing table: " + table);
-            knex(table).del().then(resolve, reject);
-        });
+        //console.log("Clearing table: " + table);
+        return knex(table).del()
     };
 };
 

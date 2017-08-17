@@ -21,7 +21,7 @@ describe("for a given date", function() {
             .then(addTestReminder)
             .then(function(){
                 done();
-            });   
+            });
     });
 
 
@@ -54,7 +54,7 @@ describe("for a given date", function() {
                             expect(results.length).to.equal(0);
                         }
                         resolve();
-                    });     
+                    });
             });
         };
 
@@ -87,43 +87,31 @@ function updateCaseDate(caseId, newDate) {
 
 function loadCases(cases) {
     return function() {
-        return new Promise(function(resolve, reject) {
-            //console.log("Adding test case.");
-            knex("cases").insert(cases).then(resolve, reject);
-        });
+        //console.log("Adding test case.");
+        return knex("cases").insert(cases);
     };
 };
 
 function addTestReminder() {
-    return new Promise(function(resolve, reject) {
        //console.log("Adding Test Reminder");
-        db.addReminder({
+       return  db.addReminder({
             caseId: TEST_CASE_ID,
             phone: "+12223334444",
             originalCase: turnerData()
-        }, function(err, data) {
-            if(err) {
-                reject(err);
-            } else {
-                resolve();
-            }
-        });
-    });
+        })
 };
 
 function clearTable(table) {
     return function() {
-        return new Promise(function(resolve, reject) {
-            //console.log("Clearing table: " + table);
-            knex(table).del().then(resolve, reject);
-        });
+        //console.log("Clearing table: " + table);
+         return  knex(table).del()
     };
 };
 
 function turnerData(v) {
-    return { 
+    return {
         //date: '27-MAR-15',
-        date: TEST_UTC_DATE,        
+        date: TEST_UTC_DATE,
         defendant: 'TURNER, FREDERICK T',
         room: 'CNVCRT',
         time: '01:00:00 PM',

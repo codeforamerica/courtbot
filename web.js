@@ -46,19 +46,16 @@ app.get('/', function (req, res) {
 app.get('/cases', function (req, res, next) {
   if (!req.query || !req.query.q) return res.send(400);
 
-  db.fuzzySearch(req.query.q, function (err, data) {
-    if (err) {
-      return next(err);
-    }
-    // Add readable dates, to avoid browser side date issues
+  db.fuzzySearch(req.query.q)
+  .then(data => {
     if (data) {
       data.forEach(function (d) {
         d.readableDate = dates.fromUtc(d.date).format('dddd, MMM Do');
       });
     }
-
     res.send(data);
-  });
+  })
+  .catch(err => next(err))
 });
 
 function askedReminderMiddleware(req, res, next) {
@@ -68,14 +65,15 @@ function askedReminderMiddleware(req, res, next) {
       req.match = req.session.match;
       return next();
     }
-    db.findAskedQueued(req.body.From, function (err, data) {  // Is this a response to a queue-triggered SMS? If so, "session" is stored in queue record
-      if (err) return next(err);
-      if (data.length == 1) { //Only respond if we found one queue response "session"
-        req.askedReminder = true;
-        req.match = data[0];
-      }
-      next();
-    });
+    db.findAskedQueued(req.body.From)
+      .then(data => {
+        if (data.length == 1) { //Only respond if we found one queue response "session"
+          req.askedReminder = true;
+          req.match = data[0];
+        }
+        next();
+      })
+      .catch(err => next(err))
   }
   else {
     next();
@@ -93,14 +91,13 @@ app.post('/sms', askedReminderMiddleware, function (req, res, next) {
         caseId: req.match.id,
         phone: req.body.From,
         originalCase: JSON.stringify(req.match)
-      }, function (err, data) {
-        if (err) {
-          return next(err);
-        }
+      })
+      .then(data => {
         twiml.sms('Sounds good. We will attempt to text you a courtesy reminder the day before your hearing date. Note that court schedules frequently change. You should always confirm your hearing date and time by going to ' + process.env.COURT_PUBLIC_URL);
         req.session.askedReminder = false;
         res.send(twiml.toString());
-      });
+      })
+      .catch(err => next(err))
     } else {
       twiml.sms('OK. You can always go to ' + process.env.COURT_PUBLIC_URL + ' for more information about your case and contact information.');
       req.session.askedReminder = false;
@@ -114,14 +111,13 @@ app.post('/sms', askedReminderMiddleware, function (req, res, next) {
       db.addQueued({
         citationId: req.session.citationId,
         phone: req.body.From
-      }, function (err, data) {
-        if (err) {
-          next(err);
-        }
+      })
+      .then(date =>{
         twiml.sms('OK. We will keep checking for up to ' + process.env.QUEUE_TTL_DAYS + ' days. You can always go to ' + process.env.COURT_PUBLIC_URL + ' for more information about your case and contact information.');
         req.session.askedQueued = false;
         res.send(twiml.toString());
-      });
+      })
+      .catch(err => next(err))
       return;
     } else if (isResponseNo(text)) {
       twiml.sms('OK. You can always go to ' + process.env.COURT_PUBLIC_URL + ' for more information about your case and contact information.');
