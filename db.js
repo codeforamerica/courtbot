@@ -7,7 +7,7 @@ var now = require("./utils/dates").now;
 exports.findCitation = function(citation) {
   // Postgres JSON search based on prebuilt index
   citation = escapeSQL(citation.toUpperCase().trim());
-  var citationSearch = knex.raw("'{\"" + citation + "\"}'::text[] <@ (json_val_arr(citations, 'id'))");
+  var citationSearch = knex.raw(`'{"${citation}"}'::text[] <@ (json_val_arr(citations, 'id'))`);
   return knex('cases').where(citationSearch).select();
 };
 
@@ -19,11 +19,11 @@ exports.findAskedQueued = function(phone) {
   // Filter for new ones. If too old, user probably missed the message (same timeframe as Twilio sessions - 4 hours). Return IFF one found. If > 1 found, skip
   return knex('queued')
     .where('phone',encryptedPhone).andWhere('asked_reminder',true)
-    .andWhereRaw('"asked_reminder_at" > current_timestamp - interval \'4 hours\'')
+    .andWhereRaw(`"asked_reminder_at" > current_timestamp - interval '4 hours'`)
     .select()
     .then(function(rows) {
       if (rows.length == 1) {
-        var citationSearch = knex.raw("'{\"" + rows[0].citation_id + "\"}'::text[] <@ (json_val_arr(citations, 'id'))");
+        var citationSearch = knex.raw(`'{"${rows[0].citation_id}"}'::text[] <@ (json_val_arr(citations, 'id'))`);
         return knex('queued')
           .where('queued_id', rows[0].queued_id)
           .update({'asked_reminder':false})
@@ -46,7 +46,7 @@ exports.fuzzySearch = function(str) {
 
   // Search for Citations
   var citation = escapeSQL(parts[0]);
-  var citationSearch = knex.raw("'{\"" + citation + "\"}'::text[] <@ (json_val_arr(citations, 'id'))");
+  var citationSearch = knex.raw(`'{"${citation}"}'::text[] <@ (json_val_arr(citations, 'id'))`);
   query = query.orWhere(citationSearch);
 
   // Limit to ten results

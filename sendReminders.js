@@ -23,8 +23,8 @@ module.exports.findReminders = function() {
   return knex('reminders')
     .where('sent', false)
     .join('cases', 'reminders.case_id', '=', 'cases.id')
-    .whereRaw('(date ("cases"."date" at time zone \'' + process.env.TIMEZONE + '\') <= date \'' + tomorrowMidnight + '\' at time zone \'' + process.env.TIMEZONE + '\') AND ' +
-        '(date ("cases"."date" at time zone \'' + process.env.TIMEZONE + '\') > date \'' + todayMidnight + '\' at time zone \'' + process.env.TIMEZONE + '\') ')
+    .whereRaw(`(date (cases.date at time zone '${process.env.TIMEZONE}') <= date '${tomorrowMidnight}' at time zone '${process.env.TIMEZONE}')
+                AND (date (cases.date at time zone  '${process.env.TIMEZONE}') > date '${todayMidnight}' at time zone '${process.env.TIMEZONE}')`)
     .select();
 };
 

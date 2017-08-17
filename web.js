@@ -84,7 +84,6 @@ function askedReminderMiddleware(req, res, next) {
 app.post('/sms', askedReminderMiddleware, function (req, res, next) {
   var twiml = new twilio.TwimlResponse();
   var text = cleanupText(req.body.Body.toUpperCase());
-
   if (req.askedReminder) {
     if (isResponseYes(text)) {
       db.addReminder({
@@ -128,7 +127,7 @@ app.post('/sms', askedReminderMiddleware, function (req, res, next) {
   }
 
   db.findCitation(text)
-  .then( function(results) {
+  .then(function(results) {
     if (!results || results.length === 0 || results.length > 1) {
       var correctLengthCitation = 6 <= text.length && text.length <= 25;
       if (correctLengthCitation) {
