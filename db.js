@@ -76,7 +76,7 @@ exports.addQueued = function(data, callback) {
 };
 
 var escapeSQL = function(val) {
-  val.replace(/[\0\n\r\b\t\\\'\"\x1a]/g, function(s) {
+  val = val.replace(/[\0\n\r\b\t\\\'\"\x1a]/g, function(s) {
     switch(s) {
       case "\0": return "\\0";
       case "\n": return "\\n";
