@@ -1,4 +1,6 @@
 require("dotenv").config();
+var db_connections = require('./db_connections');
+
 var Promise = require('bluebird');
 var promises = require("../promises"),
 	callFn = promises.callFn,
@@ -13,28 +15,18 @@ var KNEX;
 module.exports = {
 	knex: function() {
 		if(!KNEX) {
-			KNEX = require("knex")({
-				client: "pg",
-				connection: process.env.DATABASE_URL,
-				pool: {
-					afterCreate: function(connection, callback) {
-						connection.query("SET TIME ZONE 'UTC';", function(err) {
-							callback(err, connection);
-						});
-					}
-				}
-			});
+			KNEX = require("knex")(db_connections[process.env.NODE_ENV || 'development']);
 		}
-
 		return KNEX;
 	},
 
+
 	/**
-	 * Ensure all necessary tables exist.  
-	 * 
+	 * Ensure all necessary tables exist.
+	 *
 	 * Note:  create logic only creates if a table does not exists, so it is enough to just
 	 * 			call createTable() for each table.
-	 * 
+	 *
 	 * @return {Promise} Promise to ensure all courtbot tables exist.
 	 */
 	ensureTablesExist: function() {
@@ -43,7 +35,7 @@ module.exports = {
 
 	/**
 	 * Drop all courtbot tables.
-	 * 
+	 *
 	 * @return {Promise} Promise to drop all necessary tables.
 	 */
 	dropAll: function() {
@@ -52,7 +44,7 @@ module.exports = {
 
 	/**
 	 * Create all of the tables/indexes that the courtbot application depends on.
-	 * 
+	 *
 	 * @return {Promise} promise to create all tables needed by courtbot
 	 */
 	createAll: function() {
@@ -61,7 +53,7 @@ module.exports = {
 
 	/**
 	 * Drop specified table
-	 * 
+	 *
 	 * @param  {String} table name of the table to be dropped.
 	 * @return {Promise}	Promise to drop the specified table.
 	 */
@@ -76,7 +68,7 @@ module.exports = {
 
 	/**
 	 * Create specified table if it does not already exist.
-	 * 
+	 *
 	 * @param  {String} table [description]
 	 * @param  {function} table (optional) function to be performed after table is created.
 	 * @return {Promise}  Promise to create table if it does not exist.
@@ -97,19 +89,19 @@ module.exports = {
 							.then(function(){
 								console.log("Table created:  \"" + table + "\"");
 								resolve();
-							});	
+							});
 					}
 				});
-			}				
+			}
 		});
 	},
 
 	/**
 	 * Insert chunk of data to table
-	 * 
+	 *
 	 * @param  {String} table Table to insert data to.
 	 * @param  {Array} chunk Array of rows to insert into the table.
-	 * @return {void} 
+	 * @return {void}
 	 */
 	insertTableChunk: function(table, chunk) {
 		return module.exports.knex()(table).insert(chunk);
@@ -117,8 +109,8 @@ module.exports = {
 
 	/**
 	 * Manually close database connection.
-	 * 
-	 * @return {void} 
+	 *
+	 * @return {void}
 	 */
 	closeConnection: function() {
 		return module.exports.knex().client.pool.destroy();
@@ -127,8 +119,8 @@ module.exports = {
 
 /**
  * Set of instructions for creating tables needed by the courtbot application.
- * 
- * @type {Object} 
+ *
+ * @type {Object}
  */
 var _createTable = {
 	cases: function(cb) {
@@ -143,7 +135,7 @@ var _createTable = {
 				table.json('citations');
 			})
 			.then(callFn(_postCreateCallback, cb))
-			.then(_createIndexForCases)				
+			.then(_createIndexForCases)
 			.then(resolve);
 		});
 	},
@@ -180,9 +172,9 @@ var _createTable = {
 };
 
 /**
- * Callback function for once a table has been created.  Typically used for bulk insert of data prior to 
+ * Callback function for once a table has been created.  Typically used for bulk insert of data prior to
  * indexing the table, etc...
- * 
+ *
  * @param  {Function} cb function to be called
  * @return {Promise}	promise to execute callback function
  */
@@ -199,7 +191,7 @@ var _postCreateCallback = function(cb) {
 /**
  * 1.) Create indexing function for cases table using this strategy: http://stackoverflow.com/a/18405706
  * 2.) Drop and recreate index for cases table.
- * 
+ *
  * @return {Promise} Promise to create indexing function for and index for cases table.
  */
 var _createIndexForCases = function() {
