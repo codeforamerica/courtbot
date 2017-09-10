@@ -53,14 +53,12 @@ describe("with one reminder that hasn't been sent", function() {
 });
 
 describe("with three reminders (including one duplicate) that haven't been sent", function () {
-    beforeEach(function (done) {
-        manager.ensureTablesExist()
+    beforeEach(function () {
+        return manager.ensureTablesExist()
             .then(clearTable("cases"))
             .then(clearTable("reminders"))
             .then(loadCases([case1, case2]))
             .then(addTestReminders([reminder1, reminder2, reminder2_dup]))
-            .then(function() { done(); })
-            .catch(done);
     });
 
     it("sends the correct info to Twilio and updates the reminder(s) to sent", function () {
@@ -72,19 +70,14 @@ describe("with three reminders (including one duplicate) that haven't been sent"
             .times(2)
             .reply(200, { "status": 200 }, { 'access-control-allow-credentials': 'true' });
 
-        knex("cases").update({ date: dates.now().add(1, 'days'), time: '02:00:00 PM', room: 'NEWROOM' })
-            .then(function () {
-                sendReminders().then(function (res) {
-                    knex("reminders").where({ sent: true }).select("*").then(function (rows) {
-                        console.log(JSON.stringify(rows));
-                        expect(rows.length).to.equal(3);
-                        done();
-                    })
-                    .catch(done);
-                })
-                .catch(done);
-            })
+        return knex("cases").update({ date: dates.now().add(1, 'days'), time: '02:00:00 PM', room: 'NEWROOM' })
+        .then(() =>  sendReminders())
+        .then(res =>  knex("reminders").where({ sent: true }).select("*"))
+        .then(rows => {
+            console.log(JSON.stringify(rows));
+            expect(rows.length).to.equal(3);
         });
+    });
 });
 
 function loadCases(cases) {
