@@ -130,7 +130,7 @@ var _createTable = {
 				table.string('room', 100);
 				table.jsonb('citations');
 			})
-			.then(_createIndexForCases)
+			.then(() => _createIndexForCases())
 
 	},
 	queued: function() {
@@ -156,8 +156,6 @@ var _createTable = {
 	}
 };
 
-
-
 /**
  * 1.) Create indexing function for cases table using this strategy: http://stackoverflow.com/a/18405706
  * 2.) Drop and recreate index for cases table.
@@ -165,16 +163,6 @@ var _createTable = {
  * @return {Promise} Promise to create indexing function for and index for cases table.
  */
 var _createIndexForCases = function() {
-    /*
-    var cases_indexing_function = [
-			'CREATE OR REPLACE FUNCTION json_val_arr(_j json, _key text)',
-			'  RETURNS text[] AS',
-			"'",
-			'SELECT array_agg(elem->>_key)',
-			'FROM   json_array_elements(_j) AS x(elem)',
-			"'",
-			'  LANGUAGE sql IMMUTABLE;'].join('\n');
-    */
 		return module.exports.knex().raw("DROP INDEX IF EXISTS citation_ids_gin_idx")
-			   .then(module.exports.knex().raw("CREATE INDEX citation_ids_gin_idx ON cases USING GIN (citations jsonb_path_ops)") )
+			   .then(() => module.exports.knex().raw("CREATE INDEX citation_ids_gin_idx ON cases USING GIN (citations jsonb_path_ops)") )
 };
