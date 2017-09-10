@@ -52,13 +52,15 @@ describe("with one reminder that hasn't been sent", function() {
     });
 });
 
-describe("with two reminders that haven't been sent", function () {
-    beforeEach(function () {
-        return manager.ensureTablesExist()
+describe("with three reminders (including one duplicate) that haven't been sent", function () {
+    beforeEach(function (done) {
+        manager.ensureTablesExist()
             .then(clearTable("cases"))
             .then(clearTable("reminders"))
             .then(loadCases([case1, case2]))
-            .then(addTestReminders([reminder1, reminder2]))
+            .then(addTestReminders([reminder1, reminder2, reminder2_dup]))
+            .then(function() { done(); })
+            .catch(done);
     });
 
     it("sends the correct info to Twilio and updates the reminder(s) to sent", function () {
@@ -70,12 +72,17 @@ describe("with two reminders that haven't been sent", function () {
             .times(2)
             .reply(200, { "status": 200 }, { 'access-control-allow-credentials': 'true' });
 
-        return knex("cases").update({ date: dates.now().add(1, 'days'), time: '02:00:00 PM', room: 'NEWROOM' })
-            .then(() => sendReminders())
-            .then(res => knex("reminders").where({ sent: true }).select("*"))
-            .then(function (rows) {
-                console.log(JSON.stringify(rows));
-                expect(rows.length).to.equal(2);
+        knex("cases").update({ date: dates.now().add(1, 'days'), time: '02:00:00 PM', room: 'NEWROOM' })
+            .then(function () {
+                sendReminders().then(function (res) {
+                    knex("reminders").where({ sent: true }).select("*").then(function (rows) {
+                        console.log(JSON.stringify(rows));
+                        expect(rows.length).to.equal(3);
+                        done();
+                    })
+                    .catch(done);
+                })
+                .catch(done);
             })
         });
 });
@@ -136,10 +143,17 @@ var reminder1 = {
     caseId: case1.id,
     phone: "+12223334444",
     originalCase: case1
-}
+};
 
 var reminder2 = {
     caseId: case2.id,
     phone: "+12223334445",
     originalCase: case2
-}
+};
+
+var reminder2_dup = {
+    caseId: case2.id,
+    phone: "+12223334445",
+    originalCase: case2
+};
+

@@ -288,9 +288,9 @@ describe("POST /sms", function() {
               if (err) {
                 return done(err);
               }
-              expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Found a case for Frederick Turner scheduled on Mon, Mar 2nd at 1:00 PM, at CNVCRT. Can&apos;t set reminders for hearings happening the same day.</Sms></Response>');
+              expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Found a case for Frederick Turner scheduled today at 1:00 PM, at CNVCRT. Would you like a courtesy reminder the day before a future hearing? (reply YES or NO)</Sms></Response>');
               expect(getConnectCookie().askedQueued).to.equal(undefined);
-              expect(getConnectCookie().askedReminder).to.equal(undefined);
+              expect(getConnectCookie().askedReminder).to.equal(true);
               expect(getConnectCookie().citationId).to.equal(undefined);
               done();
             });
@@ -305,9 +305,9 @@ describe("POST /sms", function() {
               if (err) {
                 return done(err);
               }
-              expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Found a case for Frederick Turner scheduled on Mon, Mar 2nd at 12:00 PM, at CNVCRT. It appears your hearing has already occurred.</Sms></Response>');
+              expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Found a case for Frederick Turner scheduled today at 12:00 PM, at CNVCRT. Would you like a courtesy reminder the day before a future hearing? (reply YES or NO)</Sms></Response>');
               expect(getConnectCookie().askedQueued).to.equal(undefined);
-              expect(getConnectCookie().askedReminder).to.equal(undefined);
+              expect(getConnectCookie().askedReminder).to.equal(true);
               expect(getConnectCookie().citationId).to.equal(undefined);
               done();
             });
@@ -322,9 +322,9 @@ describe("POST /sms", function() {
               if (err) {
                 return done(err);
               }
-              expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Found a case for Frederick Turner scheduled on Mon, Mar 2nd at 10:00 AM, at CNVCRT. It appears your hearing has already occurred.</Sms></Response>');
+              expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>Found a case for Frederick Turner scheduled today at 10:00 AM, at CNVCRT. Would you like a courtesy reminder the day before a future hearing? (reply YES or NO)</Sms></Response>');
               expect(getConnectCookie().askedQueued).to.equal(undefined);
-              expect(getConnectCookie().askedReminder).to.equal(undefined);
+              expect(getConnectCookie().askedReminder).to.equal(true);
               expect(getConnectCookie().citationId).to.equal(undefined);
               done();
             });
