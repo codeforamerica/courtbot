@@ -175,6 +175,6 @@ var _createIndexForCases = function() {
 			'  LANGUAGE sql IMMUTABLE;'].join('\n');
 
 		return module.exports.knex().raw(cases_indexing_function)
-			.then(module.exports.knex().raw("DROP INDEX IF EXISTS citation_ids_gin_idx"))
-			.then(module.exports.knex().raw("CREATE INDEX citation_ids_gin_idx ON cases USING GIN (json_val_arr(citations, 'id'))"))
+			.then(() => module.exports.knex().raw("DROP INDEX IF EXISTS citation_ids_gin_idx"))
+			.then(() => module.exports.knex().raw("CREATE INDEX citation_ids_gin_idx ON cases USING GIN (json_val_arr(citations, 'id'))"))
 };
