@@ -7,7 +7,8 @@ var now = require("./utils/dates").now;
 exports.findCitation = function(citation) {
   // Postgres JSON search based on prebuilt index
   citation = escapeSQL(citation.toUpperCase().trim());
-  var citationSearch = knex.raw(`'{"${citation}"}'::text[] <@ (json_val_arr(citations, 'id'))`);
+  //var citationSearch = knex.raw(`'{"${citation}"}'::text[] <@ (json_val_arr(citations, 'id'))`);
+  var citationSearch = knex.raw(`citations @> '[{"id": "${citation}"}]' `);
   return knex('cases').where(citationSearch).select();
 };
 
@@ -23,7 +24,9 @@ exports.findAskedQueued = function(phone) {
     .select()
     .then(function(rows) {
       if (rows.length == 1) {
-        var citationSearch = knex.raw(`'{"${rows[0].citation_id}"}'::text[] <@ (json_val_arr(citations, 'id'))`);
+        //var citationSearch = knex.raw(`'{"${rows[0].citation_id}"}'::text[] <@ (json_val_arr(citations, 'id'))`);
+
+        var citationSearch = knex.raw(`citations @> '[{"id": "${rows[0].citation_id}"}]' `);
         return knex('queued')
           .where('queued_id', rows[0].queued_id)
           .update({'asked_reminder':false})
@@ -46,7 +49,8 @@ exports.fuzzySearch = function(str) {
 
   // Search for Citations
   var citation = escapeSQL(parts[0]);
-  var citationSearch = knex.raw(`'{"${citation}"}'::text[] <@ (json_val_arr(citations, 'id'))`);
+ // var citationSearch = knex.raw(`'{"${citation}"}'::text[] <@ (json_val_arr(citations, 'id'))`);
+  var citationSearch = knex.raw(`citations @> '[{"id": "${citation}"}]' `);
   query = query.orWhere(citationSearch);
 
   // Limit to ten results
