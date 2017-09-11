@@ -76,5 +76,5 @@ exports.addQueued = function(data, callback) {
 };
 
 var escapeSQL = function(val) {
-  return val.replace(/\W+/g, "")
+  return val.replace(/[^A-Za-z0-9\-]/g, "")
 };
