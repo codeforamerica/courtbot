@@ -605,9 +605,7 @@ function rawTurnerDataAsObject(v,d) {
 }
 
 function getConnectCookie() {
-  var sessionCookie = _.find(sess.cookies, function(cookie) {
-    return _.has(cookie, 'connect.sess');
-  });
+  var sessionCookie = sess.cookies.find(cookie =>  cookie.hasOwnProperty('connect.sess'))
   var cookie = sessionCookie['connect.sess'];
   return cookieParser.JSONCookie(cookieParser.signedCookie(cookie, process.env.COOKIE_SECRET));
 }
