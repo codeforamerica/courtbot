@@ -1,23 +1,23 @@
+'use strict';
 // setup ENV dependencies
-
 require('dotenv').config();
-var fs = require("fs");
-var expect = require("chai").expect;
-var nock = require('nock');
-//var _ = require("underscore");
-var cookieParser = require("cookie-parser");
-var crypto = require('crypto');
-var tk = require("timekeeper");
-var Session = require('supertest-session')({
+
+const fs = require("fs");
+const expect = require("chai").expect;
+const nock = require('nock');
+const cookieParser = require("cookie-parser");
+const crypto = require('crypto');
+const tk = require("timekeeper");
+const Session = require('supertest-session')({
   app: require('../web')
 });
 
-var manager = require("../utils/db/manager");
-var knex = manager.knex();
-var dates = require("../utils/dates");
-var moment = require("moment-timezone");
+const manager = require("../utils/db/manager");
+const knex = manager.knex();
+const dates = require("../utils/dates");
+const moment = require("moment-timezone");
 
-var TEST_UTC_DATE = "2015-03-27T13:00:00" + dates.timezoneOffset("2015-03-27");
+const TEST_UTC_DATE = "2015-03-27T13:00:00" + dates.timezoneOffset("2015-03-27");
 
 var sess;
 
