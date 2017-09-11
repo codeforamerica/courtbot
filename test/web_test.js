@@ -4,7 +4,7 @@ require('dotenv').config();
 var fs = require("fs");
 var expect = require("chai").expect;
 var nock = require('nock');
-var _ = require("underscore");
+//var _ = require("underscore");
 var cookieParser = require("cookie-parser");
 var crypto = require('crypto');
 var tk = require("timekeeper");
