@@ -152,20 +152,20 @@ app.post('/sms', askedReminderMiddleware, function (req, res, next) {
       var name = cleanupName(match.defendant);
       var datetime = dates.fromUtc(match.date);
 
-      var caseInfo = 'Found a case for ' + name + ' scheduled on ' + datetime.format("ddd, MMM Do") + ' at ' + datetime.format("h:mm A") + ', at ' + match.room + '.';
+      var caseInfo = 'Found a case for ' + name + ' scheduled ' + (datetime.isSame(dates.now(), 'd') ? 'today' : 'on ' + datetime.format("ddd, MMM Do")) + ' at ' + datetime.format("h:mm A") + ', at ' + match.room + '.';
 
-      if ((datetime.diff(dates.now()) > 0) && (datetime.isSame(dates.now(), 'd'))) {
-        twiml.sms(caseInfo + " Can\'t set reminders for hearings happening the same day.");
+      if ((datetime.diff(dates.now()) > 0) && (datetime.isSame(dates.now(), 'd'))) {   // Hearing today
+        twiml.sms(caseInfo + " Would you like a courtesy reminder the day before a future hearing? (reply YES or NO)");
       } else {
-        if (datetime.diff(dates.now()) <= 0) {
-          twiml.sms(caseInfo + " It appears your hearing has already occurred.");
+        if (datetime.diff(dates.now()) <= 0) {  // Hearing already happened
+          twiml.sms(caseInfo + " Would you like a courtesy reminder the day before a future hearing? (reply YES or NO)");
         } else {
           twiml.sms('Found a case for ' + name + ' scheduled on ' + datetime.format("ddd, MMM Do") + ' at ' + datetime.format("h:mm A") + ', at ' + match.room + '. Would you like a courtesy reminder the day before? (reply YES or NO)');
-
-          req.session.match = match;
-          req.session.askedReminder = true;
         }
       }
+
+      req.session.match = match;
+      req.session.askedReminder = true;
     }
 
     res.send(twiml.toString());
