@@ -21,7 +21,7 @@ app.use(express.cookieSession());
 
 // Serve testing page on which you can impersonate Twilio
 // (but not in production)
-if (app.settings.env === 'development') {
+if (app.settings.env === 'development' || app.settings.env === 'test') {
   app.use(express.static('public'))
 }
 

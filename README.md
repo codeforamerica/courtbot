@@ -11,7 +11,7 @@ Specifically, the twilio features include:
 
 First, install [node](https://github.com/codeforamerica/howto/blob/master/Node.js.md), [postgres](https://github.com/codeforamerica/howto/blob/master/PostgreSQL.md).
 
-Then clone the repository into a folder called courtbot: 
+Then clone the repository into a folder called courtbot:
 
 ```console
 git clone git@github.com:codeforanchorage/courtbot.git courtbot
@@ -25,10 +25,11 @@ Install node dependencies
 npm install
 ```
 
-Create a new PostgreSQL database.
+Create a new PostgreSQL database and a database to run tests.
 
 ```
 createdb courtbotdb
+createdb courtbotdb_test
 ```
 
 Define a new PostgreSQL user account.
