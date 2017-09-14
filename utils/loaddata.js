@@ -9,44 +9,106 @@ require('dotenv').config();
 var manager = require("./db/manager");
 var moment = require("moment-timezone");
 
+// main function that performs the entire load process
+function loadData() {
+  // determine what urls to load and how to extract them
+  // example DATA_URL=http://courtrecords.alaska.gov/MAJIC/sandbox/acs_mo_event.csv
+  // example DATA_URL=http://courtrecords.../acs_mo_event.csv|extractCourtData,http://courtrecords.../acs_cr_event.csv|extractCriminalCases
+  let files = process.env.DATA_URL.split(',');
+  // queue each file and extraction as a promise
+  let queue = [];
+  files.forEach((item) => {
+    let [url, extractor] = item.split('|');
+    if (url.trim() != '') {
+      // use the specified extractor name to determine which extraction method to use
+      // default to the original extraction method
+      if (extractor) {
+        queue.push(getCases(url, (extractor == 'extractCriminalCases' ?  extractCriminalCases : extractCourtData)));
+      } else {
+        queue.push(getCases(url, extractCourtData));
+      }
+    }
+  });
 
-function loadData (){
-  return getCases()
-  .then(cases => recreateDB(cases))
+  return Promise.all(queue)
+  .then(results => [].concat.apply([], results))
+  .then(cases => persistCases(cases))
   .then(() => {
-    console.log('Database recreated! All systems are go.')
+    console.log('Data loaded! All systems are go.')
     return true;
   })
 }
 
-function getCases () {
-  var url = process.env.DATA_URL;
-
-  console.log('Downloading latest CSV file...');
+// fetch the data from the url, parse it and extract it.
+function getCases (url, extractionHandler) {
+  // get the basename of the file for logging
+  let file = url.split('/').reverse()[0];
 
   return new Promise(function (resolve, reject) {
+    console.log(`Downloading CSV file ${file}...`);
     request.get(url, function(req, res) {
       if (res.statusCode == 404) {
         console.log("404 page not found: ", url);
-        reject("404 page not found");
+        reject(`404 page not found ${url}`);
       } else {
-
-        console.log('Parsing CSV File...');
-
+        console.log(`Parsing CSV file ${file}...`);
         parse(res.body, {delimiter: ','}, function(err, rows) {
           if (err) {
-            console.log('Unable to parse file: ', url);
+            console.log(`Unable to parse file: ${url}`);
             console.log(err);
             return reject(err);
           }
-          console.log('Extracting court case information...');
-          var cases = extractCourtData(rows);
-          resolve(cases)
+
+          console.log(`  extracting information from ${rows.length} rows from ${file}...`);
+          let cases = extractionHandler(rows);
+          console.log(`  produced ${cases.length} case records from ${file}...`);
+          resolve(cases);
         });
       }
     });
   });
 };
+
+// Criminal cases have a case number instead of a citation number, and may have multiple
+// hearing types possibly on different days or in different locations.  So instead of
+// condensing the records as the extractCourtData method does, we are going to keep it
+// as-is, but skip full duplicate rows.
+function extractCriminalCases(rows) {
+  var cases = [];
+  var casesMap = {};
+  rows.forEach(function(c) {
+    var newHearing = {
+      id: c[5],
+      description: c[6],
+      location: c[5].substr(0,3)
+    };
+
+    // If we want to test reminders, set all dates to tomorrow
+    if (process.env.TEST_TOMORROW_DATES === "1") {
+      let before = c[0];
+      c[0] = moment().add(1, "days").format("MM/DD/YYYY");
+      console.log(`Before: ${before}, After: ${c[0]}`);
+    }
+
+    var newCase = {
+      date: dates.fromDateAndTime(c[0], c[4]),
+      defendant: c[2] + " " + c[1],
+      room: c[3],
+      time: c[4],
+      citations: [ newHearing ]
+    };
+
+    // these are what make a case entry unique
+    newCase.id = sha1(newCase.defendant + newCase.date + newHearing.id + newHearing.description);
+    // exclude duplicates
+    if (!casesMap[newCase.id]) {
+      cases.push(newCase);
+      casesMap[newCase.id] = 1;
+    }
+  });
+
+  return cases;
+}
 
 /**
  *  Citation data provided in CSV has a few tricky parsing problems. The
@@ -58,7 +120,7 @@ function getCases () {
  *  3. Cases that use identical citatiation numbers. Typos when put into the system.
  *
  * @param  {array} rows - Citation records
- * @return {date} cases - Cases derrived from citation data
+ * @return {array} cases - Cases derrived from citation data
  */
 var extractCourtData = function(rows) {
   var cases = [];
@@ -93,7 +155,7 @@ var extractCourtData = function(rows) {
 
     // Since no values here are actually unique, we create some lookups
     var citationLookup = newCitation.id + newCitation.violation;
-    var caseLookup = newCase.id = sha1(newCase.defendant + newCitation.location.slice(0, 6));
+    var caseLookup = newCase.id = sha1(newCase.defendant + newCitation.location.slice(0, 3));
 
     // The checks below handle the multiple citations in the dataset issue.
     // See above for a more detailed explanation.
@@ -134,7 +196,7 @@ var insertCases = function(cases) {
 };
 
 
-var recreateDB = function(cases) {
+function persistCases(cases) {
 /* note: this creates the table (which also creates and index) then inserts the data,
    according to (https://www.postgresql.org/docs/9.2/static/populate.html)
    this may be slower than inserting bulk data before creating a new index. But, this is much cleaner */
@@ -142,8 +204,7 @@ var recreateDB = function(cases) {
     .then(() => manager.createTable("cases"))
     .then(() => insertCases(cases))
     .then(manager.closeConnection)
-
-  };
+};
 
 var chunk = function(arr, len) {
   var chunks = [];
