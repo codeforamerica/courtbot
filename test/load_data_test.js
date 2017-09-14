@@ -47,7 +47,7 @@ describe('Loading of Data', () => {
 
     it('hits the error callback with a 404 message', () => {
       return loadData(MOCKED_DATA_URL).then(assert.failed, (err) => {
-        expect(err).to.include('404 page not found');
+        expect(err.message).to.include('404 page not found');
       });
     });
   });
