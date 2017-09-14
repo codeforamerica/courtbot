@@ -9,12 +9,19 @@ require('dotenv').config();
 var manager = require("./db/manager");
 var moment = require("moment-timezone");
 
-// main function that performs the entire load process
-function loadData() {
+/**
+* Main function that performs the entire load process.
+*
+* @param  {string} dataUrls - list of data urls to load along with an optional
+*   extractor to use on each file.  Format is url|extractor,...  The default
+*   extractor is extractCourtData.  If this parameter is missing, then the
+*   environment variable DATA_URL is used instead.
+*/
+function loadData(dataUrls) {
   // determine what urls to load and how to extract them
   // example DATA_URL=http://courtrecords.alaska.gov/MAJIC/sandbox/acs_mo_event.csv
   // example DATA_URL=http://courtrecords.../acs_mo_event.csv|extractCourtData,http://courtrecords.../acs_cr_event.csv|extractCriminalCases
-  let files = process.env.DATA_URL.split(',');
+  let files = (dataUrls || process.env.DATA_URL).split(',');
   // queue each file and extraction as a promise
   let queue = [];
   files.forEach((item) => {

@@ -46,7 +46,7 @@ describe('Loading of Data', () => {
     });
 
     it('hits the error callback with a 404 message', () => {
-      return loadData().then(assert.failed, (err) => {
+      return loadData(MOCKED_DATA_URL).then(assert.failed, (err) => {
         expect(err).to.include('404 page not found');
       });
     });
@@ -63,20 +63,20 @@ describe('Loading of Data', () => {
     });
 
     it('hits the success callback correctly', () => {
-      return loadData()
+      return loadData(MOCKED_DATA_URL)
         .then((resp) => { expect(resp).to.equal(true); });
     });
 
     it('creates 55 cases', () => {
       // 38 lines, two sets of duplicates in first file
       // 20 lines, one set of duplicates in second file
-      return loadData()
+      return loadData(MOCKED_DATA_URL)
         .then(() => knex('cases').count('* as count'))
         .then(rows => expect(rows[0].count).to.equal('55'));
     });
 
     it('properly manages a single defendant', () => {
-      return loadData()
+      return loadData(MOCKED_DATA_URL)
         .then(() => knex('cases').where({ defendant: 'Christopher Dunlap' }))
         .then((rows) => {
           expect(rows[0].defendant).to.equal('Christopher Dunlap');
@@ -87,7 +87,7 @@ describe('Loading of Data', () => {
     });
 
     it('properly manages a duplicate defendant', () => {
-      return loadData()
+      return loadData(MOCKED_DATA_URL)
         .then(() => knex('cases').where({ defendant: 'Michael Guthrie' }))
         .then((rows) => {
           expect(rows[0].defendant).to.equal('Michael Guthrie');
@@ -99,7 +99,7 @@ describe('Loading of Data', () => {
     });
 
     it('properly manages a criminal case', () => {
-      return loadData()
+      return loadData(MOCKED_DATA_URL)
         .then(() => knex('cases').where({ defendant: 'Tyler Totland' }))
         .then((rows) => {
           for (let i = 0; i < 2; i++) {
