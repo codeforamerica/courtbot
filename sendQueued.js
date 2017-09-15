@@ -50,7 +50,7 @@ function processCitationMessage(queued) {
     if (queued.citationFound) {
       var name = strings.scrubName(queued.relatedCitation.defendant),
           datetime = dates.fromUtc(queued.relatedCitation.date);
-      return messages.send(phone, process.env.TWILIO_PHONE_NUMBER, messages.greetingMessage(name, datetime, queued.relatedCitation.room))
+      return messages.send(phone, process.env.TWILIO_PHONE_NUMBER, messages.foundItAskForReminder(true, name, datetime, queued.relatedCitation.room))
         .then(() => updateSentWithReminder(queued.queuedMessage.queued_id))
 
     } else if (dates.hasSatTooLong(queued.queuedMessage.created_at)) {
