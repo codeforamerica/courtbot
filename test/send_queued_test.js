@@ -5,7 +5,7 @@ process.env.TWILIO_AUTH_TOKEN = "token";
 process.env.TWILIO_PHONE_NUMBER = "+test";
 
 require('dotenv').config();
-var sendQueued = require("../sendQueued.js");
+var sendQueued = require("../sendQueued.js").sendQueued;
 var expect = require("chai").expect;
 var assert = require("chai").assert;
 var nock = require('nock');
