@@ -1,5 +1,6 @@
 require("dotenv").config();
 var dates = require("../dates");
+var db_connections = require('./db_connections');
 
 var TIMESTAMPTZ_OID = 1184;
 require("pg").types.setTypeParser(TIMESTAMPTZ_OID, dates.isoToUtc);
@@ -9,21 +10,11 @@ var KNEX;
 module.exports = {
 	knex: function() {
 		if(!KNEX) {
-			KNEX = require("knex")({
-				client: "pg",
-				connection: process.env.DATABASE_URL,
-				pool: {
-					afterCreate: function(connection, callback) {
-						connection.query("SET TIME ZONE 'UTC';", function(err) {
-							callback(err, connection);
-						});
-					}
-				}
-			});
+			KNEX = require("knex")(db_connections[process.env.NODE_ENV || 'development']);
 		}
-
 		return KNEX;
 	},
+
 
 	/**
 	 * Ensure all necessary tables exist.

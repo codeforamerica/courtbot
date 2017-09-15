@@ -4,7 +4,7 @@
   "description": "Deliver simple court data via JSON or SMS.",
   "main": "web.js",
   "scripts": {
-    "test": "mocha test",
+    "test": "NODE_ENV=test mocha test",
     "start": "node web.js",
     "dbsetup": "node utils/createQueuedTable; node utils/createRemindersTable",
     "loaddata": "node runners/load.js"

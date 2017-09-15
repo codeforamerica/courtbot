@@ -11,7 +11,7 @@ Specifically, the twilio features include:
 
 First, install [node](https://github.com/codeforamerica/howto/blob/master/Node.js.md), [postgres](https://github.com/codeforamerica/howto/blob/master/PostgreSQL.md).
 
-Then clone the repository into a folder called courtbot: 
+Then clone the repository into a folder called courtbot:
 
 ```console
 git clone git@github.com:codeforanchorage/courtbot.git courtbot
@@ -25,10 +25,11 @@ Install node dependencies
 npm install
 ```
 
-Create a new PostgreSQL database.
+Create a new PostgreSQL database and a database to run tests.
 
 ```
 createdb courtbotdb
+createdb courtbotdb_test
 ```
 
 Define a new PostgreSQL user account.
@@ -71,6 +72,7 @@ heroku config:set TWILIO_PHONE_NUMBER=<twilio phone number>
 heroku config:set PHONE_ENCRYPTION_KEY=<random string>
 heroku config:set DATA_URL=<court records csv location>
 heroku config:set COURT_PUBLIC_URL=<where to send people for more info>
+heroku config:set COURT_NAME=<name of court system>
 heroku config:set QUEUE_TTL_DAYS=<# days to keep a citation on the search queue>
 heroku config:set TIMEZONE=<standard timezone ex. America/Anchorage>
 heroku config:set TEST_TOMORROW_DATES=<1 if you want all court dates to be tomorrow to test reminders>
