@@ -75,5 +75,6 @@ function sendReminders() {
 }
 
 module.exports = {
+  findReminders,
   sendReminders,
 };
