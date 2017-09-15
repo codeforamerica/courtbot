@@ -5,7 +5,7 @@ process.env.TWILIO_AUTH_TOKEN = "token";
 process.env.TWILIO_PHONE_NUMBER = "+test";
 
 require('dotenv').config();
-var sendQueued = require("../sendQueued.js");
+var sendQueued = require("../sendQueued.js").sendQueued;
 var expect = require("chai").expect;
 var assert = require("chai").assert;
 var nock = require('nock');
@@ -31,7 +31,7 @@ describe("with 2 valid queued cases (same citation)", function() {
 
   it("sends the correct info to Twilio and updates the queued to sent", function() {
     var number = "+12223334444";
-    var msg = "Hello from the Alaska State Court System. We found a case for Frederick Turner scheduled on Fri, Mar 27th at 1:00 PM, at CNVCRT. Would you like a courtesy reminder the day before? (reply YES or NO)";
+    var msg = `Hello from the ${process.env.COURT_NAME}. We found a case for Frederick Turner scheduled on Fri, Mar 27th at 1:00 PM, at CNVCRT. Would you like a courtesy reminder the day before? (reply YES or NO)`;
 
     nock('https://api.twilio.com:443')
         .post('/2010-04-01/Accounts/test/Messages.json', "To=" + encodeURIComponent(number) + "&From=%2Btest&Body=" + encodeURIComponent(msg))
@@ -71,7 +71,7 @@ describe("with a queued non-existent case", function() {
 
   it("sends a failure sms after QUEUE_TTL days", function() {
     var number = "+12223334444";
-    var message = "We haven\'t been able to find your court case. You can go to " + process.env.COURT_PUBLIC_URL + " for more information. - Alaska State Court System";
+    var message = `We haven't been able to find your court case. You can go to " + process.env.COURT_PUBLIC_URL + " for more information. - ${process.env.COURT_NAME}`;
     var mockCreatedDate = now().subtract(parseInt(process.env.QUEUE_TTL_DAYS) + 2, 'days');
 
     nock('https://api.twilio.com:443')
