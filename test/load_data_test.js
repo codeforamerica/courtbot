@@ -1,6 +1,10 @@
 /* eslint "no-console": "off" */
+
+// see https://mochajs.org/#arrow-functions
 /* eslint-env mocha */
 /* eslint arrow-body-style: ["warn", "as-needed"] */
+/* eslint func-names: "off" */
+/* eslint prefer-arrow-callback: "off" */
 
 require('dotenv').config();
 const expect = require('chai').expect;
@@ -28,31 +32,31 @@ dataUrls.forEach((dataUrl) => {
   console.log('Host: ', dataHostname(dataUrl), 'Path: ', dataPath(dataUrl));
 });
 
-describe('Loading of Data', () => {
+describe('Loading of Data', function () {
   beforeEach(() => {
     const time = new Date('2016-03-01T12:00:00'); // Freeze
     tk.freeze(time);
   });
 
-  afterEach(() => {
+  afterEach(function () {
     tk.reset();
   });
 
-  describe('With a 404 on the CSV', () => {
+  describe('With a 404 on the CSV', function () {
     dataUrls.forEach((dataUrl) => {
       nock(dataHostname(dataUrl))
         .get(dataPath(dataUrl))
         .reply(404);
     });
 
-    it('hits the error callback with a 404 message', () => {
+    it('hits the error callback with a 404 message', function () {
       return loadData(MOCKED_DATA_URL).then(assert.failed, (err) => {
         expect(err.message).to.include('404 page not found');
       });
     });
   });
 
-  describe('With a 200 on the CSV', () => {
+  describe('With a 200 on the CSV', function () {
     beforeEach(() => {
       dataUrls.forEach((dataUrl) => {
         const path = dataPath(dataUrl);
@@ -62,12 +66,12 @@ describe('Loading of Data', () => {
       });
     });
 
-    it('hits the success callback correctly', () => {
+    it('hits the success callback correctly', function () {
       return loadData(MOCKED_DATA_URL)
         .then((resp) => { expect(resp).to.equal(true); });
     });
 
-    it('creates 55 cases', () => {
+    it('creates 55 cases', function () {
       // 38 lines, two sets of duplicates in first file
       // 20 lines, one set of duplicates in second file
       return loadData(MOCKED_DATA_URL)
@@ -75,7 +79,7 @@ describe('Loading of Data', () => {
         .then(rows => expect(rows[0].count).to.equal('55'));
     });
 
-    it('properly manages a single defendant', () => {
+    it('properly manages a single defendant', function () {
       return loadData(MOCKED_DATA_URL)
         .then(() => knex('cases').where({ defendant: 'Christopher Dunlap' }))
         .then((rows) => {
@@ -86,7 +90,7 @@ describe('Loading of Data', () => {
         });
     });
 
-    it('properly manages a duplicate defendant', () => {
+    it('properly manages a duplicate defendant', function () {
       return loadData(MOCKED_DATA_URL)
         .then(() => knex('cases').where({ defendant: 'Michael Guthrie' }))
         .then((rows) => {
@@ -98,7 +102,7 @@ describe('Loading of Data', () => {
         });
     });
 
-    it('properly manages a criminal case', () => {
+    it('properly manages a criminal case', function () {
       return loadData(MOCKED_DATA_URL)
         .then(() => knex('cases').where({ defendant: 'Tyler Totland' }))
         .then((rows) => {
