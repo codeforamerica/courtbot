@@ -75,8 +75,5 @@ function sendReminders() {
 }
 
 module.exports = {
-  findReminders,
-  sendReminder,
   sendReminders,
-  updateReminderStatus,
 };
