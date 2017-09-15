@@ -1,15 +1,17 @@
-var twilio = require('twilio');
-var express = require('express');
-var logfmt = require('logfmt');
-var db = require('./db');
-var dates = require("./utils/dates");
-var rollbar = require('rollbar');
-var emojiStrip = require('emoji-strip');
+/* eslint "no-console": "off" */
 
+const twilio = require('twilio');
+const express = require('express');
+const logfmt = require('logfmt');
+const db = require('./db');
+const dates = require('./utils/dates');
+const rollbar = require('rollbar');
+const emojiStrip = require('emoji-strip');
+const messages = require('./utils/messages.js');
 
 require('dotenv').config();
 
-var app = express();
+const app = express();
 
 // Express Middleware
 app.use(logfmt.requestLogger());
@@ -22,83 +24,130 @@ app.use(express.cookieSession());
 // Serve testing page on which you can impersonate Twilio
 // (but not in production)
 if (app.settings.env === 'development' || app.settings.env === 'test') {
-  app.use(express.static('public'))
+  app.use(express.static('public'));
 }
 
 // Allows CORS
-app.all('*', function (req, res, next) {
-  res.header("Access-Control-Allow-Origin", "*");
-  res.header("Access-Control-Allow-Headers", "X-Requested-With");
+app.all('*', (req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Headers', 'X-Requested-With');
   next();
 });
 
 // Enable CORS support for IE8.
-app.get('/proxy.html', function (req, res) {
-  res.send('<!DOCTYPE HTML>\n' + '<script src="http://jpillora.com/xdomain/dist/0.6/xdomain.min.js" master="http://www.courtrecords.alaska.gov"></script>');
+app.get('/proxy.html', (req, res) => {
+  res.send('<!DOCTYPE HTML>\n<script src="http://jpillora.com/xdomain/dist/0.6/xdomain.min.js" master="http://www.courtrecords.alaska.gov"></script>');
 });
 
-app.get('/', function (req, res) {
-  res.status(200).send('Hello, I am Courtbot. I have a heart of justice and a knowledge of court cases.');
+app.get('/', (req, res) => {
+  res.status(200).send(messages.iAmCourtBot());
 });
 
 // Fuzzy search that returns cases with a partial name match or
 // an exact citation match
-app.get('/cases', function (req, res, next) {
-  if (!req.query || !req.query.q) return res.send(400);
+app.get('/cases', (req, res, next) => {
+  if (!req.query || !req.query.q) {
+    return res.send(400);
+  }
 
-  db.fuzzySearch(req.query.q)
-  .then(data => {
-    if (data) {
-      data.forEach(function (d) {
-        d.readableDate = dates.fromUtc(d.date).format('dddd, MMM Do');
-      });
-    }
-    res.send(data);
-  })
-  .catch(err => next(err))
+  return db.fuzzySearch(req.query.q)
+    .then((data) => {
+      if (data) {
+        data.forEach((d) => {
+          d.readableDate = dates.fromUtc(d.date).format('dddd, MMM Do'); /* eslint "no-param-reassign": "off" */
+        });
+      }
+      return res.send(data);
+    })
+    .catch(err => next(err));
 });
+
+/**
+ * strips line feeds, returns, and emojis from string and trims it
+ *
+ * @param  {String} text incoming message to evaluate
+ * @return {String} cleaned up string
+ */
+function cleanupText(text) {
+  text = text.replace(/[\r\n|\n].*/g, '');
+  return emojiStrip(text).trim();
+}
+
+/**
+ * checks for an affirmative response
+ *
+ * @param  {String} text incoming message to evaluate
+ * @return {Boolean} true if the message is an affirmative response
+ */
+function isResponseYes(text) {
+  text = text.toUpperCase().trim();
+  return (text === 'YES' || text === 'YEA' || text === 'YUP' || text === 'Y');
+}
+
+/**
+ * checks for negative or declined response
+ *
+ * @param  {String} text incoming message to evaluate
+ * @return {Boolean} true if the message is a negative response
+ */
+function isResponseNo(text) {
+  text = text.toUpperCase().trim();
+  return (text === 'NO' || text === 'N');
+}
+
+/**
+ * Change FIRST LAST to First Last
+ *
+ * @param  {String} name name to manipulate
+ * @return {String} propercased name
+ */
+function cleanupName(name) {
+  return name.trim()
+    .replace(/\w\S*/g, txt => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
+}
+
 
 function askedReminderMiddleware(req, res, next) {
   if (isResponseYes(req.body.Body) || isResponseNo(req.body.Body)) {
     if (req.session.askedReminder) {
       req.askedReminder = true;
       req.match = req.session.match;
-      return next();
+      next();
+      return;
     }
     db.findAskedQueued(req.body.From)
-      .then(data => {
-        if (data.length == 1) { //Only respond if we found one queue response "session"
+      .then((data) => {
+        if (data.length === 1) { // Only respond if we found one queue response "session"
           req.askedReminder = true;
           req.match = data[0];
         }
         next();
       })
-      .catch(err => next(err))
-  }
-  else {
+      .catch(err => next(err));
+  } else {
     next();
   }
 }
 
 // Respond to text messages that come in from Twilio
-app.post('/sms', askedReminderMiddleware, function (req, res, next) {
-  var twiml = new twilio.TwimlResponse();
-  var text = cleanupText(req.body.Body.toUpperCase());
+app.post('/sms', askedReminderMiddleware, (req, res, next) => {
+  const twiml = new twilio.TwimlResponse();
+  const text = cleanupText(req.body.Body.toUpperCase());
   if (req.askedReminder) {
     if (isResponseYes(text)) {
       db.addReminder({
         caseId: req.match.id,
         phone: req.body.From,
-        originalCase: JSON.stringify(req.match)
+        originalCase: JSON.stringify(req.match),
       })
-      .then(data => {
-        twiml.sms('Sounds good. We will attempt to text you a courtesy reminder the day before your hearing date. Note that court schedules frequently change. You should always confirm your hearing date and time by going to ' + process.env.COURT_PUBLIC_URL);
-        req.session.askedReminder = false;
-        res.send(twiml.toString());
-      })
-      .catch(err => next(err))
+        .then(() => {
+          twiml.sms(messages.weWillRemindYou());
+          req.session.askedReminder = false;
+          res.send(twiml.toString());
+        })
+        .catch(err => next(err));
     } else {
-      twiml.sms('OK. You can always go to ' + process.env.COURT_PUBLIC_URL + ' for more information about your case and contact information.');
+      twiml.sms(messages.forMoreInfo());
       req.session.askedReminder = false;
       res.send(twiml.toString());
     }
@@ -109,17 +158,17 @@ app.post('/sms', askedReminderMiddleware, function (req, res, next) {
     if (isResponseYes(text)) {
       db.addQueued({
         citationId: req.session.citationId,
-        phone: req.body.From
+        phone: req.body.From,
       })
-      .then(date =>{
-        twiml.sms('OK. We will keep checking for up to ' + process.env.QUEUE_TTL_DAYS + ' days. You can always go to ' + process.env.COURT_PUBLIC_URL + ' for more information about your case and contact information.');
-        req.session.askedQueued = false;
-        res.send(twiml.toString());
-      })
-      .catch(err => next(err))
+        .then(() => {
+          twiml.sms(messages.weWillKeepLooking());
+          req.session.askedQueued = false;
+          res.send(twiml.toString());
+        })
+        .catch(err => next(err));
       return;
     } else if (isResponseNo(text)) {
-      twiml.sms('OK. You can always go to ' + process.env.COURT_PUBLIC_URL + ' for more information about your case and contact information.');
+      twiml.sms(messages.forMoreInfo());
       req.session.askedQueued = false;
       res.send(twiml.toString());
       return;
@@ -127,96 +176,58 @@ app.post('/sms', askedReminderMiddleware, function (req, res, next) {
   }
 
   db.findCitation(text)
-  .then(function(results) {
-    if (!results || results.length === 0 || results.length > 1) {
-      var correctLengthCitation = 6 <= text.length && text.length <= 25;
-      if (correctLengthCitation) {
-        twiml.sms('Could not find a case with that number. It can take several days for a case to appear in our system. Would you like us to keep checking for the next ' + process.env.QUEUE_TTL_DAYS + ' days and text you if we find it? (reply YES or NO)');
+    .then((results) => {
+      if (!results || results.length === 0 || results.length > 1) {
+        const correctLengthCitation = text.length >= 6 && text.length <= 25;
+        if (correctLengthCitation) {
+          twiml.sms(messages.notFoundAskToKeepLooking());
 
-        req.session.askedQueued = true;
-        req.session.citationId = text;
-      } else {
-        twiml.sms('Couldn\'t find your case. Case identifier should be 6 to 25 numbers and/or letters in length.');
-      }
-    } else {
-      var match = results[0];
-      var name = cleanupName(match.defendant);
-      var datetime = dates.fromUtc(match.date);
-
-      var caseInfo = 'Found a case for ' + name + ' scheduled ' + (datetime.isSame(dates.now(), 'd') ? 'today' : 'on ' + datetime.format("ddd, MMM Do")) + ' at ' + datetime.format("h:mm A") + ', at ' + match.room + '.';
-
-      if ((datetime.diff(dates.now()) > 0) && (datetime.isSame(dates.now(), 'd'))) {   // Hearing today
-        twiml.sms(caseInfo + " Would you like a courtesy reminder the day before a future hearing? (reply YES or NO)");
-      } else {
-        if (datetime.diff(dates.now()) <= 0) {  // Hearing already happened
-          twiml.sms(caseInfo + " Would you like a courtesy reminder the day before a future hearing? (reply YES or NO)");
+          req.session.askedQueued = true;
+          req.session.citationId = text;
         } else {
-          twiml.sms('Found a case for ' + name + ' scheduled on ' + datetime.format("ddd, MMM Do") + ' at ' + datetime.format("h:mm A") + ', at ' + match.room + '. Would you like a courtesy reminder the day before? (reply YES or NO)');
+          twiml.sms(messages.invalidCaseNumber());
         }
+      } else {
+        const match = results[0];
+        const name = cleanupName(match.defendant);
+        const datetime = dates.fromUtc(match.date);
+
+        twiml.sms(messages.foundItAskForReminder(false, name, datetime, match.room));
+
+        req.session.match = match;
+        req.session.askedReminder = true;
       }
 
-      req.session.match = match;
-      req.session.askedReminder = true;
-    }
-
-    res.send(twiml.toString());
-
-  })
-  .catch(function(err){
-    return next(err)
-  })
+      res.send(twiml.toString());
+    })
+    .catch(err => next(err));
 });
-
-var cleanupName = function (name) {
-  name = name.trim();
-
-  // Change FIRST LAST to First Last
-  name = name.replace(/\w\S*/g, function (txt) { return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase(); });
-
-  return name;
-};
-
-function cleanupText (text) {
-  text = text.replace(/[\r\n|\n].*/g, '');
-
-  text = emojiStrip(text);
-  text = text.trim();
-  return text;
-}
-
-function isResponseYes(text) {
-  text = text.toUpperCase().trim();
-  return (text === 'YES' || text === 'YEA' || text === 'YUP' || text === 'Y');
-}
-
-function isResponseNo(text) {
-  text = text.toUpperCase().trim();
-  return (text === 'NO' || text === 'N');
-}
 
 // Error handling Middleware
-app.use(function (err, req, res, next) {
+app.use((err, req, res) => {
   if (!res.headersSent) {
-    // during development, return the trace to the client for
-    // helpfulness
-    console.log("Error: " + err.message);
+    console.log('Error: ', err.message);
     rollbar.handleError(err, req);
+
+    // during development, return the trace to the client for helpfulness
     if (app.settings.env !== 'production') {
-      return res.status(500).send(err.stack);
+      res.status(500).send(err.stack);
+      return;
     }
 
-    return res.status(500).send('Sorry, internal server error');
+    res.status(500).send('Sorry, internal server error');
   }
 });
+
 // Send all uncaught exceptions to Rollbar???
-var options = {
-  exitOnUncaughtException: true
+const options = {
+  exitOnUncaughtException: true,
 };
 rollbar.handleUncaughtExceptionsAndRejections(process.env.ROLLBAR_ACCESS_TOKEN, options);
 
-var port = Number(process.env.PORT || 5000);
-app.listen(port, function () {
-  console.log("Listening on " + port);
+const port = Number(process.env.PORT || 5000);
+app.listen(port, () => {
+  console.log('Listening on ', port);
 });
 
 module.exports = app;
