@@ -2,7 +2,6 @@ require('dotenv').config();
 var findReminders = require("../sendReminders.js").findReminders;
 var expect = require("chai").expect;
 var manager = require("../utils/db/manager");
-var Promise = require("bluebird");
 
 var db = require('../db');
 var knex = manager.knex();
@@ -13,34 +12,30 @@ var dates = require("../utils/dates"),
     TEST_UTC_DATE = "2015-03-27T08:00:00" + dates.timezoneOffset("2015-03-27");
 
 describe("for a given date", function() {
-    beforeEach(function(done) {
-        manager.ensureTablesExist()
+    beforeEach(function() {
+        return manager.ensureTablesExist()
             .then(clearTable("cases"))
             .then(clearTable("reminders"))
             .then(loadCases([turnerData()]))
             .then(addTestReminder)
-            .then(function(){
-                done();
-            });   
     });
 
 
-    it("datetime in table matches datetime on the client", function(done) {
+    it("datetime in table matches datetime on the client", function() {
 
-        knex.select("*").from("cases").where("date", TEST_UTC_DATE)
+        return knex.select("*").from("cases").where("date", TEST_UTC_DATE)
             .then(function(results) {
                 expect(results.length).to.equal(1);
-                done();
             });
     });
 
-    it("datetime matches for all hours in a day", function(done) {
+    it("datetime matches for all hours in a day", function() {
         this.timeout(5000); // This may take a while
-        var test = function(hr) {
-            return new Promise(function(resolve, reject) {
-                var testDateTime = dates.now().add(1, "days").hour(0).add(hr, "hours");
+        let test = function(hr) {
+                console.log("hr: ", hr)
+                let testDateTime = dates.now().add(1, "days").hour(0).add(hr, "hours");
                 console.log("Now: ",dates.now().format());
-                updateCaseDate(TEST_CASE_ID, testDateTime)
+                return updateCaseDate(TEST_CASE_ID, testDateTime)
                     .then(findReminders)
                     .then(function(results) {
                         if (results[0]) console.log(dates.fromUtc(results[0].date).format(), testDateTime.format());
@@ -53,77 +48,62 @@ describe("for a given date", function() {
                             console.log("NO reminder found for hour ", hr)
                             expect(results.length).to.equal(0);
                         }
-                        resolve();
-                    });     
-            });
+                    });
         };
 
-        Promise.resolve(TEST_HOURS)
-            .each(test)
-            .then(function() {done();})
-            .catch(done);
+        // test() overwrites DB data with each iteration so it's important that the tests are done sequentially
+        return TEST_HOURS.reduce((p, hr) =>{
+            return p.then(r=> test(hr))
+        }, Promise.resolve())
+
     });
 });
 
 function updateCaseDate(caseId, newDate) {
-    return new Promise(function(resolve, reject) {
-        console.log("Updating date to: " + newDate.format());
-        knex("cases")
+    console.log("Updating date to: " + newDate.format());
+    return  knex("cases")
             .where("id", "=", caseId)
             .update({
                 "date": newDate.format(),
                 "time": dates.toFormattedTime(newDate)
             })
-            .then(resolve);
-        knex('cases')
-            .where("id", "=", caseId)
-            .select()
-            .then(function(results) {
-                console.log("Stored: ", results[0].date, " ",results[0].time)
-            })
-
-    });
-};
+            .then(() => knex('cases')
+                .where("id", "=", caseId)
+                .select()
+                .then(function(results) {
+                    console.log("Stored: ", results[0].date, " ",results[0].time)
+                    return results
+                })
+            )
+}
 
 function loadCases(cases) {
     return function() {
-        return new Promise(function(resolve, reject) {
-            //console.log("Adding test case.");
-            knex("cases").insert(cases).then(resolve, reject);
-        });
+        //console.log("Adding test case.");
+        return knex("cases").insert(cases);
     };
 };
 
 function addTestReminder() {
-    return new Promise(function(resolve, reject) {
        //console.log("Adding Test Reminder");
-        db.addReminder({
+       return  db.addReminder({
             caseId: TEST_CASE_ID,
             phone: "+12223334444",
             originalCase: turnerData()
-        }, function(err, data) {
-            if(err) {
-                reject(err);
-            } else {
-                resolve();
-            }
-        });
-    });
+        })
 };
 
 function clearTable(table) {
     return function() {
-        return new Promise(function(resolve, reject) {
-            //console.log("Clearing table: " + table);
-            knex(table).del().then(resolve, reject);
-        });
+        //console.log("Clearing table: " + table);
+         return  knex(table).del()
     };
 };
 
 function turnerData(v) {
-    return { 
+    return {
         //date: '27-MAR-15',
-        date: TEST_UTC_DATE,        
+        date: TEST_UTC_DATE,
         defendant: 'TURNER, FREDERICK T',
         room: 'CNVCRT',
         time: '01:00:00 PM',

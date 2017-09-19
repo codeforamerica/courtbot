@@ -35,7 +35,7 @@ module.exports = {
 			dt = moment().format("YYYY-MM-DD");      // Default to today
 		}
 		var tz = moment.tz(dt, process.env.TIMEZONE).format('Z');
-		console.log("Date: " + moment(dt).format("YYYY-MM-DD") + " Offset: " + tz);
+		//console.log("Date: " + moment(dt).format("YYYY-MM-DD") + " Offset: " + tz);
 		return tz;
 	},
 
@@ -53,7 +53,7 @@ module.exports = {
 	 * @return {string}      UTC formatted date string
 	 */
 	isoToUtc: function(date) {
-		console.log("RAW DATE FROM DB:", date);
+		//console.log("RAW DATE FROM DB:", date);
 		var dt = moment.utc(date);
 		dt = dt.utcOffset(module.exports.timezoneOffset(dt)).format();
 		return dt;
@@ -69,10 +69,10 @@ module.exports = {
 		dt = dt.utcOffset(module.exports.timezoneOffset(dt));
 		return dt;
 	},
-	
+
 	/**
 	 * Take separate date and time and combine them into single moment object
-	 * 
+	 *
 	 * @param  {string} date in format MM/DD/YYYY or MM-DD-YYYY
 	 * @param  {string} time time in format "hh:mm A"
 	 * @return {moment} moment combine separate date and time into a single date and time moment object.
