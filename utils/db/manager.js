@@ -1,11 +1,6 @@
 require("dotenv").config();
+var dates = require("../dates");
 var db_connections = require('./db_connections');
-
-var Promise = require('bluebird');
-var promises = require("../promises"),
-	callFn = promises.callFn,
-	chainable = promises.chainablePromise,
-	dates = require("../dates");
 
 var TIMESTAMPTZ_OID = 1184;
 require("pg").types.setTypeParser(TIMESTAMPTZ_OID, dates.isoToUtc);
@@ -58,12 +53,8 @@ module.exports = {
 	 * @return {Promise}	Promise to drop the specified table.
 	 */
 	dropTable: function(table) {
-		return new Promise(function(resolve, reject) {
-			module.exports.knex().schema.dropTableIfExists(table).asCallback(function(){
-				console.log("Dropped existing table \"" + table + "\"");
-				resolve();
-			});
-		});
+		return module.exports.knex().schema.dropTableIfExists(table)
+			   .then(console.log("Dropped existing table \"" + table + "\""))
 	},
 
 	/**
@@ -73,27 +64,24 @@ module.exports = {
 	 * @param  {function} table (optional) function to be performed after table is created.
 	 * @return {Promise}  Promise to create table if it does not exist.
 	 */
-	createTable: function(table, postCreateCallback) {
-		return new Promise(function(resolve, reject) {
-			console.log("Trying to create table: " + table);
-			if(!_createTable[table]) {
-				console.log("No Table Creation Instructions found for table \"" + table + "\".");
-				resolve();
-			} else {
-				module.exports.knex().schema.hasTable(table).then(function(exists) {
+	createTable: function(table) {
+		console.log("Trying to create table: " + table);
+		if(!_createTable[table]) {
+			console.log("No Table Creation Instructions found for table \"" + table + "\".");
+		} else {
+			return module.exports.knex().schema.hasTable(table)
+				.then(function(exists) {
 					if(exists) {
 						console.log("Table \"" + table + "\" already exists.  Will not create.");
-						resolve();
 					} else {
-						_createTable[table](postCreateCallback)
-							.then(function(){
-								console.log("Table created:  \"" + table + "\"");
-								resolve();
-							});
-					}
-				});
-			}
-		});
+						return _createTable[table]()
+						.then(function(){
+							console.log("Table created:  \"" + table + "\"");
+						});
+				}
+			});
+		}
+
 	},
 
 	/**
@@ -123,25 +111,21 @@ module.exports = {
  * @type {Object}
  */
 var _createTable = {
-	cases: function(cb) {
-		return new Promise(function(resolve, reject) {
-			module.exports.knex().schema.createTableIfNotExists("cases", function(table){
+	cases: function() {
+		return module.exports.knex().schema.createTableIfNotExists("cases", function(table){
 				table.string('id', 100).primary();
 				table.string('defendant', 100);
 				table.timestamp('date');
 				//table.specificType("date", "timestamptz");
 				table.string('time', 100);
 				table.string('room', 100);
-				table.json('citations');
+				table.jsonb('citations');
 			})
-			.then(callFn(_postCreateCallback, cb))
-			.then(_createIndexForCases)
-			.then(resolve);
-		});
+			.then(() => _createIndexForCases())
+
 	},
-	queued: function(cb) {
-		return new Promise(function(resolve, reject) {
-			module.exports.knex().schema.createTableIfNotExists("queued", function(table) {
+	queued: function() {
+		return module.exports.knex().schema.createTableIfNotExists("queued", function(table) {
 				table.increments("queued_id").primary();
 				table.dateTime("created_at");
 				table.string("citation_id", 100);
@@ -150,42 +134,17 @@ var _createTable = {
 				table.boolean("asked_reminder");
 				table.dateTime("asked_reminder_at");
 			})
-			.then(callFn(_postCreateCallback, cb))
-			.then(resolve);
-		});
 	},
-	reminders: function(cb) {
-		return new Promise(function(resolve, reject) {
-			module.exports.knex().schema.createTableIfNotExists("reminders", function(table) {
+	reminders: function() {
+		return module.exports.knex().schema.createTableIfNotExists("reminders", function(table) {
 				table.increments("reminder_id").primary();
 				table.dateTime("created_at");
 				table.string("case_id", 100);
 				table.string("phone", 100);
 				table.boolean("sent", 100);
-				table.json("original_case");
+				table.jsonb("original_case");
 			})
-			.then(callFn(_postCreateCallback, cb))
-			.then(resolve);
-		});
 	}
-
-};
-
-/**
- * Callback function for once a table has been created.  Typically used for bulk insert of data prior to
- * indexing the table, etc...
- *
- * @param  {Function} cb function to be called
- * @return {Promise}	promise to execute callback function
- */
-var _postCreateCallback = function(cb) {
-	return new Promise(function(resolve, reject) {
-		if(cb && typeof cb === "function") {
-			cb().then(resolve);
-		} else {
-			resolve();
-		}
-	});
 };
 
 /**
@@ -195,19 +154,6 @@ var _postCreateCallback = function(cb) {
  * @return {Promise} Promise to create indexing function for and index for cases table.
  */
 var _createIndexForCases = function() {
-	return new Promise(function(resolve, reject){
-		var cases_indexing_function = [
-			'CREATE OR REPLACE FUNCTION json_val_arr(_j json, _key text)',
-			'  RETURNS text[] AS',
-			"'",
-			'SELECT array_agg(elem->>_key)',
-			'FROM   json_array_elements(_j) AS x(elem)',
-			"'",
-			'  LANGUAGE sql IMMUTABLE;'].join('\n');
-
-		module.exports.knex().raw(cases_indexing_function)
-			.then(module.exports.knex().raw("DROP INDEX IF EXISTS citation_ids_gin_idx"))
-			.then(module.exports.knex().raw("CREATE INDEX citation_ids_gin_idx ON cases USING GIN (json_val_arr(citations, 'id'))"))
-			.then(resolve);
-	});
+		return module.exports.knex().raw("DROP INDEX IF EXISTS citation_ids_gin_idx")
+			   .then(() => module.exports.knex().raw("CREATE INDEX citation_ids_gin_idx ON cases USING GIN (citations jsonb_path_ops)") )
 };
