@@ -1,11 +1,11 @@
 /* eslint "no-console": "off" */
 
-const crypto = require('crypto');
+const db = require('./db.js');
 const manager = require('./utils/db/manager');
 const messages = require('./utils/messages');
 const dates = require('./utils/dates');
 
-const knex = manager.knex();
+const knex = manager.knex;
 
 /**
  * Find all reminders with a case date of tomorrow for which a reminder has not been sent
@@ -36,11 +36,7 @@ function findReminders() {
  * @return {Promise}  Promise to send reminders.
  */
 function sendReminder(reminder) {
-  // Be careful when refactoring this function, the decipher object needs to be created
-  //    each time a reminder is sent because the decipher.final() method destroys the object
-  //    Reference: https://nodejs.org/api/crypto.html#crypto_decipher_final_output_encoding
-  const decipher = crypto.createDecipher('aes256', process.env.PHONE_ENCRYPTION_KEY);
-  const phone = decipher.update(reminder.phone, 'hex', 'utf8') + decipher.final('utf8');
+  const phone = db.decryptPhone(reminder.phone);
   console.log('Phone: ', phone);
 
   return messages.send(phone, process.env.TWILIO_PHONE_NUMBER, messages.reminder(reminder))

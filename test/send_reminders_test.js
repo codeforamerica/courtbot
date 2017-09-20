@@ -10,7 +10,7 @@ var expect = require("chai").expect;
 var nock = require('nock');
 var manager = require("../utils/db/manager");
 var db = require('../db');
-var knex = manager.knex();
+var knex = manager.knex;
 
 var dates = require("../utils/dates"),
     TEST_CASE_ID = "677167760f89d6f6ddf7ed19ccb63c15486a0eab",

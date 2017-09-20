@@ -2,20 +2,22 @@
 // setup ENV dependencies
 require('dotenv').config();
 
-const fs = require("fs");
-const expect = require("chai").expect;
+const fs = require('fs');
+const expect = require('chai').expect;
 const nock = require('nock');
-const cookieParser = require("cookie-parser");
+const cookieParser = require('cookie-parser');
 const crypto = require('crypto');
-const tk = require("timekeeper");
+const tk = require('timekeeper');
 const Session = require('supertest-session')({
   app: require('../web')
 });
 
-const manager = require("../utils/db/manager");
-const knex = manager.knex();
-const dates = require("../utils/dates");
-const moment = require("moment-timezone");
+const db = require('../db.js');
+const manager = require('../utils/db/manager');
+const dates = require('../utils/dates');
+const moment = require('moment-timezone');
+
+const knex = manager.knex;
 
 const TEST_UTC_DATE = "2015-03-27T13:00:00" + dates.timezoneOffset("2015-03-27");
 
@@ -207,7 +209,7 @@ describe("POST /sms", function() {
                 .expect(200)
                 .end(function(err, res) {
                     if (err)  return done(err);
-                    expect(getConnectCookie().askedQueued).to.equal(undefined);
+                    expect(getConnectCookie().askedQueued).to.equal(false);
                     expect(getConnectCookie().askedReminder).to.equal(true);
                     expect(getConnectCookie().match).to.deep.equal(rawTurnerDataAsObject(""));
                     done();
@@ -238,7 +240,7 @@ describe("POST /sms", function() {
                     .end(function(err, res) {
                         if (err) return done(err);
                         expect(getConnectCookie().askedQueued).to.equal(true);
-                        expect(getConnectCookie().askedReminder).to.equal(undefined);
+                        expect(getConnectCookie().askedReminder).to.equal(false);
                         expect(getConnectCookie().citationId).to.equal("123456");
                         done();
                     });
@@ -276,7 +278,7 @@ describe("POST /sms", function() {
                     .end(function (err, res) {
                         if (err) return done(err);
                         expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>We found a case for Frederick Turner scheduled today at 1:00 PM, at CNVCRT. Would you like a courtesy reminder the day before a future hearing? (reply YES or NO)</Sms></Response>');
-                        expect(getConnectCookie().askedQueued).to.equal(undefined);
+                        expect(getConnectCookie().askedQueued).to.equal(false);
                         expect(getConnectCookie().askedReminder).to.equal(true);
                         expect(getConnectCookie().citationId).to.equal(undefined);
                         done();
@@ -293,7 +295,7 @@ describe("POST /sms", function() {
                     .end(function (err, res) {
                         if (err) return done(err);
                         expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>We found a case for Frederick Turner scheduled today at 12:00 PM, at CNVCRT. Would you like a courtesy reminder the day before a future hearing? (reply YES or NO)</Sms></Response>');
-                        expect(getConnectCookie().askedQueued).to.equal(undefined);
+                        expect(getConnectCookie().askedQueued).to.equal(false);
                         expect(getConnectCookie().askedReminder).to.equal(true);
                         expect(getConnectCookie().citationId).to.equal(undefined);
                         done();
@@ -310,7 +312,7 @@ describe("POST /sms", function() {
                     .end(function (err, res) {
                         if (err) return done(err);
                         expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Sms>We found a case for Frederick Turner scheduled today at 10:00 AM, at CNVCRT. Would you like a courtesy reminder the day before a future hearing? (reply YES or NO)</Sms></Response>');
-                        expect(getConnectCookie().askedQueued).to.equal(undefined);
+                        expect(getConnectCookie().askedQueued).to.equal(false);
                         expect(getConnectCookie().askedReminder).to.equal(true);
                         expect(getConnectCookie().citationId).to.equal(undefined);
                         done();
@@ -349,7 +351,7 @@ describe("POST /sms", function() {
                     .then((rows) => {
                         var record = rows[0];
                         expect(record.count).to.equal('1');
-                        expect(record.phone).to.equal(cypher("+12223334444"));
+                        expect(record.phone).to.equal(db.encryptPhone('+12223334444'));
                         expect(record.case_id).to.equal('677167760f89d6f6ddf7ed19ccb63c15486a0eab');
                         expect(record.sent).to.equal(false);
                         expect(record.original_case).to.deep.equal(rawTurnerDataAsObject("", false));
@@ -384,12 +386,10 @@ describe("POST /sms", function() {
             .then(() => knex('cases').insert([turnerData()]))
             .then(() => knex("queued").del())
             .then(() => {
-                var cipher = crypto.createCipher('aes256', process.env.PHONE_ENCRYPTION_KEY);
-                var encryptedPhone = cipher.update("+12223334444", 'utf8', 'hex') + cipher.final('hex');
                 return knex('queued').insert({
                     citation_id: "4928456",
                     sent: true,
-                    phone: encryptedPhone,
+                    phone: db.encryptPhone('+12223334444'),
                     asked_reminder: true,
                     asked_reminder_at: "NOW()",
                     created_at: "NOW()"
@@ -414,7 +414,7 @@ describe("POST /sms", function() {
                     .then(rows =>  {
                         var record = rows[0];
                         expect(record.count).to.equal('1');
-                        expect(record.phone).to.equal(cypher("+12223334444"));
+                        expect(record.phone).to.equal(db.encryptPhone('+12223334444'));
                         expect(record.case_id).to.equal('677167760f89d6f6ddf7ed19ccb63c15486a0eab');
                         expect(record.sent).to.equal(false);
                         expect(record.original_case).to.deep.equal(rawTurnerDataAsObject("", false));
@@ -448,14 +448,12 @@ describe("POST /sms", function() {
             .then(() => knex('cases').insert([turnerData()]))
             .then(() => knex("queued").del())
             .then(() => {
-                var cipher = crypto.createCipher('aes256', process.env.PHONE_ENCRYPTION_KEY);
-                var encryptedPhone = cipher.update("+12223334444", 'utf8', 'hex') + cipher.final('hex');
                 var oldDate = new Date();
                 oldDate.setHours(oldDate.getHours() - 5);
                 return knex('queued').insert({
                     citation_id: "4928456",
                     sent: true,
-                    phone: encryptedPhone,
+                    phone: db.encryptPhone('+12223334444'),
                     asked_reminder: true,
                     asked_reminder_at: oldDate,
                     created_at: "NOW()"
@@ -522,7 +520,7 @@ describe("POST /sms", function() {
                     .then(rows => {
                         var record = rows[0];
                         expect(record.count).to.equal('1');
-                        expect(record.phone).to.equal(cypher("+12223334444"));
+                        expect(record.phone).to.equal(db.encryptPhone('+12223334444'));
                         expect(record.citation_id).to.equal('123456');
                         expect(record.sent).to.equal(false);
                     })
@@ -608,11 +606,6 @@ function getConnectCookie() {
   var sessionCookie = sess.cookies.find(cookie =>  cookie.hasOwnProperty('connect.sess'))
   var cookie = sessionCookie['connect.sess'];
   return cookieParser.JSONCookie(cookieParser.signedCookie(cookie, process.env.COOKIE_SECRET));
-}
-
-function cypher(phone) {
-  var cipher = crypto.createCipher('aes256', process.env.PHONE_ENCRYPTION_KEY);
-  return cipher.update(phone, 'utf8', 'hex') + cipher.final('hex');
 }
 
 function sortObject(o) {

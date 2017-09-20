@@ -184,20 +184,7 @@ function insertCases(cases) {
     c.citations = JSON.stringify(c.citations); /* eslint "no-param-reassign": "off" */
   });
 
-  function chunk(arr, len) {
-    const chunks = [];
-    let i = 0;
-    const n = arr.length;
-
-    while (i < n) {
-      chunks.push(arr.slice(i, i += len));
-    }
-
-    return chunks;
-  }
-
-  const chunks = chunk(cases, 1000);
-  return Promise.all(chunks.map(portion => manager.insertTableChunk('cases', portion)));
+  return manager.batchInsert('cases', cases, 1000);
 }
 
 /**

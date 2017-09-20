@@ -16,7 +16,7 @@ const url = require('url');
 const manager = require('../utils/db/manager');
 const loadData = require('../utils/loaddata');
 
-const knex = manager.knex();
+const knex = manager.knex;
 const MOCKED_DATA_URL = 'http://courtrecords.alaska.gov/MAJIC/sandbox/acs_mo_event.csv|extractCourtData,http://courtrecords.alaska.gov/MAJIC/sandbox/acs_cr_event.csv|extractCriminalCases';
 const dataUrls = MOCKED_DATA_URL.split(',');
 
@@ -68,7 +68,7 @@ describe('Loading of Data', function () {
 
     it('hits the success callback correctly', function () {
       return loadData(MOCKED_DATA_URL)
-        .then((resp) => { expect(resp).to.equal(true); });
+        .then(resp => expect(resp).to.equal(true));
     });
 
     it('creates 55 cases', function () {
