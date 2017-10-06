@@ -1,13 +1,12 @@
 /* eslint "no-console": "off" */
 
-const crypto = require('crypto');
 const db = require('./db.js');
 const dates = require('./utils/dates');
 const strings = require('./utils/strings');
 const messages = require('./utils/messages');
 const manager = require('./utils/db/manager');
 
-const knex = manager.knex();
+const knex = manager.knex;
 
 /**
  * Retrieve array of queued messages that have not been sent, if any exist.
@@ -73,13 +72,7 @@ function updateSentWithoutReminder(queuedId) {
  * @return {Promise} promise to process queued message (if applicable)
  */
 function processCitationMessage(queued) {
-  // Be careful when refactoring this function, the decipher object needs to be created
-  //    each time a reminder is sent because the decipher.final() method destroys the object
-  //    Reference: https://nodejs.org/api/crypto.html#crypto_decipher_final_output_encoding
-  // TODO! this code to decrypt the phone is duplicated in sendReminders and should be DRYed up
-  const decipher = crypto.createDecipher('aes256', process.env.PHONE_ENCRYPTION_KEY);
-  const phone = decipher.update(queued.queuedMessage.phone, 'hex', 'utf8') + decipher.final('utf8');
-
+  const phone = db.decryptPhone(queued.queuedMessage.phone);
   if (queued.citationFound) {
     const name = strings.scrubName(queued.relatedCitation.defendant);
     const datetime = dates.fromUtc(queued.relatedCitation.date);

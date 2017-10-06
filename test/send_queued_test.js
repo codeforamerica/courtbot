@@ -12,7 +12,7 @@ var nock = require('nock');
 var now = require("../utils/dates").now;
 var manager = require("../utils/db/manager");
 var db = require('../db');
-var knex = manager.knex();
+var knex = manager.knex;
 
 nock.disableNetConnect();
 nock('https://api.twilio.com:443').log(console.log);
