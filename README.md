@@ -4,8 +4,22 @@ Courtbot is a simple web service for handling court case data. It offers a basic
 
 Specifically, the twilio features include:
 
-- **Reminders.** If a case requires a court appearance, the app allows users to sign up for reminders, served 24 hours in advance of the case.
-- **Queued Cases.** If a case isn't in the system (usually because it takes two weeks for paper citations to be put into the computer), the app allows users to get information when it becomes available. The app continues checking each day for up to 16 days and sends the case information when found (or an apology if not).
+- **Requests.** If a case requires a court appearance, the app allows users to sign up for reminders, served 24 hours in advance of the case.
+- **Unmatched Cases.** If a case isn't in the system (usually because it takes two weeks for paper citations to be put into the computer), the app allows users to get information when it becomes available. The app continues checking each day for a number of days (set by config QUEUE_TTL_DAYS) and sends the case information when found (or an apology if not).
+
+## Datamodel
+The main features of the app use three tables in a Postgress Databases:
+1. hearings | This table had the data about upcoming cases. It is recreated each time *runners/load.js* is exectued from the csv files found at urls set in config variable *DATA_URL*. It is ephemeral — it is recreated from scratch every day so the app must be prepared for cases that are there one day and not there the next. It is possible for the CSV to have duplicate rows. The load script enforces unique case_ids
+2. requests | This table stores the requests for notifications. Each row requires a phone number, which is encrypted using config *PHONE_ENCRYPTION_KEY*, and a *case_id*.  The table also has columns *known_case* and *active*. *known_case* allows the app to distinguish between cases that we have seen *at some point* in the hearings table. Requests for cases where *known_case* is false will expire after *QUEUE_TTL_DAYS* and *active* will be set to false. If the case appears at anytime before that *known_case* will be set to true and the request will not expire unless a user manually turns if off with by texting DELETE after sending the case. The requests table uses the column *updated_at* to determine if an unmatched case has expired rather than *created_at*. These will generally be the same, but it allows for the future possibility of allowing unmatched cases to be extended.
+3. notifications | Rows in the notifications table are added whenever the app send the user a notification. These can include notifications the day before a hearing or notifications that an unmatched cases was not found within QUEUE_TTL_DAYS. The table has columns for *case_id* and *phone_number* which link the case to the person recieving the notification. It also has the following columns:
+   * *created_at* timestamp, which should correspond to the time the notification is sent
+   * *event_date* the date of the hearing at the time the notification was sent. This may or may not be the date in current versions of the csv as this changes frequently.
+   * *type* enumeration to distinguish between hearing notifications[reminder], matched[matched] cases, and expired cases that were not found within QUEUE_TTL_DAYS [expired]
+   * *error* and error string if sending a notification failed (perhaps due to a twilio error or bad number).
+
+See sendReminders.js and sendUnmatched.js for examples of SQL using these tables.
+
+The database also has tables *log_hits* and *log_runners*. These log activity of the app.
 
 ## Running Locally
 
@@ -41,8 +55,8 @@ createuser courtbot
 Then, to create the tables and load in initial data:
 
 ```console
-node utils/createQueuedTable.js
-node utils/createRemindersTable.js
+node utils/createRequestsTable.js
+node utils/createNotificationsTable.js
 node runners/load.js
 ```
 
@@ -74,11 +88,14 @@ heroku config:set DATA_URL=<court records csv location>
 heroku config:set COURT_PUBLIC_URL=<where to send people for more info>
 heroku config:set COURT_NAME=<name of court system>
 heroku config:set QUEUE_TTL_DAYS=<# days to keep a citation on the search queue>
-heroku config:set TIMEZONE=<standard timezone ex. America/Anchorage>
+heroku config:set TZ=<standard timezone ex. America/Anchorage>
 heroku config:set TEST_TOMORROW_DATES=<1 if you want all court dates to be tomorrow to test reminders>
+heroku config:set ADMIN_LOGIN=<user name for access to admin api>
+heroku config:set ADMIN_PASSWORD=<password for access to admin api>
+heroku config:set JWT_SECRET=<random string to be used to create json web token when authenticating admin api>
 git push heroku master
-heroku run node utils/createQueuedTable.js
-heroku run node utils/createRemindersTable.js
+heroku run node utils/createRequestsTable.js
+heroku run node utils/createNotificationsTable.js
 heroku run node runners/load.js
 heroku open
 ```
@@ -98,7 +115,7 @@ Finally, you'll want to setup scheduler to run the various tasks each day. Here'
 
 ## Scheduler Changes
 * node runners/load.js
-* node runners/sendQueued.js
+* node runners/sendUnmatched.js
 * node runners/sendReminders.js
 
 ## Running Tests

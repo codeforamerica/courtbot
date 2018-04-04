@@ -1,5 +1,5 @@
 var manager = require("./db/manager");
 
-manager.createTable("reminders")
+manager.createTable("requests")
   .then(manager.closeConnection)
   .then(process.exit);

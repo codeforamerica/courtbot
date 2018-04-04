@@ -1,7 +1,5 @@
 const twilio = require('twilio');
-const dates = require('./dates');
-
-const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+const moment = require('moment-timezone');
 
 /**
  * reduces whitespace to a single space
@@ -13,7 +11,18 @@ const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TO
  * @return {String} the msg with whitespace condensed to a single space
  */
 function normalizeSpaces(msg) {
-  return msg.replace(/\s\s+/g, ' ');
+    return msg.replace(/\s\s+/g, ' ');
+}
+
+/**
+ * Change FIRST LAST to First Last
+ *
+ * @param  {String} name name to manipulate
+ * @return {String} propercased name
+ */
+function cleanupName(name) {
+    return name.trim()
+    .replace(/\w\S*/g, txt => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
 }
 
 /**
@@ -22,8 +31,52 @@ function normalizeSpaces(msg) {
  * @return {String} message.
  */
 function forMoreInfo() {
-  return normalizeSpaces(`OK. You can always go to ${process.env.COURT_PUBLIC_URL}
+    return normalizeSpaces(`OK. You can always go to ${process.env.COURT_PUBLIC_URL}
     for more information about your case and contact information.`);
+}
+/**
+ * message when user replies 'No' when offered to reciece reminders
+ *
+ * @return {String} message.
+ */
+function repliedNo(){
+    return normalizeSpaces(`You said “No” so we won’t text you a reminder.
+    You can always go to ${process.env.COURT_PUBLIC_URL}
+    for more information about your case and contact information.`);
+}
+/**
+ * message when user replies 'No' when offered to reciece reminders
+ *
+ * @return {String} message.
+ */
+function repliedNoToKeepChecking(){
+    return normalizeSpaces(`You said “No” so we won’t keep checking.
+    You can always go to ${process.env.COURT_PUBLIC_URL}
+    for more information about your case and contact information.`);
+}
+/**
+ * tell them of the court date, and ask them if they would like a reminder
+ *
+ * @param  {Boolean} includeSalutation true if we should greet them
+ * @param  {string} name Name of cited person/defendant.
+ * @param  {moment} datetime moment object containing date and time of court appearance.
+ * @param  {string} room room of court appearance.
+ * @return {String} message.
+ */
+function foundItAskForReminder(match) {
+    const caseInfo = `We found a case for ${cleanupName(match.defendant)} scheduled
+        ${(match.today ? 'today' : `on ${moment(match.date).format('ddd, MMM Do')}`)}
+        at ${moment(match.date).format('h:mm A')}, at ${match.room}.`;
+
+    let futureHearing = '';
+    if (match.has_past) {
+        futureHearing = ' a future hearing';
+    } else if (match.today) { // Hearing today
+        futureHearing = ' a future hearing';
+    }
+
+    return normalizeSpaces(`${caseInfo}
+        Would you like a courtesy reminder the day before${futureHearing}? (reply YES or NO)`);
 }
 
 /**
@@ -35,22 +88,21 @@ function forMoreInfo() {
  * @param  {string} room room of court appearance.
  * @return {String} message.
  */
-function foundItAskForReminder(includeSalutation, name, datetime, room) {
-  const salutation = `Hello from the ${process.env.COURT_NAME}. `;
+function foundItWillRemind(includeSalutation, match) {
+    const salutation = `Hello from the ${process.env.COURT_NAME}. `;
+    const caseInfo = `We found a case for ${cleanupName(match.defendant)} scheduled
+        ${(match.today ? 'today' : `on ${moment(match.date).format('ddd, MMM Do')}`)}
+        at ${moment(match.date).format('h:mm A')}, at ${match.room}.`;
 
-  const caseInfo = `We found a case for ${name} scheduled
-    ${(datetime.isSame(dates.now(), 'd') ? 'today' : `on ${datetime.format('ddd, MMM Do')}`)}
-    at ${datetime.format('h:mm A')}, at ${room}.`;
+    let futureHearing = '';
+    if (match.has_past) {
+        futureHearing = ' future hearings';
+    } else if (match.today) { // Hearing today
+        futureHearing = ' future hearings';
+    }
 
-  let futureHearing = '';
-  if ((datetime.diff(dates.now()) > 0) && (datetime.isSame(dates.now(), 'd'))) { // Hearing today
-    futureHearing = ' a future hearing';
-  } else if (datetime.diff(dates.now()) <= 0) { // Hearing already happened
-    futureHearing = ' a future hearing';
-  }
-
-  return normalizeSpaces(`${(includeSalutation ? salutation : '')}${caseInfo}
-    Would you like a courtesy reminder the day before${futureHearing}? (reply YES or NO)`);
+    return normalizeSpaces(`${(includeSalutation ? salutation : '')}${caseInfo}
+        We will send you courtesy reminders the day before${futureHearing}.`);
 }
 
 /**
@@ -59,7 +111,7 @@ function foundItAskForReminder(includeSalutation, name, datetime, room) {
  * @return {String} message.
  */
 function iAmCourtBot() {
-  return 'Hello, I am Courtbot. I have a heart of justice and a knowledge of court cases.';
+    return 'Hello, I am Courtbot. I have a heart of justice and a knowledge of court cases.';
 }
 
 /**
@@ -68,8 +120,9 @@ function iAmCourtBot() {
  * @return {String} message.
  */
 function invalidCaseNumber() {
-  return normalizeSpaces(`Couldn't find your case. Case identifier should be 6 to 25
-    numbers and/or letters in length.`);
+    return normalizeSpaces(`Reply with a case or ticket number to sign up for a reminder.
+    Case number length should be 14, example: 1KE-18-01234MO.
+    Ticket number can be 8 to 17 letters and/or numbers in length, example: KETEEP00000123456.`);
 }
 
 /**
@@ -78,10 +131,10 @@ function invalidCaseNumber() {
  * @return {String} message.
  */
 function notFoundAskToKeepLooking() {
-  return normalizeSpaces(`Could not find a case with that number. It can take
-    several days for a case to appear in our system. Would you like us to keep
-    checking for the next ${process.env.QUEUE_TTL_DAYS} days and text you if
-    we find it? (reply YES or NO)`);
+    return normalizeSpaces(`We could not find that number. It can take several days for a citation 
+        number to appear in our system. Would you like us to keep
+        checking for the next ${process.env.QUEUE_TTL_DAYS} days and text you if
+        we find it? (reply YES or NO)`);
 }
 
 /**
@@ -91,11 +144,11 @@ function notFoundAskToKeepLooking() {
  * @return {string} message
  */
 function reminder(occurrence) {
-  return normalizeSpaces(`Reminder: It appears you have a court hearing tomorrow at
-    ${dates.fromUtc(occurrence.date).format('h:mm A')} at ${occurrence.room}.
-    You should confirm your hearing date and time by going to
-    ${process.env.COURT_PUBLIC_URL}.
-    - ${process.env.COURT_NAME}`);
+    return normalizeSpaces(`Courtesy reminder: ${cleanupName(occurrence.defendant)} has a court hearing on
+        ${moment(occurrence.date).format('ddd, MMM Do')} at ${moment(occurrence.date).format('h:mm A')}, at ${occurrence.room}.
+        You should confirm your hearing date and time by going to
+        ${process.env.COURT_PUBLIC_URL}.
+        - ${process.env.COURT_NAME}`);
 }
 
 /**
@@ -103,21 +156,21 @@ function reminder(occurrence) {
  *
  * @return {string} Not Found Message
  */
-function unableToFindCitationForTooLong() {
-  return normalizeSpaces(`We haven't been able to find your court case.
-  You can go to ${process.env.COURT_PUBLIC_URL} for more information.
-  - ${process.env.COURT_NAME}`);
+function unableToFindCitationForTooLong(request) {
+    return normalizeSpaces(`We haven't been able to find your court case ${request.case_id}.
+        You can go to ${process.env.COURT_PUBLIC_URL} for more information.
+        - ${process.env.COURT_NAME}`);
 }
 
 /**
  * tell them we will keep looking for the case they inquired about
- *
+ * @param {Array} cases
  * @return {string} message
  */
 function weWillKeepLooking() {
-  return normalizeSpaces(`OK. We will keep checking for up to ${process.env.QUEUE_TTL_DAYS} days.
-    You can always go to ${process.env.COURT_PUBLIC_URL} for more information about
-    your case and contact information.`);
+    return normalizeSpaces(`OK. We will keep checking for up to ${process.env.QUEUE_TTL_DAYS} days.
+        You can always go to ${process.env.COURT_PUBLIC_URL} for more information about
+        your case and contact information.`);
 }
 
 /**
@@ -126,12 +179,44 @@ function weWillKeepLooking() {
  * @return {String} message.
  */
 function weWillRemindYou() {
-  return normalizeSpaces(`Sounds good. We will attempt to text you a courtesy reminder
-    the day before your hearing date. Note that court schedules frequently change.
-    You should always confirm your hearing date and time by going
-    to ${process.env.COURT_PUBLIC_URL}.`);
+    return normalizeSpaces(`OK. We will text you a courtesy reminder
+        the day before your hearing date. Note that court schedules frequently change.
+        You should always confirm your hearing date and time by going
+        to ${process.env.COURT_PUBLIC_URL}.`);
 }
 
+/**
+ * alerts user they are currently getting reminders for this case and gives option to stop
+ * @param {Array} cases
+ * @return {string} message
+ */
+function alreadySubscribed(case_id){
+    return normalizeSpaces(`You are currently scheduled to receive reminders for this case.
+    We will attempt to text you a courtesy reminder the day before your hearing date. To stop receiving reminders for this case text 'DELETE'.
+    You can go to ${process.env.COURT_PUBLIC_URL} for more information.`);
+}
+
+/**
+ * tell them we will stop sending reminders about cases
+ * @param {Array} cases
+ * @return {string} message
+ */
+function weWillStopSending(case_id) {
+    return normalizeSpaces(`OK. We will stop sending reminders for case: ${case_id}.
+     If you want to resume reminders you can text this ID to us again.
+    You can go to ${process.env.COURT_PUBLIC_URL} for more information.`);
+}
+
+/**
+ * tell them we don't have any requests in the system for them
+ *
+ * @return {String} message.
+ */
+function youAreNotFollowingAnything(){
+    return normalizeSpaces(`You are not currently subscribed for any reminders. If you want to be reminded
+    about an upcoming hearing, send us the case/citation number. You can go to ${process.env.COURT_PUBLIC_URL} for more information.
+    - ${process.env.COURT_NAME}`)
+}
 
 /**
  * Send a twilio message
@@ -143,20 +228,30 @@ function weWillRemindYou() {
  * @return {Promise} Promise to send message.
  */
 function send(to, from, body) {
-  return new Promise((resolve) => {
-    client.sendMessage({ to, from, body }, resolve);
-  });
+    const client = new twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+
+    return client.messages.create({
+        body: body,
+        to: to,
+        from: from
+    })
 }
 
 module.exports = {
-  forMoreInfo,
-  foundItAskForReminder,
-  iAmCourtBot,
-  invalidCaseNumber,
-  notFoundAskToKeepLooking,
-  weWillKeepLooking,
-  weWillRemindYou,
-  reminder,
-  send,
-  unableToFindCitationForTooLong,
+    forMoreInfo,
+    foundItAskForReminder,
+    foundItWillRemind,
+    iAmCourtBot,
+    invalidCaseNumber,
+    notFoundAskToKeepLooking,
+    weWillKeepLooking,
+    weWillRemindYou,
+    reminder,
+    send,
+    unableToFindCitationForTooLong,
+    weWillStopSending,
+    youAreNotFollowingAnything,
+    alreadySubscribed,
+    repliedNo,
+    repliedNoToKeepChecking
 };
