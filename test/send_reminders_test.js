@@ -151,8 +151,8 @@ describe("with notification already sent for hearing", function () {
     })
 
     it("should send reminder when notification exists for same phone/case_id but at a different date/time", function(){
-        var message1 = `Courtesy reminder: Frederick T Turner has a court hearing on ${TOMORROW_DATE.format('ddd, MMM Do')} at 2:00 PM, at CNVCRT for case/ticket number: ${case1.case_id}. You should verfiy your hearing date and time by going to ${process.env.COURT_PUBLIC_URL}. - ${process.env.COURT_NAME}`;
-        var message2 = `Courtesy reminder: Bob J Smith has a court hearing on ${TOMORROW_DATE.format('ddd, MMM Do')} at 2:00 PM, at CNVJAIL for case/ticket number: ${case2.case_id}. You should verfiy your hearing date and time by going to ${process.env.COURT_PUBLIC_URL}. - ${process.env.COURT_NAME}`;
+        var message1 = `Courtesy reminder: Frederick T Turner has a court hearing on ${TOMORROW_DATE.format('ddd, MMM Do')} at 2:00 PM, at CNVCRT for case/ticket number: ${case1.case_id}. You should verify your hearing date and time by going to ${process.env.COURT_PUBLIC_URL}. - ${process.env.COURT_NAME}`;
+        var message2 = `Courtesy reminder: Bob J Smith has a court hearing on ${TOMORROW_DATE.format('ddd, MMM Do')} at 2:00 PM, at CNVJAIL for case/ticket number: ${case2.case_id}. You should verify your hearing date and time by going to ${process.env.COURT_PUBLIC_URL}. - ${process.env.COURT_NAME}`;
 
         messageMock.expects('send').resolves(true).once().withExactArgs(request1.phone, process.env.TWILIO_PHONE_NUMBER, message1)
         messageMock.expects('send').resolves(true).once().withExactArgs(request2.phone, process.env.TWILIO_PHONE_NUMBER, message2)
