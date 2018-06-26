@@ -145,8 +145,9 @@ function notFoundAskToKeepLooking() {
  */
 function reminder(occurrence) {
     return normalizeSpaces(`Courtesy reminder: ${cleanupName(occurrence.defendant)} has a court hearing on
-        ${moment(occurrence.date).format('ddd, MMM Do')} at ${moment(occurrence.date).format('h:mm A')}, at ${occurrence.room}.
-        You should confirm your hearing date and time by going to
+        ${moment(occurrence.date).format('ddd, MMM Do')} at ${moment(occurrence.date).format('h:mm A')}, at ${occurrence.room}
+        for case/ticket number: ${occurrence.case_id}.
+        You should verify your hearing date and time by going to
         ${process.env.COURT_PUBLIC_URL}.
         - ${process.env.COURT_NAME}`);
 }
