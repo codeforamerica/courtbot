@@ -182,7 +182,7 @@ function weWillKeepLooking() {
 function weWillRemindYou() {
     return normalizeSpaces(`OK. We will text you a courtesy reminder
         the day before your hearing date. Note that court schedules frequently change.
-        You should always confirm your hearing date and time by going
+        You should always verify your hearing date and time by going
         to ${process.env.COURT_PUBLIC_URL}.`);
 }
 
