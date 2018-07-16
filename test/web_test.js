@@ -333,7 +333,7 @@ describe("POST /sms", function() {
                 .end(function (err, res) {
                     if (err)  return done(err);
 
-                    expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Message>OK. We will text you a courtesy reminder the day before your hearing date. Note that court schedules frequently change. You should always confirm your hearing date and time by going to http://courts.alaska.gov.</Message></Response>');
+                    expect(res.text).to.equal('<?xml version="1.0" encoding="UTF-8"?><Response><Message>OK. We will text you a courtesy reminder the day before your hearing date. Note that court schedules frequently change. You should always verify your hearing date and time by going to http://courts.alaska.gov.</Message></Response>');
                     expect(getConnectCookie(sess).case_id).to.be.undefined;
                     expect(getConnectCookie(sess).known_case).to.be.undefined;
 
