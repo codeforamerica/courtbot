@@ -1,0 +1,81 @@
+body {
+    font-family: 'Raleway', sans-serif;
+    font-weight: 300;
+    background-color: #fafafa;
+    color: #666;
+    margin: 0;
+    padding: 0;
+}
+h1 {
+    font-family: 'Raleway', serif;
+    font-weight: 900;
+    color: #cf5533;
+    font-size: 4em;
+    margin-bottom: .2em;
+}
+h2 {
+    font-family: 'Raleway', serif;
+    font-weight: 300;
+    font-size: 1.75em;
+    margin-top: 0em;
+}
+h3 {
+    font-family: 'Raleway', serif;
+    font-weight: 600;
+    font-size: 1.5em;
+    margin-bottom: 0em;
+}
+h4 {
+    font-family: 'Raleway', serif;
+    font-weight: 600;
+    font-size: 1.25em;
+    margin-bottom: .2em;
+}
+p {
+    line-height: 150%;
+}
+p.faq b {
+    font-weight: 600;
+}
+a {
+    color: #cf5533;;
+}
+
+#title {
+   max-width: 40em;
+   flex-basis: 40%;
+   flex-shrink: 1;
+   flex-grow:2;
+   width: 50%;
+}
+#splashImage{
+    flex-basis: 350px;
+    align-items: flex-end;
+    text-align: center;
+    padding-top: 3em;
+    margin-right: 1em;
+}
+#top {
+    display: flex;
+    flex-wrap: wrap-reverse;
+    max-width: 1200px;
+    padding: 0 2em;
+    margin: 0 auto; 
+    background-color: #fafafa;
+}
+#phoneNumber {
+    color: #cf5533;
+    font-size: 1.5em;
+    font-weight: 600;
+    line-height: 200%
+}
+
+@media (max-width: 800px)
+{
+    p {
+        font-size:1.25em;
+    }
+    #top {
+        padding: 1.2em; 
+    }
+}

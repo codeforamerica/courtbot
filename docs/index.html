@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<!--[if lt IE 7]>      <html class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
+<!--[if IE 7]>         <html class="no-js lt-ie9 lt-ie8"> <![endif]-->
+<!--[if IE 8]>         <html class="no-js lt-ie9"> <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js"> <!--<![endif]-->
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>Alaska CourtBot</title>
+        <meta name="description" content="CourtBot is a free service that sends SMS reminders for court hearings">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link href="https://fonts.googleapis.com/css?family=Raleway:300,600,900" rel="stylesheet">
+        <link rel="stylesheet" href="styles/styles.css">
+        <script src="js/fittext.js"></script>
+    </head>
+    <body>
+        <div id="top">
+            <div id="splashImage">
+                <img src="img/phone_339x406.png" />
+            </div>
+            <div id="title">
+                <h1 id="courtBotHeader">Alaska CourtBot</h1>
+                <h2>A free service that will send you a text message reminder the day before your court hearing.</h2>
+                <h3>How it works:</h3>
+                <p>
+                    Just text your case or ticket number to:
+                <br>
+                    <span id="phoneNumber">907-312-2700</span> <br>
+                    We will attempt to send you a reminder the evening before your court hearing. Case numbers are 14 characters long like: 1KE-19-01234MO. Ticket numbes can be 8 to 17 characters long. For example: KETEEP000123456.    
+                </p>
+                <h4>Frequently asked questions</h4>
+                <p class ="faq">
+                    <b>How do I turn off notifications?</b><br />
+                    Reply to the message with "stop" and we will stop sending you notifications.
+                </p>
+                <p class ="faq">
+                        <b>Do I still need to verify my court date?</b><br />
+                        Yes! This service is provided as-is. Court dates change frequently, so you should always verify the date and time of your hearing by visiting the <a href="https://records.courts.alaska.gov">Alaska State Court System</a>.
+                </p>
+                <p class ="faq">
+                        <b>Who maintains Alaska CourtBot</b><br />
+                        Alaska CourtBot is maintained by volunteers at Code for Anchorage, a brigade of Code for America. If you would like to be involved with this or similar projects, please visit: <a href="http://codeforanchorage.org">Code for Anchorage</a>.
+                </p>
+            </div>
+        </div>
+        <script>
+            fitText(document.getElementById('courtBotHeader'), 0.9)
+        </script>
+        <script src="" async defer></script>
+    </body>
+</html>
