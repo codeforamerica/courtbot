@@ -109,7 +109,8 @@ exit
 ```
 
 ### Setting up the Scheduler
-Finally, you'll want to set up the [scheduler](https://elements.heroku.com/addons/scheduler) addon to run the various tasks each day. Here's the recommended config:
+
+Finally, you'll want to set up the [scheduler](https://elements.heroku.com/addons/scheduler) addon to run the various tasks each day. Here's the recommended configuration:
 
 | Task | Dyno Size | Frequency | At |
 | --- | :---: | :--: | :--: |
@@ -122,13 +123,18 @@ Finally, you'll want to set up the [scheduler](https://elements.heroku.com/addon
 
 Initialize the test database:
 
-* node test_utils/reset
+```
+node test_utils/reset
+```
 
-Set up your environment variables:
+Set up your environment variables (may required some customization):
 
-* cp .sample.env .env
--OR- set your own
+```
+cp .sample.env .env
+```
 
-The run the tests:
+Then run the tests:
 
+```
 npm test
+```
