@@ -2,247 +2,131 @@
 
 // Downloads the latest courtdate CSV file and
 // rebuilds the database. For best results, load nightly.
-
 const request = require('request');
-const parse = require('csv-parse');
-const sha1 = require('sha1');
-const dates = require('./dates');
-require('dotenv').config();
+const csv = require('csv');
+const copyFrom = require('pg-copy-streams').from;
+const CombinedStream = require('combined-stream')
 const manager = require('./db/manager');
-const moment = require('moment-timezone');
 
 const CSV_DELIMITER = ',';
 
-/**
- * fetch the data from the url, parse it and extract it
- *
- * @param  {String} url - url of the court data
- * @param  {String} extractionHandler - function to use to extract the case data
- *    from the rows once they are parsed from the CSV file
- * @return {Promise} ({Array} cases) - cases derived from data
- */
-function getCases(url, extractionHandler) {
-  // get the basename of the file for logging
-  const file = url.split('/').reverse()[0];
-
-  return new Promise((resolve, reject) => {
-    console.log(`Downloading CSV file ${file}...`);
-    request.get(url, (req, res) => {
-      if (res.statusCode === 404) {
-        console.log(`404 page not found ${url}`);
-        return reject(Error(`404 page not found ${url}`));
-      }
-
-      console.log(`Parsing CSV file ${file}...`);
-      return parse(res.body, { delimiter: CSV_DELIMITER }, (err, rows) => {
-        if (err) {
-          console.log(`Unable to parse file: ${url}`);
-          console.log(err);
-          return reject(err);
-        }
-
-        console.log(`  extracting information from ${rows.length} rows from ${file}...`);
-        const cases = extractionHandler(rows);
-        console.log(`  produced ${cases.length} case records from ${file}...`);
-        return resolve(cases);
-      });
-    });
-  });
-}
-
-/**
- *  extract criminal cases from criminal court hearing rows parsed from the CSV file
- *
- * Criminal cases have a case number instead of a citation number, and may have multiple
- *  hearing types possibly on different days or in different locations.  So instead of
- *  condensing the records as the extractCourtData method does, we are going to keep it
- *  as-is, but skip full duplicate rows.
- *
- * @param  {Array} rows - criminal court hearing records
- * @return {Array} cases - cases derived from citation data
- */
-function extractCriminalCases(rows) {
-  const cases = [];
-  const casesMap = {};
-  rows.forEach((c) => {
-    const newHearing = {
-      id: c[5],
-      description: c[6],
-      location: c[5].substr(0, 3),
-    };
-
-    let hearingDate = c[0];
-    // If we want to test reminders, set all dates to tomorrow
-    if (process.env.TEST_TOMORROW_DATES === '1') {
-      const before = c[0];
-      hearingDate = moment().add(1, 'days').format('MM/DD/YYYY');
-      console.log(`Before: ${before}, After: ${hearingDate}`);
-    }
-
-    const newCase = {
-      date: dates.fromDateAndTime(hearingDate, c[4]),
-      defendant: `${c[2]} ${c[1]}`,
-      room: c[3],
-      time: c[4],
-      citations: [newHearing],
-    };
-
-    // these are what make a case entry unique
-    newCase.id = sha1(newCase.defendant + newCase.date + newHearing.id + newHearing.description);
-    // exclude duplicates
-    if (!casesMap[newCase.id]) {
-      cases.push(newCase);
-      casesMap[newCase.id] = 1;
-    }
-  });
-
-  return cases;
-}
-
-/**
- *  Citation data provided in CSV has a few tricky parsing problems. The
- *  main of which is that citation numbers can appear multiple times.
- *  There's actually a couple reasons why:
- *
- *  1. Duplicates produced by the SQL query that generates the file
- *  2. Date updates -- each date is included. Need to go with latest.
- *  3. Cases that use identical citation numbers. Typos when put into the system.
- *
- * @param  {Array} rows - Citation records
- * @return {Array} cases - Cases derived from citation data
- */
-function extractCourtData(rows) {
-  const cases = [];
-  const casesMap = {};
-  const citationsMap = {};
-
-  rows.forEach((c) => {
-    const citationInfo = c[8].split(':');
-    const newCitation = {
-      id: c[6],
-      violation: citationInfo[0],
-      description: citationInfo[1],
-      location: c[6].substr(0, 3),
-    };
-
-    let hearingDate = c[0];
-    // If we want to test reminders, set all dates to tomorrow
-    if (process.env.TEST_TOMORROW_DATES === '1') {
-      const before = c[0];
-      hearingDate = moment().add(1, 'days').format('MM/DD/YYYY');
-      console.log(`Before: ${before}, After: ${hearingDate}`);
-    }
-
-    const newCase = {
-      date: dates.fromDateAndTime(hearingDate, c[5]),
-      defendant: `${c[2]} ${c[1]}`,
-      room: c[4],
-      time: c[5],
-      citations: [],
-    };
-
-    // Since no values here are actually unique, we create some lookups
-    const citationLookup = newCitation.id + newCitation.violation;
-    newCase.id = sha1(newCase.defendant + newCitation.location.slice(0, 3));
-    const caseLookup = newCase.id;
-
-    // The checks below handle the multiple citations in the dataset issue.
-    // See above for a more detailed explanation.
-    const prevCitation = citationsMap[citationLookup];
-    const prevCase = casesMap[caseLookup];
-
-    // If we've seen this citation and case, this is just a date update.
-    // If we've seen this case, this is an additional citation on it
-    // Otherwise, both the case and the citation are new.
-    if (prevCitation && prevCase) {
-      prevCase.date = moment.max(prevCase.date, newCase.date);
-    } else if (prevCase) {
-      prevCase.date = moment.max(prevCase.date, newCase.date);
-      prevCase.citations.push(newCitation);
-      citationsMap[citationLookup] = newCitation;
-    } else {
-      cases.push(newCase);
-      casesMap[caseLookup] = newCase;
-
-      newCase.citations.push(newCitation);
-      citationsMap[citationLookup] = newCitation;
-    }
-  });
-
-  return cases;
-}
-
-/**
- * inserts cases into the cases table in the database, 1000 at a time
- *
- * @param  {Array} cases - array of cases to store
- * @return {Promise} - void
- */
-function insertCases(cases) {
-  // Make violations a JSON blob, to keep things simple
-  cases.forEach((c) => {
-    c.citations = JSON.stringify(c.citations); /* eslint "no-param-reassign": "off" */
-  });
-
-  return manager.batchInsert('cases', cases, 1000);
-}
-
-/**
- * store cases in the database
- *
- * Note: this drops and recreates the table (which also creates and index) then
- *   inserts the data, according to (https://www.postgresql.org/docs/9.2/static/populate.html)
- *   this may be slower than inserting bulk data before creating a new index.
- *   But, this is much cleaner.
- *
- * @param  {Array} cases - array of cases to store
- * @return {Promise}
- */
-function persistCases(cases) {
-  return manager.dropTable('cases')
-    .then(() => manager.createTable('cases'))
-    .then(() => insertCases(cases))
-    .then(manager.closeConnection);
+const csv_headers = {
+    criminal_cases: ['date', 'last', 'first', 'room', 'time', 'id', 'type'],
+    civil_cases: ['date', 'last', 'first', false, 'room', 'time', 'id', false, 'violation', false]
 }
 
 /**
  * Main function that performs the entire load process.
  *
  * @param  {String} dataUrls - list of data urls to load along with an optional
- *   extractor to use on each file.  Format is url|extractor,...  The default
- *   extractor is extractCourtData.  If this parameter is missing, then the
+ *   header object key to use on each file.  Format is url|csv_type,...  The default
+ *   csv_type is civil_cases. If this parameter is missing, then the
  *   environment variable DATA_URL is used instead.
- * @return {Promise} - true
+ * @return {Promise} - resolves to object with file and record count: { files: 2, records: 12171 }
  */
-function loadData(dataUrls) {
-  // determine what urls to load and how to extract them
-  // example DATA_URL=http://courtrecords.alaska.gov/MAJIC/sandbox/acs_mo_event.csv
-  // example DATA_URL=http://courtrecords.../acs_mo_event.csv|extractCourtData,http://courtrecords.../acs_cr_event.csv|extractCriminalCases
-  const files = (dataUrls || process.env.DATA_URL).split(',');
-  // queue each file and extraction as a promise
-  const queue = [];
-  files.forEach((item) => {
-    const [url, extractor] = item.split('|');
-    if (url.trim() !== '') {
-      // use the specified extractor name to determine which extraction method to use
-      // default to the original extraction method
-      if (extractor) {
-        queue.push(getCases(url, (extractor === 'extractCriminalCases' ? extractCriminalCases : extractCourtData)));
-      } else {
-        queue.push(getCases(url, extractCourtData));
-      }
-    }
-  });
+async function loadData(dataUrls) {
+    // determine what urls to load and how to extract them
+    // example DATA_URL=http://courtrecords.alaska.gov/MAJIC/sandbox/acs_mo_event.csv
+    // example DATA_URL=http://courtrecords.../acs_mo_event.csv|civil_cases,http://courtrecords.../acs_cr_event.csv|criminal_cases
 
-  return Promise.all(queue)
-    .then(results => [].concat.apply([], results))
-    .then(cases => persistCases(cases))
-    .then(() => {
-      console.log('Data loaded! All systems are go.');
-      return true;
-    });
+    const files = (dataUrls || process.env.DATA_URL).split(',');
+
+    // A single connection is needed for pg-copy-streams and the temp table
+    const stream_client = await manager.acquireSingleConnection()
+
+    // Postgres temp tables only last as long as the connection
+    // so we need to use one connection for the whole life of the table
+    await createTempHearingsTable(stream_client)
+
+    for (let i = 0; i < files.length; i++) {
+        const [url, csv_type] = files[i].split('|');
+        if (url.trim() == '') continue
+        try{
+            await loadCSV(stream_client, url, csv_type)
+        } catch(err) {
+            stream_client.end()
+            throw(err)
+        }
+    }
+
+    var count = await copyTemp(stream_client)
+    stream_client.end()
+    manager.knex.client.pool.destroy()
+    return {files: files.length, records: count}
+}
+/**
+ * Transforms and loads a streamed csv file into the Postgres table .
+ *
+ * @param {Client} client - single pg client to use to create temp table and stream into DB
+ * @param {string} url - CSV url
+ * @param {string} csv_type - key for the csv_headers
+ */
+function loadCSV(client, url, csv_type){
+    /* Define transform from delivered csv to unified format suitable for DB */
+    const transformToTable = csv.transform(row => [`${row.date} ${row.time}`, `${row.first} ${row.last}`, row.room, row.id, row.type])
+
+    /* Use the csv header array to determine which headers describe the csv.
+       Default to the original citation headers */
+    const parser =  csv.parse({
+        delimiter: CSV_DELIMITER,
+        columns: csv_headers[csv_type === 'criminal_cases' ? 'criminal_cases' : 'civil_cases'],
+        trim: true
+    })
+
+    return new Promise(async (resolve, reject) => {
+        /*  Since we've transformed csv into [date, defendant, room, id] form, we can just pipe it to postgres */
+        const copy_stream = client.query(copyFrom('COPY hearings_temp ("date", "defendant", "room", "case_id", "type") FROM STDIN CSV'));
+        copy_stream.on('error', reject)
+        copy_stream.on('end',  resolve)
+
+        request.get(url)
+        .on('response', function (res) {
+            if (res.statusCode !== 200) {
+              this.emit('error', new Error("Error loading CSV. Return HTTP Status: "+res.statusCode))
+            }
+        })
+        .on('error', reject)
+        .pipe(parser)
+        .on('error', reject)
+        .pipe(transformToTable)
+        .pipe(csv.stringify())
+        .pipe(copy_stream)
+    })
 }
 
-// Do the thing!
+/**
+ * Copy temp table to real table. Enforce unique constraints by ignoring dupes.
+ * @param {*} client
+ */
+async function copyTemp(client){
+    await manager.dropTable('hearings')
+    await manager.createTable('hearings')
+    let resp = await client.query(
+        `INSERT INTO hearings (date, defendant, room, case_id, type)
+        SELECT date, defendant, room, case_id, type from hearings_temp
+        ON CONFLICT DO NOTHING;`
+    )
+    const count = resp.rowCount
+    return count
+}
+/**
+ * Temp table to pipe into. This is necessary because Postgres can't configure
+ * alternate constraint handling when consuming streams. Duplicates would kill the insert.
+ * @param {*} client
+ */
+async function createTempHearingsTable(client){
+    // Need to use the client rather than pooled knex connection
+    // becuase pg temp tables are tied to the life of the client.
+    await client.query(
+        `CREATE TEMP TABLE hearings_temp (
+            date timestamptz,
+            defendant varchar(100),
+            room varchar(100),
+            case_id varchar(100),
+            type varchar(100)
+        )`
+    )
+    return
+}
 
 module.exports = loadData;

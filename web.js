@@ -1,235 +1,301 @@
 /* eslint "no-console": "off" */
-
-const twilio = require('twilio');
+require('dotenv').config();
+const MessagingResponse = require('twilio').twiml.MessagingResponse;
 const express = require('express');
-const logfmt = require('logfmt');
+const cookieSession = require('cookie-session')
+const bodyParser = require('body-parser')
 const db = require('./db');
-const dates = require('./utils/dates');
-const rollbar = require('rollbar');
 const emojiStrip = require('emoji-strip');
 const messages = require('./utils/messages.js');
-
-require('dotenv').config();
+const moment = require("moment-timezone");
+const onHeaders = require('on-headers');
+const log = require('./utils/logger')
+const web_log = require('./utils/logger/hit_log')
+const web_api = require('./web_api/routes');
+const action_symbol = Symbol.for('action');
 
 const app = express();
 
-// Express Middleware
-app.use(logfmt.requestLogger());
-app.use(express.json());
-app.use(express.urlencoded());
-app.use(express.cookieParser(process.env.COOKIE_SECRET));
-app.use(express.cookieSession());
+/* Express Middleware */
 
+app.use(bodyParser.urlencoded({ extended: false }))
+app.use(bodyParser.json())
+app.use(cookieSession({
+    name: 'session',
+    secret: process.env.COOKIE_SECRET,
+    signed: false, // causing problems with twilio -- investigating
+}));
 
-// Serve testing page on which you can impersonate Twilio
-// (but not in production)
+/* makes json print nicer for /cases */
+app.set('json spaces', 2);
+
+/* Serve testing page on which you can impersonate Twilio (but not in production) */
 if (app.settings.env === 'development' || app.settings.env === 'test') {
-  app.use(express.static('public'));
+    app.use(express.static('public'));
 }
 
-// Allows CORS
+/* Allows CORS */
 app.all('*', (req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Headers', 'X-Requested-With');
-  next();
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Headers', 'X-Requested-With, Authorization, Content-Type');
+    res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,OPTIONS');
+    onHeaders(res, web_log)
+    next();
 });
 
-// Enable CORS support for IE8.
+/* Enable CORS support for IE8. */
 app.get('/proxy.html', (req, res) => {
-  res.send('<!DOCTYPE HTML>\n<script src="http://jpillora.com/xdomain/dist/0.6/xdomain.min.js" master="http://www.courtrecords.alaska.gov"></script>');
+    res.send('<!DOCTYPE HTML>\n<script src="http://jpillora.com/xdomain/dist/0.6/xdomain.min.js" master="http://www.courtrecords.alaska.gov"></script>');
 });
 
 app.get('/', (req, res) => {
-  res.status(200).send(messages.iAmCourtBot());
+    res.status(200).send(messages.iAmCourtBot());
 });
 
-// Fuzzy search that returns cases with a partial name match or
-// an exact citation match
-app.get('/cases', (req, res, next) => {
-  if (!req.query || !req.query.q) {
-    return res.send(400);
-  }
+/* Add routes for api access */
+app.use('/api', web_api);
 
-  return db.fuzzySearch(req.query.q)
+/* Fuzzy search that returns cases with a partial name match or
+   an exact citation match
+*/
+app.get('/cases', (req, res, next) => {
+    if (!req.query || !req.query.q) {
+        return res.sendStatus(400);
+    }
+
+    return db.fuzzySearch(req.query.q)
     .then((data) => {
       if (data) {
         data.forEach((d) => {
-          d.readableDate = dates.fromUtc(d.date).format('dddd, MMM Do'); /* eslint "no-param-reassign": "off" */
+            d.readableDate = moment(d.date).format('dddd, MMM Do'); /* eslint "no-param-reassign": "off" */
         });
       }
-      return res.send(data);
+      return res.json(data);
     })
     .catch(err => next(err));
 });
 
 /**
- * strips line feeds, returns, and emojis from string and trims it
+ * Twilio Hook for incoming text messages
+ */
+app.post('/sms',
+    cleanupTextMiddelWare,
+    stopMiddleware,
+    deleteMiddleware,
+    yesNoMiddleware,
+    currentRequestMiddleware,
+    caseIdMiddleware,
+    unservicableRequest
+);
+
+ /* Middleware functions */
+
+/**
+ * Strips line feeds, returns, and emojis from string and trims it
  *
  * @param  {String} text incoming message to evaluate
  * @return {String} cleaned up string
  */
-function cleanupText(text) {
-  text = text.replace(/[\r\n|\n].*/g, '');
-  return emojiStrip(text).trim();
+function cleanupTextMiddelWare(req,res, next) {
+    let text = req.body.Body.replace(/[\r\n|\n].*/g, '');
+    req.body.Body = emojiStrip(text).trim().toUpperCase();
+    next()
 }
 
 /**
- * checks for an affirmative response
+ * Checks for 'STOP' text. We will recieve this if the user requests that twilio stop sending texts
+ * All further attempts to send a text (inlcuding responing to this text) will fail until the user restores this.
+ * This will delete any requests the user currently has (alternatively we could mark them inactive and reactiveate if they restart)
+ */
+function stopMiddleware(req, res, next){
+    const stop_words = ['STOP', 'STOPALL', 'UNSUBSCRIBE', 'CANCEL', 'END','QUIT']
+    const text = req.body.Body
+    if (!stop_words.includes(text)) return next()
+
+    db.deactivateRequestsFor(req.body.From)
+    .then(case_ids => {
+        res[action_symbol] = "stop"
+        return res.sendStatus(200); // once stopped replies don't make it to the user
+    })
+    .catch(err => next(err));
+}
+
+/**
+ *  Handles cases when user has send a yes or no text.
+ */
+function yesNoMiddleware(req, res, next) {
+    // Yes or No resonses are only meaningful if we also know the citation ID.
+    if (!req.session.case_id) return next()
+
+    const twiml = new MessagingResponse();
+    if (isResponseYes(req.body.Body)) {
+        db.addRequest({
+            case_id: req.session.case_id,
+            phone: req.body.From,
+            known_case: req.session.known_case
+        })
+        .then(() => {
+            twiml.message(req.session.known_case ? messages.weWillRemindYou() : messages.weWillKeepLooking() );
+            res[action_symbol] = req.session.known_case? "schedule_reminder" : "schedule_unmatched"
+            req.session = null;
+            req.session = null;
+            res.send(twiml.toString());
+        })
+        .catch(err => next(err));
+    } else if (isResponseNo(req.body.Body)) {
+        res[action_symbol] = "decline_reminder"
+        twiml.message(req.session.known_case ? messages.repliedNo(): messages.repliedNoToKeepChecking());
+        req.session = null;
+        res.send(twiml.toString());
+    } else{
+        next()
+    }
+}
+
+/**
+ * Handles cases where user has entered a case they are already subscribed to
+ * and then type Delete
+ */
+function deleteMiddleware(req, res, next) {
+    // Delete response is only meaningful if we have a delete_case_id.
+    const case_id = req.session.delete_case_id
+    const phone = req.body.From
+    if (!case_id || req.body.Body !== "DELETE") return next()
+    res[action_symbol] = "delete_request"
+    const twiml = new MessagingResponse();
+    db.deactivateRequest(case_id, phone)
+    .then(() => {
+        req.session = null;
+        twiml.message(messages.weWillStopSending(case_id))
+        res.send(twiml.toString());
+    })
+    .catch(err => next(err));
+}
+
+/**
+ * Responds if the sending phone number is alreay subscribed to this case_id=
+ */
+function currentRequestMiddleware(req, res, next) {
+    const text = req.body.Body
+    const phone = req.body.From
+    if (!possibleCaseID(text)) return next()
+    db.findRequest(text, phone)
+    .then(results => {
+        if (!results || results.length === 0) return next()
+
+        const twiml = new MessagingResponse();
+        // looks like they're already subscribed
+        res[action_symbol] = "already_subscribed"
+        req.session.delete_case_id = text
+        twiml.message(messages.alreadySubscribed(text))
+        res.send(twiml.toString());
+    })
+    .catch(err => next(err));
+}
+
+/**
+ * If input looks like a case number handle it
+ */
+function caseIdMiddleware(req, res, next){
+    const text = req.body.Body
+    if (!possibleCaseID(text)) return next()
+    const twiml = new MessagingResponse();
+
+    db.findCitation(req.body.Body)
+    .then(results => {
+        if (!results || results.length === 0){
+            // Looks like it could be a citation that we don't know about yet
+            res[action_symbol] = "unmatched_case"
+            twiml.message(messages.notFoundAskToKeepLooking());
+            req.session.known_case = false;
+            req.session.case_id = text;
+        } else {
+            // They sent a known citation!
+            res[action_symbol] = "found_case"
+            twiml.message(messages.foundItAskForReminder(results[0]));
+            req.session.case_id = text;
+            req.session.known_case = true;
+        }
+        res.send(twiml.toString());
+    })
+    .catch(err => next(err));
+}
+
+/**
+ * None of our middleware could figure out what to do with the input
+ * [TODO: create a better message to help users use the service]
+ */
+function unservicableRequest(req, res, next){
+    // this would be a good place for some instructions to the user
+    res[action_symbol] = "unusable_input"
+    const twiml = new MessagingResponse();
+    twiml.message(messages.invalidCaseNumber());
+    res.send(twiml.toString());
+}
+
+/* Utility helper functions */
+
+/**
+ * Test message to see if it looks like a case id.
+ * Currently alphan-numeric plus '-' between 6 and 25 characters
+ * @param {String} text
+ */
+function possibleCaseID(text) {
+    /*  From AK Court System:
+        - A citation must start with an alpha letter (A-Z) and followed 
+          by only alpha (A-Z) and numeric (0-9) letters with a length of 8-17.   
+        - Case number must start with a number (1-4) 
+          and have a length of 14 exactly with dashes.
+    */     
+   
+    const citation_rx = /^[A-Za-z][A-Za-z0-9]{7,16}$/
+    const case_rx = /^[1-4][A-Za-z0-9-]{13}$/
+    return case_rx.test(text) ||  citation_rx.test(text);
+}
+
+/**
+ * Checks for an affirmative response
  *
  * @param  {String} text incoming message to evaluate
  * @return {Boolean} true if the message is an affirmative response
  */
 function isResponseYes(text) {
-  text = text.toUpperCase().trim();
-  return (text === 'YES' || text === 'YEA' || text === 'YUP' || text === 'Y');
+    return (text === 'YES' || text === 'YEA' || text === 'YUP' || text === 'Y');
 }
 
 /**
- * checks for negative or declined response
+ * Checks for negative or declined response
  *
  * @param  {String} text incoming message to evaluate
  * @return {Boolean} true if the message is a negative response
  */
 function isResponseNo(text) {
-  text = text.toUpperCase().trim();
-  return (text === 'NO' || text === 'N');
-}
-
-/**
- * Change FIRST LAST to First Last
- *
- * @param  {String} name name to manipulate
- * @return {String} propercased name
- */
-function cleanupName(name) {
-  return name.trim()
-    .replace(/\w\S*/g, txt => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
+    return (text === 'NO' || text === 'N');
 }
 
 
-function askedReminderMiddleware(req, res, next) {
-  if (isResponseYes(req.body.Body) || isResponseNo(req.body.Body)) {
-    if (req.session.askedReminder) {
-      req.askedReminder = true;
-      req.match = req.session.match;
-      next();
-      return;
-    }
-    db.findAskedQueued(req.body.From)
-      .then((data) => {
-        if (data.length === 1) { // Only respond if we found one queue response "session"
-          req.askedReminder = true;
-          req.match = data[0];
-        }
-        next();
-      })
-      .catch(err => next(err));
-  } else {
-    next();
-  }
-}
-
-// Respond to text messages that come in from Twilio
-app.post('/sms', askedReminderMiddleware, (req, res, next) => {
-  const twiml = new twilio.TwimlResponse();
-  const text = cleanupText(req.body.Body.toUpperCase());
-  if (req.askedReminder) {
-    if (isResponseYes(text)) {
-      db.addReminder({
-        caseId: req.match.id,
-        phone: req.body.From,
-        originalCase: JSON.stringify(req.match),
-      })
-        .then(() => {
-          twiml.sms(messages.weWillRemindYou());
-          req.session.askedReminder = false;
-          res.send(twiml.toString());
-        })
-        .catch(err => next(err));
-    } else {
-      twiml.sms(messages.forMoreInfo());
-      req.session.askedReminder = false;
-      res.send(twiml.toString());
-    }
-    return;
-  }
-
-  if (req.session.askedQueued) {
-    if (isResponseYes(text)) {
-      db.addQueued({
-        citationId: req.session.citationId,
-        phone: req.body.From,
-      })
-        .then(() => {
-          twiml.sms(messages.weWillKeepLooking());
-          req.session.askedQueued = false;
-          res.send(twiml.toString());
-        })
-        .catch(err => next(err));
-      return;
-    } else if (isResponseNo(text)) {
-      twiml.sms(messages.forMoreInfo());
-      req.session.askedQueued = false;
-      res.send(twiml.toString());
-      return;
-    }
-  }
-
-  db.findCitation(text)
-    .then((results) => {
-      if (!results || results.length === 0 || results.length > 1) {
-        const correctLengthCitation = text.length >= 6 && text.length <= 25;
-        if (correctLengthCitation) {
-          twiml.sms(messages.notFoundAskToKeepLooking());
-
-          req.session.citationId = text;
-          req.session.askedQueued = true;
-          req.session.askedReminder = false;
-        } else {
-          twiml.sms(messages.invalidCaseNumber());
-        }
-      } else {
-        const match = results[0];
-        const name = cleanupName(match.defendant);
-        const datetime = dates.fromUtc(match.date);
-
-        twiml.sms(messages.foundItAskForReminder(false, name, datetime, match.room));
-
-        req.session.match = match;
-        req.session.askedReminder = true;
-        req.session.askedQueued = false;
-      }
-
-      res.send(twiml.toString());
-    })
-    .catch(err => next(err));
-});
-
-// Error handling Middleware
+/* Error handling Middleware */
 app.use((err, req, res, next) => {
-  if (!res.headersSent) {
-    console.log('Error: ', err.message);
-    rollbar.handleError(err, req);
+    if (!res.headersSent) {
+        log.error(err);
 
-    // during development, return the trace to the client for helpfulness
-    if (app.settings.env !== 'production') {
-      res.status(500).send(err.stack);
-      return;
+        // during development, return the trace to the client for helpfulness
+        if (app.settings.env !== 'production') {
+            res.status(500).send(err.stack);
+            return;
+        }
+        res.status(500).send('Sorry, internal server error');
     }
-
-    res.status(500).send('Sorry, internal server error');
-  }
 });
 
-// Send all uncaught exceptions to Rollbar???
+/* Send all uncaught exceptions to Rollbar??? */
 const options = {
-  exitOnUncaughtException: true,
+    exitOnUncaughtException: true,
 };
-rollbar.handleUncaughtExceptionsAndRejections(process.env.ROLLBAR_ACCESS_TOKEN, options);
 
 const port = Number(process.env.PORT || 5000);
 app.listen(port, () => {
-  console.log('Listening on ', port);
+    log.info(`Listening on port ${port}`);
 });
 
 module.exports = app;

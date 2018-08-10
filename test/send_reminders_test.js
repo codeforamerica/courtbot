@@ -1,151 +1,237 @@
-// Special env vars needed for NOCK consistency
-process.env.TWILIO_ACCOUNT_SID = "test";
-process.env.TWILIO_AUTH_TOKEN = "token";
-process.env.TWILIO_PHONE_NUMBER = "+test";
+'use strict';
 require('dotenv').config();
-var sr = require("../sendReminders.js");
-var sendReminders = sr.sendReminders;
-var findReminders = sr.findReminders;
-var expect = require("chai").expect;
-var nock = require('nock');
-var manager = require("../utils/db/manager");
-var db = require('../db');
-var knex = manager.knex;
-
-var dates = require("../utils/dates"),
-    TEST_CASE_ID = "677167760f89d6f6ddf7ed19ccb63c15486a0eab",
-    TEST_UTC_DATE = "2015-03-27T08:00:00" + dates.timezoneOffset("2015-03-27");
-
-nock.disableNetConnect();
-nock('https://api.twilio.com:443').log(console.log);
+const sr = require("../sendReminders.js");
+const sendReminders = sr.sendReminders;
+const findReminders = sr.findReminders;
+const expect = require("chai").expect;
+const sinon = require('sinon')
+const manager = require("../utils/db/manager");
+const db = require('../db');
+const knex = manager.knex;
+const messages = require('../utils/messages')
+const moment = require('moment-timezone')
+const TEST_CASE_ID = "677167760f89d6f6ddf7ed19ccb63c15486a0eab",
+      TOMORROW_DATE = moment(14, 'HH').tz(process.env.TZ).add(1, 'days'), // 2:00pm tomorrow
+      TEST_UTC_DATE = moment("2015-03-27T08:00:00").tz(process.env.TZ).format();
+// todo test that reminders are not sent when notification indicates its already sent
 
 describe("with one reminder that hasn't been sent", function() {
+    let messageStub
+
     beforeEach(function () {
+       messageStub = sinon.stub(messages, 'send')
+       messageStub.resolves(true)
+
        return manager.ensureTablesExist()
-            .then(clearTable("cases"))
-            .then(clearTable("reminders"))
-            .then(loadCases([case1]))
-            .then(addTestReminders([reminder1]))
+            .then(clearTable("hearings"))
+            .then(clearTable("requests"))
+            .then(clearTable("notifications"))
+            .then(loadHearings([case1]))
+            .then(addTestRequests([request1]))
     });
 
-    it("sends the correct info to Twilio and updates the reminder to sent", function() {
-        var number = "+12223334444";
-        var message1 = "(1/2) Reminder: It appears you have a court case tomorrow at 2:00 PM at NEWROOM.";
-        var message2 = `(2/2) You should confirm your case date and time by going to ${process.env.COURT_PUBLIC_URL}. - ${process.env.COURT_NAME}`;
-
-        return knex("cases").update({date: dates.now().add(1, 'days'), time: '02:00:00 PM', room: 'NEWROOM' })
-            .then(function() {
-                nock('https://api.twilio.com:443')
-                    .post('/2010-04-01/Accounts/test/Messages.json', "To=" + encodeURIComponent(number) + "&From=%2Btest&Body=" + encodeURIComponent(message1))
-                    .reply(200, {"status":200}, { 'access-control-allow-credentials': 'true'});
-                nock('https://api.twilio.com:443')
-                    .post('/2010-04-01/Accounts/test/Messages.json', "To=" + encodeURIComponent(number) + "&From=%2Btest&Body=" + encodeURIComponent(message2))
-                    .reply(200, {"status":200}, { 'access-control-allow-credentials': 'true'});
-
-                return sendReminders()
-            })
-            .then(res => knex("reminders").where({ sent: true }).select("*"))
-            .then(function (rows) {
-                console.log(JSON.stringify(rows));
-                expect(rows.length).to.equal(1);
-            })
+    afterEach(function() {
+        messageStub.restore()
     });
+
+    it("sends the correct info to Twilio and adds a notification", function() {
+        var message = `Courtesy reminder: Frederick T Turner has a court hearing on ${TOMORROW_DATE.format('ddd, MMM Do')} at 2:00 PM, at CNVCRT for case/ticket number: ${case1.case_id}. You should verify your hearing date and time by going to ${process.env.COURT_PUBLIC_URL}. - ${process.env.COURT_NAME}`;
+        return sendReminders()
+        .then(rows => {
+            sinon.assert.calledWith(messageStub, request1.phone, process.env.TWILIO_PHONE_NUMBER, message)
+        });
+    });
+
+    it("sending reminder adds a notification with the correct case, phone, and time", function(){
+        return sendReminders()
+        .then(() => knex("notifications").where({ case_id: case1.case_id }).select("*"))
+        .then(function (rows) {
+            expect(rows.length).to.equal(1);
+            expect(rows[0].phone).to.equal(db.encryptPhone(request1.phone))
+            expect(moment(rows[0].event_date).tz(process.env.TZ).toISOString()).to.equal(moment(14, 'HH').tz(process.env.TZ).add(1, 'days').toISOString())
+        })
+    })
 });
 
-describe("with three reminders (including one duplicate) that haven't been sent", function () {
+describe("when there is an error sending the message", function(){
+    let messageStub
+    const errorString = "an error occured"
     beforeEach(function () {
+        messageStub = sinon.stub(messages, 'send')
+
+        messageStub.rejects(new Error(errorString))
+
         return manager.ensureTablesExist()
-            .then(clearTable("cases"))
-            .then(clearTable("reminders"))
-            .then(loadCases([case1, case2]))
-            .then(addTestReminders([reminder1, reminder2, reminder2_dup]))
+            .then(clearTable("hearings"))
+            .then(clearTable("requests"))
+            .then(clearTable("notifications"))
+            .then(loadHearings([case1]))
+            .then(addTestRequests([request1]))
     });
 
-    it("sends the correct info to Twilio and updates the reminder(s) to sent", function () {
-        nock('https://api.twilio.com:443')
-            .filteringPath(function (path) {
-                return '/';
-            })
-            .post('/')
-            .times(2)
-            .reply(200, { "status": 200 }, { 'access-control-allow-credentials': 'true' });
+    afterEach(function() {
+        messageStub.restore()
+    });
 
-        return knex("cases").update({ date: dates.now().add(1, 'days'), time: '02:00:00 PM', room: 'NEWROOM' })
-        .then(() =>  sendReminders())
-        .then(res =>  knex("reminders").where({ sent: true }).select("*"))
+    it("records the error in the notification", function(){
+        var message = `Courtesy reminder: Frederick T Turner has a court hearing on ${TOMORROW_DATE.format('ddd, MMM Do')} at 2:00 PM, at CNVCRT for case/ticket number: ${case1.case_id}. You should verfify your hearing date and time by going to ${process.env.COURT_PUBLIC_URL}. - ${process.env.COURT_NAME}`;
+        return sendReminders()
+        .then(res => knex("notifications").whereIn('case_id', [case1['case_id'], case2['case_id']]).select("*"))
         .then(rows => {
-            console.log(JSON.stringify(rows));
-            expect(rows.length).to.equal(3);
+            expect(rows[0].error).to.equal(errorString)
+        });
+    })
+
+})
+
+describe("with three reminders (including one duplicate) that haven't been sent", function () {
+    let messageMock
+
+    beforeEach(function () {
+        messageMock = sinon.mock(messages)
+
+        return manager.ensureTablesExist()
+            .then(clearTable("hearings"))
+            .then(clearTable("requests"))
+            .then(clearTable("notifications"))
+            .then(loadHearings([case1, case2]))
+            .then(addTestRequests([request1, request2, request2_dup]))
+    });
+
+    afterEach(function() {
+        messageMock.restore()
+    });
+
+    it("sends the correct info to Twilio, adds notification, and skips duplicate request", function () {
+        var message1 = `Courtesy reminder: Frederick T Turner has a court hearing on ${TOMORROW_DATE.format('ddd, MMM Do')} at 2:00 PM, at CNVCRT for case/ticket number: ${case1.case_id}. You should verify your hearing date and time by going to ${process.env.COURT_PUBLIC_URL}. - ${process.env.COURT_NAME}`;
+        var message2 = `Courtesy reminder: Bob J Smith has a court hearing on ${TOMORROW_DATE.format('ddd, MMM Do')} at 2:00 PM, at CNVJAIL for case/ticket number: ${case2.case_id}. You should verify your hearing date and time by going to ${process.env.COURT_PUBLIC_URL}. - ${process.env.COURT_NAME}`;
+
+        messageMock.expects('send').resolves(true).once().withExactArgs(request1.phone, process.env.TWILIO_PHONE_NUMBER, message1)
+        messageMock.expects('send').resolves(true).once().withExactArgs(request2.phone, process.env.TWILIO_PHONE_NUMBER, message2)
+
+        return sendReminders()
+        .then(res => knex("notifications").whereIn('case_id', [case1['case_id'], case2['case_id']]).select("*"))
+        .then(rows => {
+            messageMock.verify()
+            expect(rows.length).to.equal(2);
         });
     });
 });
 
-function loadCases(cases) {
-    return function() {
-        //console.log("Adding test case.");
-        return knex("cases").insert(cases);
-    };
-};
+describe("with notification already sent for hearing", function () {
+    let messageMock
 
-function addTestReminders(reminders) {
-    return function () {
-        return Promise.all(reminders.map(function (reminder) {
-            return addTestReminder(reminder);
-        }))
+    beforeEach(function () {
+        messageMock = sinon.mock(messages)
+
+        return manager.ensureTablesExist()
+            .then(clearTable("hearings"))
+            .then(clearTable("requests"))
+            .then(clearTable("notifications"))
+            .then(loadHearings([case1, case2]))
+            .then(addTestRequests([request1, request2]))
+            .then(addTestNotification(notification1))
+    });
+
+    afterEach(function() {
+        messageMock.restore()
+    });
+
+    it("Should only send reminders to requests without existing notifications for same case_id/event time/number", function(){
+        var message = `Courtesy reminder: Bob J Smith has a court hearing on ${TOMORROW_DATE.format('ddd, MMM Do')} at 2:00 PM, at CNVJAIL for case/ticket number: ${case2.case_id}. You should verify your hearing date and time by going to ${process.env.COURT_PUBLIC_URL}. - ${process.env.COURT_NAME}`;
+        messageMock.expects('send').resolves(true).once().withExactArgs(request2.phone, process.env.TWILIO_PHONE_NUMBER, message)
+
+        return knex("notifications").update({ event_date: TOMORROW_DATE})
+        .then(() => sendReminders())
+        .then(() => knex("notifications").whereIn('case_id', [case1['case_id'], case2['case_id']]).select("*"))
+        .then(rows => {
+            messageMock.verify()
+            expect(rows.length).to.equal(2)
+        })
+    })
+
+    it("should send reminder when notification exists for same phone/case_id but at a different date/time", function(){
+        var message1 = `Courtesy reminder: Frederick T Turner has a court hearing on ${TOMORROW_DATE.format('ddd, MMM Do')} at 2:00 PM, at CNVCRT for case/ticket number: ${case1.case_id}. You should verify your hearing date and time by going to ${process.env.COURT_PUBLIC_URL}. - ${process.env.COURT_NAME}`;
+        var message2 = `Courtesy reminder: Bob J Smith has a court hearing on ${TOMORROW_DATE.format('ddd, MMM Do')} at 2:00 PM, at CNVJAIL for case/ticket number: ${case2.case_id}. You should verify your hearing date and time by going to ${process.env.COURT_PUBLIC_URL}. - ${process.env.COURT_NAME}`;
+
+        messageMock.expects('send').resolves(true).once().withExactArgs(request1.phone, process.env.TWILIO_PHONE_NUMBER, message1)
+        messageMock.expects('send').resolves(true).once().withExactArgs(request2.phone, process.env.TWILIO_PHONE_NUMBER, message2)
+        
+        return sendReminders()
+        .then(() => messageMock.verify())
+    })
+})
+
+function loadHearings(hearing) {
+    return function() {
+        return knex("hearings").insert(hearing);
     }
 }
 
-function addTestReminder(reminder) {
-    // console.log("Adding Test Reminder");
-    return db.addReminder({
-        caseId: reminder.caseId,
-        phone: reminder.phone,
-        originalCase: reminder.originalCase
-    })
+function addTestRequests(requests) {
+    return function () {
+        return Promise.all(requests.map(function (request) {
+            return addTestRequest(request);
+        }));
+    }
 }
 
+function addTestRequest(request) {
+    return db.addRequest({
+        case_id: request.case_id,
+        phone: request.phone,
+        known_case: request.known_case
+    });
+}
+function addTestNotification(notification){
+    return function(){
+        return knex("notifications").insert(notification)
+    }
+}
 function clearTable(table) {
     return function() {
-        //console.log("Clearing table: " + table);
         return knex(table).del()
     };
-};
+}
 
-var case1 = {
+const case1 = {
     //date: '27-MAR-15',
-    date: TEST_UTC_DATE,
-    defendant: 'TURNER, FREDERICK T',
+    date: TOMORROW_DATE,
+    defendant: 'FREDERICK T TURNER',
     room: 'CNVCRT',
-    time: '01:00:00 PM',
-    citations: '[{"id":"4928456","violation":"40-8-76.1","description":"SAFETY BELT VIOLATION","location":"27 DECAATUR ST"}]',
-    id: "677167760f89d6f6ddf7ed19ccb63c15486a0eab"
+    case_id: "4928456"
+}
 
-};
-
-var case2 = {
+const case2 = {
     //date: '27-MAR-15',
-    date: TEST_UTC_DATE,
-    defendant: 'SMITH, Bob J',
+    date: TOMORROW_DATE,
+    defendant: ' Bob J SMITH',
     room: 'CNVJAIL',
-    time: '01:00:00 PM',
-    citations: '[{"id":"4928457","violation":"40-8-78.1","description":"DRIVING TO SLOW...","location":"22 NUNYA DR"}]',
-    id: "677167760f89d6f6ddf7ed19ccb63c15486a0eac"
-};
+    case_id: "4928457"
+}
 
-var reminder1 = {
-    caseId: case1.id,
+const request1 = {
     phone: "+12223334444",
-    originalCase: case1
-};
+    case_id: case1.case_id,
+    known_case: true
+}
 
-var reminder2 = {
-    caseId: case2.id,
+const request2 = {
+    case_id: case2.case_id,
     phone: "+12223334445",
-    originalCase: case2
-};
+    known_case: true
+}
 
-var reminder2_dup = {
-    caseId: case2.id,
+const request2_dup = {
+    case_id: case2.case_id,
     phone: "+12223334445",
-    originalCase: case2
-};
+    known_case: true
+}
+
+const notification1 = {
+    case_id: case1.case_id,
+    phone: db.encryptPhone(request1.phone),
+    event_date: TEST_UTC_DATE,
+    type:'reminder'
+}
+

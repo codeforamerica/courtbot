@@ -5,3 +5,4 @@ utils/tmp/*
 !utils/tmp/.gitkeep
 TODO
 .idea
+.vscode/
