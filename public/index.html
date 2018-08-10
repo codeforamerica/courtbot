@@ -2,6 +2,9 @@
   <head>
     <title>Courtbot</title>
     <style>
+      * {
+        font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+      }
       .hide {
         display:none;
       }
@@ -64,7 +67,7 @@
       function received() {
         let iframe = document.getElementById('my_iframe');
         let innerDoc = iframe.contentDocument || iframe.contentWindow.document;
-        let sms = innerDoc.getElementsByTagName('sms');
+        let sms = innerDoc.getElementsByTagName('response');
         if (sms.length > 0) {
           addLogEntry(sms[0].textContent, 'received');
         }
