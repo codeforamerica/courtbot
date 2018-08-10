@@ -1,13 +1,93 @@
 <html>
+  <head>
+    <title>Courtbot</title>
+    <style>
+      * {
+        font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+      }
+      .hide {
+        display:none;
+      }
+      #log {
+        overflow: auto;
+      }
+      .sent, .received {
+        display: block;
+        width: 50%;
+        border-radius: .5em;
+        padding: .5em;
+        margin-top: .5em;
+      }
+      .received {
+        background-color: #d0e4c5;
+        float: right;
+      }
+      .received-stamp {
+        font-size: .6em;
+        float: right;
+        display: block;
+        width: 50%;
+        color: #999;
+        text-align: right;
+      }
+      .sent {
+        background-color: #e4f0ff;
+        float: left;
+      }
+      .sent-stamp {
+        font-size: .6em;
+        float: left;
+        display: block;
+        width: 50%;
+        color: #999;
+      }
+      form {
+        max-width: 640px;
+      }
+      textarea {
+        width: 50%;
+      }
+    </style>
+    <script>
+      function addLogEntry(msg, className) {
+        function _addEntry(msg, className) {
+          let node = document.createElement('DIV');
+          node.classList.add(className);
+          node.textContent = msg;
+          document.getElementById('log').appendChild(node);
+        }
+        _addEntry(msg, className);
+        _addEntry(new Date().toLocaleTimeString(), className + '-stamp');
+      }
+      // log what was sent
+      function sent() {
+        addLogEntry(document.getElementById('message').value, 'sent');
+      }
+      // log what was received
+      function received() {
+        let iframe = document.getElementById('my_iframe');
+        let innerDoc = iframe.contentDocument || iframe.contentWindow.document;
+        let sms = innerDoc.getElementsByTagName('response');
+        if (sms.length > 0) {
+          addLogEntry(sms[0].textContent, 'received');
+        }
+      }
+    </script>
+  </head>
+  <body>
     <h1>Impersonate Twilio</h1>
 
-    <h3>Input</h3>
-    <form action="/sms" method="POST" target="my_iframe">
-        number: <input name="From" value="9075551234"/> <br>
-        message: <textarea name="Body"></textarea> <br>
-        <input type="submit"/>
+    <form action="/sms" method="POST" target="my_iframe" onsubmit="sent()">
+        Phone Number: <input name="From" value="9075551234" type="tel"/> <br>
+
+        <div class="activity">
+          <iframe id="my_iframe" name="my_iframe" src="" onload="received()" class="hide"></iframe>
+          <div id="log"></div>
+        </div>
+
+        <textarea id="message" name="Body" placeholder="Your Message"></textarea> <br>
+        <input type="submit" value="Send"/>
     </form>
 
-    <h3>Response</h3>
-    <iframe name="my_iframe" src=""></iframe>
+  </body>
 </html>
