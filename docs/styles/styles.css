@@ -40,7 +40,11 @@ p.faq b {
 a {
     color: #cf5533;;
 }
-
+p#howItWorks{
+    border-left: 5px solid #cf5533;
+    padding-left: 1em;
+    font-size: 1.25em;
+}
 #title {
    max-width: 40em;
    flex-basis: 40%;
