@@ -127,7 +127,7 @@ Initialize the test database:
 node test_utils/reset
 ```
 
-Set up your environment variables (may required some customization):
+Set up your environment variables (may require some customization):
 
 ```
 cp .sample.env .env
