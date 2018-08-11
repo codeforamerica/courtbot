@@ -23,7 +23,7 @@ The database also has tables *log_hits* and *log_runners*. These log activity of
 
 ## Running Locally
 
-First, install [node](https://github.com/codeforamerica/howto/blob/master/Node.js.md), [postgres](https://github.com/codeforamerica/howto/blob/master/PostgreSQL.md).
+First, install [node](https://github.com/codeforamerica/howto/blob/master/Node.js.md) (atleast version 7.6), and [postgres](https://github.com/codeforamerica/howto/blob/master/PostgreSQL.md) (atleast version 9.5).
 
 Then clone the repository into a folder called courtbot:
 
