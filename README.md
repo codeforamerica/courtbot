@@ -39,24 +39,23 @@ Install node dependencies
 npm install
 ```
 
-Create a new PostgreSQL database and a database to run tests.
-
-```
-createdb courtbotdb
-createdb courtbotdb_test
-```
-
 Define a new PostgreSQL user account.
 
 ```
 createuser courtbot
 ```
 
+Create a new PostgreSQL database and a database to run tests.
+
+```
+createdb courtbotdb -O courtbot
+createdb courtbotdb_test -O courtbot
+```
+
 Then, to create the tables and load in initial data:
 
 ```console
-node utils/createRequestsTable.js
-node utils/createNotificationsTable.js
+node utils/createTables.js
 node runners/load.js
 ```
 
@@ -121,13 +120,7 @@ Finally, you'll want to set up the [scheduler](https://elements.heroku.com/addon
 
 ## Running Tests
 
-Initialize the test database:
-
-```
-node test_utils/reset
-```
-
-Set up your environment variables (may require some customization):
+Set up your environment variables.  This may require some customization-- especially the DATABASE_TEST_URL.
 
 ```
 cp .sample.env .env
