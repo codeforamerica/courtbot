@@ -49,9 +49,8 @@ async function loadData(dataUrls) {
         }
     }
     var count = await copyTemp(stream_client)
+    stream_client.on('end', () => manager.closeConnection(stream_client))
     stream_client.end()
-    //manager.knex.client.pool.destroy()  // this causes logging not to work from load.js abort
-    manager.closeConnection(stream_client)
     return {files: files.length, records: count}
 }
 
