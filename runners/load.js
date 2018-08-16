@@ -8,6 +8,14 @@ const log = require('../utils/logger')
 
 runnerScript()
 .then((r) => runner_log.loaded(r))
+.then(() => {
+    log.debug('checking active handles')
+    let v = process._getActiveHandles()
+    log.debug(v)
+    log.debug('checking active requests')
+    let u = process._getActiveRequests()
+    log.debug(u)
+})
 .then(() => manager.knex.destroy())
 .catch((err) => {
     manager.knex.destroy()

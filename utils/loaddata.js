@@ -33,6 +33,7 @@ async function loadData(dataUrls) {
 
     // A single connection is needed for pg-copy-streams and the temp table
     const stream_client = await manager.acquireSingleConnection()
+
     // Postgres temp tables only last as long as the connection
     // so we need to use one connection for the whole life of the table
     await createTempHearingsTable(stream_client)
@@ -47,10 +48,10 @@ async function loadData(dataUrls) {
             throw(err)
         }
     }
-
     var count = await copyTemp(stream_client)
     stream_client.end()
-    //manager.knex.client.pool.destroy()  // this causes logging not to work from load.js
+    //manager.knex.client.pool.destroy()  // this causes logging not to work from load.js abort
+    manager.closeConnection(stream_client)
     return {files: files.length, records: count}
 }
 
@@ -109,6 +110,7 @@ async function copyTemp(client){
     const count = resp.rowCount
     return count
 }
+
 /**
  * Temp table to pipe into. This is necessary because Postgres can't configure
  * alternate constraint handling when consuming streams. Duplicates would kill the insert.

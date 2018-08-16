@@ -121,6 +121,7 @@ function acquireSingleConnection() {
     return knex.client.acquireConnection()
     // return new Promise((resolve, reject) => {
     //     knex.client.pool.acquire((err, client) => {
+    //         console.log('working on acquiring')
     //         if (err) return reject(err)
     //         resolve(client)
     //     })
@@ -128,12 +129,15 @@ function acquireSingleConnection() {
 }
 
 /**
- * Manually close database connection.
+ * Manually close one or all database connections.
  *
  * @return {void}
  */
-function closeConnection() {
-  return knex.client.pool.destroy();
+function closeConnection(conn) {
+  if (conn == null)
+    return knex.client.pool.destroy()
+  else
+    return knex.client.releaseConnection(conn)
 }
 
 /**
