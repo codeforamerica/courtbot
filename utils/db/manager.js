@@ -119,25 +119,19 @@ function batchInsert(table, rows, size) {
 
 function acquireSingleConnection() {
     return knex.client.acquireConnection()
-    // return new Promise((resolve, reject) => {
-    //     knex.client.pool.acquire((err, client) => {
-    //         console.log('working on acquiring')
-    //         if (err) return reject(err)
-    //         resolve(client)
-    //     })
-    // })
 }
 
 /**
- * Manually close one or all database connections.
+ * Manually close one or all idle database connections.
  *
  * @return {void}
  */
 function closeConnection(conn) {
-  if (conn == null)
+  if (conn == null) {
     return knex.client.pool.destroy()
-  else
+  } else {
     return knex.client.releaseConnection(conn)
+  }
 }
 
 /**
