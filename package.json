@@ -4,9 +4,9 @@
   "description": "Deliver simple court data via JSON or SMS.",
   "main": "web.js",
   "scripts": {
-    "test": "NODE_ENV=test mocha test",
+    "test": "NODE_ENV=test mocha --exit test",
     "start": "node web.js",
-    "dbsetup": "node utils/createNotificationsTable; node utils/createRequestsTable",
+    "dbsetup": "node utils/createTables.js",
     "loaddata": "node runners/load.js"
   },
   "author": "Sam Hashemi",
