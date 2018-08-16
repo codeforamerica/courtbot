@@ -21,7 +21,7 @@ module.exports = {
         client: "pg",
         connection: process.env.DATABASE_URL,
         pool: {
-            afterCreate: function(connection, callback) {
+                afterCreate: function(connection, callback) {
                 connection.query(`SET TIME ZONE '${process.env.TZ}';`, function(err) {
                     callback(err, connection);
                 });

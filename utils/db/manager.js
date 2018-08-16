@@ -22,65 +22,83 @@ require('pg').types.setTypeParser(TIMESTAMPTZ_OID, date => moment(date).tz(proce
  */
 const createTableInstructions = {
     hearings() {
-        return knex.schema.createTableIfNotExists('hearings', (table) => {
-            table.string('defendant', 100);
-            table.timestamp('date');
-            table.string('room', 100);
-            table.string('case_id', 100);
-            table.string('type', 100);
-            table.primary(['case_id', 'date']);
-            table.index('case_id');
+        return knex.schema.hasTable('hearings')
+        .then((exists) => {
+            if (!exists) {
+                return knex.schema.createTable('hearings', (table) => {
+                    table.string('defendant', 100);
+                    table.timestamp('date');
+                    table.string('room', 100);
+                    table.string('case_id', 100);
+                    table.string('type', 100);
+                    table.primary(['case_id', 'date']);
+                    table.index('case_id');
+                })
+            }
         })
     },
     requests() {
-        return knex.schema.createTableIfNotExists('requests', (table) => {
-            table.timestamps(true, true);
-            table.string('case_id', 100);
-            table.string('phone', 100);
-            table.boolean('known_case').defaultTo(false);
-            table.boolean('active').defaultTo(true);
-            table.primary(['case_id', 'phone']);
-        });
+        return knex.schema.hasTable('requests')
+        .then((exists) => {
+            if (!exists) {
+                return knex.schema.createTable('requests', (table) => {
+                    table.timestamps(true, true);
+                    table.string('case_id', 100);
+                    table.string('phone', 100);
+                    table.boolean('known_case').defaultTo(false);
+                    table.boolean('active').defaultTo(true);
+                    table.primary(['case_id', 'phone']);
+                });
+            }
+        })
     },
-    notifications(){
-        return knex.schema.createTableIfNotExists('notifications', (table) => {
-            table.timestamp('created_at').defaultTo(knex.fn.now());
-            table.string('case_id');
-            table.string('phone');
-            table.timestamp('event_date');
-            table.enu('type', ['reminder', 'matched', 'expired']);
-            table.string('error');
-            table.foreign(['case_id', 'phone']).onDelete('CASCADE').references(['case_id', 'phone' ]).inTable('requests')
+    notifications() {
+        return knex.schema.hasTable('notifications')
+        .then((exists) => {
+            if (!exists) {
+                return knex.schema.createTable('notifications', (table) => {
+                    table.timestamp('created_at').defaultTo(knex.fn.now());
+                    table.string('case_id');
+                    table.string('phone');
+                    table.timestamp('event_date');
+                    table.enu('type', ['reminder', 'matched', 'expired']);
+                    table.string('error');
+                    table.foreign(['case_id', 'phone']).onDelete('CASCADE').references(['case_id', 'phone' ]).inTable('requests')
+                })
+            }
+        })
+    },
+    log_runners() {
+        return knex.schema.hasTable('log_runners')
+        .then((exists) => {
+            if (!exists) {
+                return knex.schema.createTable('log_runners', function (table) {
+                    table.increments()
+                    table.enu('runner', ['send_reminder', 'send_expired', 'send_matched','load'])
+                    table.integer('count')
+                    table.integer('error_count')
+                    table.timestamp('date').defaultTo(knex.fn.now())
+                })
+            }
+        })
+    },
+    log_hits() {
+        return knex.schema.hasTable('log_hits')
+        .then((exists) => {
+            if (!exists) {
+                return knex.schema.createTable('log_hits', function (table) {
+                    table.timestamp('time').defaultTo(knex.fn.now()),
+                    table.string('path'),
+                    table.string('method'),
+                    table.string('status_code'),
+                    table.string('phone'),
+                    table.string('body'),
+                    table.string('action')
+                })
+            }
         })
     }
 };
-
-checkLogDBTables()
-.then(() => logger.debug("Checking Log Tables"))
-.catch((err) => logger.error(err))
-
-function checkLogDBTables(){
-    /* create log tables if they don't exist */
-    const p1 = knex.schema.createTableIfNotExists('log_runners', function (table) {
-        table.increments()
-        table.enu('runner', ['send_reminder', 'send_expired', 'send_matched','load'])
-        table.integer('count')
-        table.integer('error_count')
-        table.timestamp('date').defaultTo(knex.fn.now())
-    })
-
-    const p2 = knex.schema.createTableIfNotExists('log_hits', function(table){
-        table.timestamp('time').defaultTo(knex.fn.now()),
-        table.string('path'),
-        table.string('method'),
-        table.string('status_code'),
-        table.string('phone'),
-        table.string('body'),
-        table.string('action')
-    })
-
-    return Promise.all([p1, p2])
-}
 
 /**
  * Insert chunk of data to table
@@ -99,13 +117,14 @@ function batchInsert(table, rows, size) {
     .catch(trx.rollback));
 }
 
-function acquireSingleConnection(){
-    return new Promise((resolve, reject) => {
-        knex.client.pool.acquire((err, client) => {
-            if (err) return reject(err)
-            resolve(client)
-        })
-    })
+function acquireSingleConnection() {
+    return knex.client.acquireConnection()
+    // return new Promise((resolve, reject) => {
+    //     knex.client.pool.acquire((err, client) => {
+    //         if (err) return reject(err)
+    //         resolve(client)
+    //     })
+    // })
 }
 
 /**
@@ -125,7 +144,6 @@ function closeConnection() {
  * @return {Promise}  Promise to create table if it does not exist.
  */
 function createTable(table) {
-    logger.debug('Trying to create table:', table);
   if (!createTableInstructions[table]) {
     logger.error(`No Table Creation Instructions found for table "${table}".`);
     return false;
@@ -139,7 +157,7 @@ function createTable(table) {
 
       return createTableInstructions[table]()
         .then(() => {
-            logger.debug(`Table created: "${table}"`);
+            return logger.debug(`Table created: "${table}"`);
         });
     });
 }
@@ -160,14 +178,16 @@ function dropTable(table) {
  *
  * Note:  create logic only creates if a table does not exists, so it is enough to just
  *   call createTable() for each table. Becuase of foreign key constraint, requests table must
- *   exist before creating notifications table. The order is imortnat because of constraints.
+ *   exist before creating notifications table. The order is important because of constraints.
  *
  * @return {Promise} Promise to ensure all courtbot tables exist.
  */
 function ensureTablesExist() {
-  const tables = ['requests', 'hearings', 'notifications']
-  return tables.reduce((p, v) => p.then(() => createTable(v)), Promise.resolve())
-
+  const tables = ['requests', 'hearings', 'notifications', 'log_runners', 'log_hits']
+  return tables.reduce((p, v) => p.then(() => {
+      return createTable(v)
+      .catch(err => logger.error(err))
+    }), Promise.resolve())
 }
 
 module.exports = {
@@ -177,6 +197,5 @@ module.exports = {
   dropTable,
   batchInsert,
   knex,
-  acquireSingleConnection,
-  checkLogDBTables
+  acquireSingleConnection
 };

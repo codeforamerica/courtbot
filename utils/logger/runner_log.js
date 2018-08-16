@@ -32,7 +32,7 @@ const runnerLog = {
         .then((r) => logger.info(`Runner: ${r.action} | sent: ${r.sent} errors: ${r.err} `))
         .catch(logger.error)
     },
-    loaded({files, records}){
+    loaded({files, records}) {
         return logLoadRunner({files, records})
         .then((r) => logger.info(`Runner: load | files: ${r.files} records: ${r.records} `))
         .catch(logger.error)

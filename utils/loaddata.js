@@ -33,7 +33,6 @@ async function loadData(dataUrls) {
 
     // A single connection is needed for pg-copy-streams and the temp table
     const stream_client = await manager.acquireSingleConnection()
-
     // Postgres temp tables only last as long as the connection
     // so we need to use one connection for the whole life of the table
     await createTempHearingsTable(stream_client)
@@ -41,7 +40,7 @@ async function loadData(dataUrls) {
     for (let i = 0; i < files.length; i++) {
         const [url, csv_type] = files[i].split('|');
         if (url.trim() == '') continue
-        try{
+        try {
             await loadCSV(stream_client, url, csv_type)
         } catch(err) {
             stream_client.end()
@@ -51,9 +50,10 @@ async function loadData(dataUrls) {
 
     var count = await copyTemp(stream_client)
     stream_client.end()
-    manager.knex.client.pool.destroy()
+    //manager.knex.client.pool.destroy()  // this causes logging not to work from load.js
     return {files: files.length, records: count}
 }
+
 /**
  * Transforms and loads a streamed csv file into the Postgres table .
  *
