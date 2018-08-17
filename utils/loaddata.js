@@ -33,6 +33,7 @@ async function loadData(dataUrls) {
 
     // A single connection is needed for pg-copy-streams and the temp table
     const stream_client = await manager.acquireSingleConnection()
+    stream_client.on('end', () => manager.closeConnection(stream_client))
 
     // Postgres temp tables only last as long as the connection
     // so we need to use one connection for the whole life of the table
@@ -49,7 +50,6 @@ async function loadData(dataUrls) {
         }
     }
     var count = await copyTemp(stream_client)
-    stream_client.on('end', () => manager.closeConnection(stream_client))
     stream_client.end()
     return {files: files.length, records: count}
 }
