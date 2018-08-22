@@ -33,6 +33,7 @@ async function loadData(dataUrls) {
 
     // A single connection is needed for pg-copy-streams and the temp table
     const stream_client = await manager.acquireSingleConnection()
+    stream_client.on('end', () => manager.closeConnection(stream_client))
 
     // Postgres temp tables only last as long as the connection
     // so we need to use one connection for the whole life of the table
@@ -41,19 +42,18 @@ async function loadData(dataUrls) {
     for (let i = 0; i < files.length; i++) {
         const [url, csv_type] = files[i].split('|');
         if (url.trim() == '') continue
-        try{
+        try {
             await loadCSV(stream_client, url, csv_type)
         } catch(err) {
             stream_client.end()
             throw(err)
         }
     }
-
     var count = await copyTemp(stream_client)
     stream_client.end()
-    manager.knex.client.pool.destroy()
     return {files: files.length, records: count}
 }
+
 /**
  * Transforms and loads a streamed csv file into the Postgres table .
  *
@@ -109,6 +109,7 @@ async function copyTemp(client){
     const count = resp.rowCount
     return count
 }
+
 /**
  * Temp table to pipe into. This is necessary because Postgres can't configure
  * alternate constraint handling when consuming streams. Duplicates would kill the insert.
