@@ -15,6 +15,7 @@ function load(){
     .then(() => manager.knex.destroy())
     .catch((err) => {
         if (count < max_tries){
+            log.debug("load failed retrying")
             setTimeout(load, time_between_retries) 
         } else {
             manager.knex.destroy()
