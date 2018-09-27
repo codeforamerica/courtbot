@@ -3,6 +3,7 @@ const runnerScript = require('../utils/loaddata.js');
 const manager = require('../utils/db/manager')
 const runner_log = require('../utils/logger/runner_log')
 const log = require('../utils/logger')
+const {HTTPError} = require('../utils/errors')
 
 let count = 0
 const max_tries = 6
@@ -14,8 +15,9 @@ function load(){
     .then((r) => runner_log.loaded(r))
     .then(() => manager.knex.destroy())
     .catch((err) => {
-        if (count < max_tries){
-            log.debug("load failed retrying")
+        if (count < max_tries && err instanceof HTTPError){
+            console.log(err.message)
+            log.debug("load failed retrying", err)
             setTimeout(load, time_between_retries) 
         } else {
             manager.knex.destroy()

@@ -5,9 +5,8 @@
 const request = require('request');
 const csv = require('csv');
 const copyFrom = require('pg-copy-streams').from;
-const CombinedStream = require('combined-stream')
 const manager = require('./db/manager');
-
+const {HTTPError} = require('./errors')
 const CSV_DELIMITER = ',';
 
 const csv_headers = {
@@ -82,7 +81,7 @@ function loadCSV(client, url, csv_type){
         request.get(url)
         .on('response', function (res) {
             if (res.statusCode !== 200) {
-              this.emit('error', new Error("Error loading CSV. Return HTTP Status: "+res.statusCode))
+              this.emit('error', new HTTPError("Error loading CSV. Return HTTP Status: "+res.statusCode))
             }
         })
         .on('error', reject)
