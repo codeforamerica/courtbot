@@ -23,7 +23,7 @@ The database also has tables *log_hits* and *log_runners*. These log activity of
 
 ## Running Locally
 
-First, install [node](https://github.com/codeforamerica/howto/blob/master/Node.js.md) (atleast version 7.6), and [postgres](https://github.com/codeforamerica/howto/blob/master/PostgreSQL.md) (atleast version 9.5).
+First, install [node](https://github.com/codeforamerica/howto/blob/master/Node.js.md) (atleast version 7.6), and [postgres](https://github.com/codeforamerica/howto/blob/master/PostgreSQL.md) (at least version 9.5).
 
 Then clone the repository into a folder called courtbot:
 
@@ -40,7 +40,7 @@ Install node dependencies
 npm install
 ```
 
-Define a new PostgreSQL user account, give it a password. You might have to create a postgres account for yourself first with superuser permissions if you don't have one already.
+Define a new PostgreSQL user account, give it a password. You might have to create a postgres account for yourself first with superuser permissions if you don't have one already, or use sudo -u postgres before these commands.
 
 ```
 createuser courtbot --pwprompt
