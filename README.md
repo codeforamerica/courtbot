@@ -56,7 +56,7 @@ createdb courtbotdb_test -O courtbot
 Set up your environment variables.  This may require some customization-- especially the DATABASE_TEST_URL.
 
 ```
-cp .sample.env .env
+cp .env.sample .env
 ```
 
 Then, to create the tables and load in initial data:
