@@ -40,7 +40,7 @@ Install node dependencies
 npm install
 ```
 
-Define a new PostgreSQL user account, give it a password.
+Define a new PostgreSQL user account, give it a password. You might have to create a postgres account for yourself first with superuser permissions if you don't have one already.
 
 ```
 createuser courtbot --pwprompt
