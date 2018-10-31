@@ -53,6 +53,12 @@ createdb courtbotdb -O courtbot
 createdb courtbotdb_test -O courtbot
 ```
 
+Set up your environment variables.  This may require some customization-- especially the DATABASE_TEST_URL.
+
+```
+cp .sample.env .env
+```
+
 Then, to create the tables and load in initial data:
 
 ```console
@@ -121,14 +127,6 @@ Finally, you'll want to set up the [scheduler](https://elements.heroku.com/addon
 
 
 ## Running Tests
-
-Set up your environment variables.  This may require some customization-- especially the DATABASE_TEST_URL.
-
-```
-cp .sample.env .env
-```
-
-Then run the tests:
 
 ```
 npm test
