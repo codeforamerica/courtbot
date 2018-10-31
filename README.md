@@ -36,13 +36,14 @@ Since the app uses twilio to send text messages, it requires a bit of configurat
 Install node dependencies
 
 ```console
+cd courtbot
 npm install
 ```
 
-Define a new PostgreSQL user account.
+Define a new PostgreSQL user account, give it a password.
 
 ```
-createuser courtbot
+createuser courtbot --pwprompt
 ```
 
 Create a new PostgreSQL database and a database to run tests.
@@ -92,6 +93,7 @@ heroku config:set TEST_TOMORROW_DATES=<1 if you want all court dates to be tomor
 heroku config:set ADMIN_LOGIN=<user name for access to admin api>
 heroku config:set ADMIN_PASSWORD=<password for access to admin api>
 heroku config:set JWT_SECRET=<random string to be used to create json web token when authenticating admin api>
+heroku config:set TESTCASE=<case number for testing>
 git push heroku master
 heroku run node utils/createRequestsTable.js
 heroku run node utils/createNotificationsTable.js
