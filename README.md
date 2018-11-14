@@ -23,12 +23,13 @@ The database also has tables *log_hits* and *log_runners*. These log activity of
 
 ## Running Locally
 
-First, install [node](https://github.com/codeforamerica/howto/blob/master/Node.js.md) (atleast version 7.6), and [postgres](https://github.com/codeforamerica/howto/blob/master/PostgreSQL.md) (atleast version 9.5).
+First, install [node](https://github.com/codeforamerica/howto/blob/master/Node.js.md) (atleast version 7.6), and [postgres](https://github.com/codeforamerica/howto/blob/master/PostgreSQL.md) (at least version 9.5).
 
 Then clone the repository into a folder called courtbot:
 
 ```console
 git clone git@github.com:codeforanchorage/courtbot.git courtbot
+cd courtbot
 ```
 
 Since the app uses twilio to send text messages, it requires a bit of configuration. Get a [twilio account](http://www.twilio.com/), create a .env file by running `cp .env.sample .env`, and add your twilio authentication information. While you're there, add a cookie secret and an encryption key (long random strings).
@@ -39,10 +40,10 @@ Install node dependencies
 npm install
 ```
 
-Define a new PostgreSQL user account.
+Define a new PostgreSQL user account, give it a password. You might have to create a postgres account for yourself first with superuser permissions if you don't have one already, or use sudo -u postgres before these commands.
 
 ```
-createuser courtbot
+createuser courtbot --pwprompt
 ```
 
 Create a new PostgreSQL database and a database to run tests.
@@ -50,6 +51,12 @@ Create a new PostgreSQL database and a database to run tests.
 ```
 createdb courtbotdb -O courtbot
 createdb courtbotdb_test -O courtbot
+```
+
+Set up your environment variables.  This may require some customization-- especially the DATABASE_TEST_URL.
+
+```
+cp .env.sample .env
 ```
 
 Then, to create the tables and load in initial data:
@@ -92,6 +99,7 @@ heroku config:set TEST_TOMORROW_DATES=<1 if you want all court dates to be tomor
 heroku config:set ADMIN_LOGIN=<user name for access to admin api>
 heroku config:set ADMIN_PASSWORD=<password for access to admin api>
 heroku config:set JWT_SECRET=<random string to be used to create json web token when authenticating admin api>
+heroku config:set TESTCASE=<case number for testing>
 git push heroku master
 heroku run node utils/createRequestsTable.js
 heroku run node utils/createNotificationsTable.js
@@ -119,14 +127,6 @@ Finally, you'll want to set up the [scheduler](https://elements.heroku.com/addon
 
 
 ## Running Tests
-
-Set up your environment variables.  This may require some customization-- especially the DATABASE_TEST_URL.
-
-```
-cp .sample.env .env
-```
-
-Then run the tests:
 
 ```
 npm test

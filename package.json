@@ -2,6 +2,10 @@
   "name": "courtbot",
   "version": "0.0.1",
   "description": "Deliver simple court data via JSON or SMS.",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/codeforanchorage/courtbot.git"
+  },
   "main": "web.js",
   "scripts": {
     "test": "NODE_ENV=test mocha --exit test",
