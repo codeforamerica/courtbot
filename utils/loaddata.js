@@ -54,15 +54,33 @@ async function loadData(dataUrls) {
 }
 
 /**
- * Transforms and loads a streamed csv file into the Postgres table .
+ * Tests whether a csv row is valid
+ * @param {row} a row from the csv
+ * @return {boolean} True if the row is valid, false otherwise
+ */
+function rowIsValid(row) {
+    // currently just making sure the id is not falsey
+    if (row.id) {
+        return true
+    }
+    return false
+
+}
+
+/**
+ * Transforms and loads a streamed csv file into the Postgres table.
  *
  * @param {Client} client - single pg client to use to create temp table and stream into DB
  * @param {string} url - CSV url
  * @param {string} csv_type - key for the csv_headers
  */
 function loadCSV(client, url, csv_type){
-    /* Define transform from delivered csv to unified format suitable for DB */
-    const transformToTable = csv.transform(row => [`${row.date} ${row.time}`, `${row.first} ${row.last}`, row.room, row.id, row.type])
+    /* Define transform from delivered csv to unified format suitable for DB. Returning null will skip the row */
+    const transformToTable = csv.transform(row => 
+        rowIsValid(row) 
+        ? [`${row.date} ${row.time}`, `${row.first} ${row.last}`, row.room, row.id, row.type]
+        : null
+        )
 
     /* Use the csv header array to determine which headers describe the csv.
        Default to the original citation headers */
