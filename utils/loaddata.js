@@ -87,7 +87,8 @@ function loadCSV(client, url, csv_type){
     const parser =  csv.parse({
         delimiter: CSV_DELIMITER,
         columns: csv_headers[csv_type === 'criminal_cases' ? 'criminal_cases' : 'civil_cases'],
-        trim: true
+        trim: true,
+        from_line: 2
     })
 
     return new Promise(async (resolve, reject) => {
