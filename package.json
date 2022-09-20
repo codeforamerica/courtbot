@@ -29,7 +29,7 @@
     "knex": "^0.19.5",
     "logfmt": "^1.2.1",
     "moment": "^2.29.4",
-    "moment-timezone": "^0.5.21",
+    "moment-timezone": "^0.5.37",
     "on-headers": "^1.0.1",
     "pg": "^7.4.3",
     "pg-copy-streams": "^1.2.0",
