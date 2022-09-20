@@ -36,7 +36,7 @@
     "request": "^2.88.0",
     "rollbar": "^2.4.4",
     "sha1": "~1.1.0",
-    "twilio": "^3.19.1",
+    "twilio": "^3.82.0",
     "winston": "^3.0.0"
   },
   "devDependencies": {
