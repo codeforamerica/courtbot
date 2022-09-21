@@ -16,7 +16,7 @@
   "author": "Sam Hashemi",
   "license": "MIT",
   "engines": {
-    "node": "8.9.1"
+    "node": "16.17.0"
   },
   "dependencies": {
     "body-parser": "^1.18.3",
@@ -26,12 +26,12 @@
     "emoji-strip": "^1.0.1",
     "express": "^4.16.3",
     "jsonwebtoken": "^8.3.0",
-    "knex": "^0.19.5",
+    "knex": "^2.3.0",
     "logfmt": "^1.2.1",
     "moment": "^2.29.4",
     "moment-timezone": "^0.5.37",
     "on-headers": "^1.0.1",
-    "pg": "^7.4.3",
+    "pg": "^8.0.3",
     "pg-copy-streams": "^1.2.0",
     "request": "^2.88.0",
     "rollbar": "^2.4.4",
