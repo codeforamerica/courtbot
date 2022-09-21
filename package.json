@@ -31,7 +31,7 @@
     "moment": "^2.29.4",
     "moment-timezone": "^0.5.37",
     "on-headers": "^1.0.1",
-    "pg": "^8.0.3",
+    "pg": "^8.8.0",
     "pg-copy-streams": "^1.2.0",
     "request": "^2.88.0",
     "rollbar": "^2.4.4",
